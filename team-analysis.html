@@ -55,7 +55,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 </header>
 <div id="main"></div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
 const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
@@ -687,11 +687,42 @@ function openMon(team,key){
   $('closeDetail').addEventListener('click',()=>{detail.innerHTML='';window.scrollTo({top:0,behavior:'smooth'})});
 }
 async function load(){
-  try{
-    const {data,error}=await supabase.from('replays').select('replay_id,replay_data');
-    if(error)throw error;
+  const showError=(msg)=>{
+    console.error('Team Analysis:',msg);
+    $('teamSelect').innerHTML='<option value="">Unable to load teams</option>';
+    $('main').innerHTML=`<div class="panel"><div class="empty">${esc(msg)}</div></div>`;
+  };
 
-    for(const row of (data||[])){
+  try{
+    // Give the Supabase SDK a moment to initialize on GitHub Pages.
+    if(!window.supabase){
+      await new Promise(resolve=>setTimeout(resolve,500));
+    }
+
+    let rows=null;
+
+    // Primary path: Supabase JS client.
+    if(window.supabase?.createClient){
+      const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+      const result=await client.from('replays').select('replay_id,replay_data');
+      if(result.error)throw result.error;
+      rows=result.data||[];
+    }else{
+      // Fallback path: direct REST request. This makes the page independent
+      // of whether the CDN UMD bundle was initialized by the browser.
+      const response=await fetch(
+        SUPABASE_URL+'/rest/v1/replays?select=replay_id%2Creplay_data',
+        {headers:{
+          apikey:SUPABASE_KEY,
+          Authorization:'Bearer '+SUPABASE_KEY
+        },
+        cache:'no-store'}
+      );
+      if(!response.ok)throw new Error('Supabase request failed ('+response.status+')');
+      rows=await response.json();
+    }
+
+    for(const row of rows){
       if(row.replay_id===STATE_ID){
         const rd=row.replay_data||{};
         STATE.teamMap=rd.teamMap||{};
@@ -704,8 +735,9 @@ async function load(){
     const teams=[...new Set(allRows().flatMap(r=>[
       teamFor(r.players?.p1),
       teamFor(r.players?.p2),
-      r.team1,r.team2,r.player1Team,r.player2Team
-    ]).filter(x=>typeof x==='string'&&x.trim()))]
+      r.team1,r.team2,r.player1Team,r.player2Team,
+      r.teams?.p1,r.teams?.p2
+    ]).filter(x=>typeof x==='string'&&x.trim()&&x.trim()!=='Unknown'))]
       .map(x=>x.trim())
       .sort((a,b)=>a.localeCompare(b));
 
@@ -719,15 +751,13 @@ async function load(){
     if(requested&&teams.includes(requested))$('teamSelect').value=requested;
 
     if(!teams.length){
-      $('main').innerHTML='<div class="panel"><div class="empty">No teams were found in the loaded replay data.</div></div>';
+      showError('Replay data loaded, but no team names were found. Check the replay data/team mapping in Supabase.');
       return;
     }
 
     await render();
   }catch(e){
-    console.error('Team Analysis load failed:',e);
-    $('teamSelect').innerHTML='<option value="">Load error</option>';
-    $('main').innerHTML=`<div class="panel"><div class="empty">Could not load replay data: ${esc(e.message||e)}</div></div>`;
+    showError('Could not load replay data from Supabase: '+(e.message||e));
   }
 }
 
