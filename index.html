@@ -1758,11 +1758,12 @@
   function renderGoldenFist(){
     contentEl.innerHTML = `
       <div class="panel gf-panel">
-        <h2>🥇 Golden Fist</h2>
+        <h2>Golden Fist</h2>
         <div class="row" style="align-items:flex-end;">
           <div><label>Scope</label>${weekSelectorHtml('gfWeek')}</div>
           <div style="flex:0;"><button class="ghost" id="exportGF">Export CSV</button></div>
         </div>
+        <br>
         <div class="note" style="margin-bottom:12px;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
         <div id="gfList"></div>
       </div>`;
@@ -1860,7 +1861,6 @@
     contentEl.innerHTML=`
       <div class="panel">
         <h2>Replay Browser</h2>
-        <br>
         <div class="note">Search and filter every processed replay. Click <strong>View replay</strong> to open the original Pokémon Showdown battle.</div>
         <br>
         <div class="row" style="align-items:flex-end;margin-top:14px;">
