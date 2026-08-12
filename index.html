@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SBL Stats Hub</title>
+<title>SBL Dashboard</title>
 <style>
   :root{
 --bg: #160308;
@@ -159,7 +159,7 @@
   #globalTable table{min-width:620px;}
 
   /* pokemon search */
-  .pokemon-search-box{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px;}
+  .pokemon-search-box{display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-top:14px; margin-bottom:14px;}
   .pokemon-search-box .search-input-wrap{flex:1; min-width:240px;}
   .pokemon-search-box input[type=text]{font-family:var(--sans); font-size:14px;}
   .pokemon-search-hint{font-size:12px; color:var(--text-dim); margin-top:8px;}
@@ -410,16 +410,17 @@
     margin-right:auto !important;
   }
 .profile-two-col .type-badge{display:none!important;}
-.pokemon-type-filter{min-width:150px;}
+.pokemon-type-filter{min-width:150px; display:flex; flex-direction:column;}
 .pokemon-type-filter label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
-.pokemon-type-filter select{width:100%;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px;font:inherit;}
+.pokemon-type-filter select{width:100%;height:38px;box-sizing:border-box;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px;font:inherit;}
 </style>
 </head>
 <body data-admin="false">
 <div id="app">
   <header>
-    <h1>League Damage Dashboard</h1>
-    <div class="sub">Paste replay links → auto-parsed stats → running season totals + weekly CSVs</div>
+    <br>
+    <h1>SBL Season 15: National Dex Draft</h1>
+    <br>
     <div id="bannerMount"></div>
   </header>
 
@@ -428,7 +429,7 @@
     <button data-tab="pokemonsearch">Pokémon Search</button>
     <button data-tab="global">Damage Board</button>
     <button data-tab="goldenfist">Golden Fist</button>
-    <button data-tab="causes">Death Causes</button>
+    <button data-tab="causes">Death Stats</button>
     <button data-tab="teamcompare">Standings</button>
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="replays">Replay Browser</button>
@@ -1552,6 +1553,7 @@
     contentEl.innerHTML = `
       <div class="panel">
         <h2>Damage Leaderboard</h2>
+        <br>
         <div class="row" style="align-items:flex-end;">
           <div><label>Scope</label>${weekSelectorHtml('globalWeek')}</div>
           <div style="flex:0;"><button class="ghost" id="exportGlobal">Export CSV</button></div>
@@ -1746,7 +1748,7 @@
   }
 
   function renderTeamComparison(){
-    contentEl.innerHTML=`<div class="panel"><h2>Team / Coach Comparison</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('compareWeek')}</div></div><div class="note" id="compareNote"></div><div id="compareBody"></div></div>`;
+    contentEl.innerHTML=`<div class="panel"><h2>Team / Coach Comparison</h2><br><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('compareWeek')}</div></div><div class="note" id="compareNote" style="margin-top:12px;"></div><div id="compareBody" style="margin-top:10px;"></div></div>`;
     const sel=document.getElementById('compareWeek');
     function draw(){
       const data=teamComparisonData(sel.value); const anyWins=data.some(x=>x.wins>0); document.getElementById('compareNote').textContent=anyWins?'Win/loss records are saved with each parsed replay. Reprocess older replays once to populate them.':'Win/loss data is not present in the stored replay parses yet; reprocess the season from the Admin page to populate it.';
@@ -1758,13 +1760,13 @@
   function renderGoldenFist(){
     contentEl.innerHTML = `
       <div class="panel gf-panel">
-        <h2>Golden Fist</h2>
+        <h2>🥇 Golden Fist</h2>
         <div class="row" style="align-items:flex-end;">
           <div><label>Scope</label>${weekSelectorHtml('gfWeek')}</div>
           <div style="flex:0;"><button class="ghost" id="exportGF">Export CSV</button></div>
         </div>
-        <br>
         <div class="note" style="margin-bottom:12px;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
+        <br>
         <div id="gfList"></div>
       </div>`;
 
@@ -1804,20 +1806,22 @@
       <div class="panel">
         <h2>Franchise Stats</h2>
         <div class="row" style="align-items:flex-end;">
+          <div><label>Scope</label>${weekSelectorHtml('teamsWeek')}</div>
           <div><label>Team</label><select id="teamSelect">${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
           <div style="flex:0;"><button class="ghost" id="exportTeams">Export all teams (CSV)</button></div>
         </div>
         ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-6px 0 14px;"></div><div id="teamTable"></div>`}
       </div>`;
     if(teams.length===0) return;
+    const weekSel = document.getElementById('teamsWeek');
     const teamSel = document.getElementById('teamSelect');
     function draw(){
       const coaches = usernamesForTeamLabel(teamSel.value);
       document.getElementById('coachLine').innerHTML = coaches.length===0 ? '' :
         `Coached by <strong>${coaches.map(escapeHtml).join(', ')}</strong>`;
-      const data = teamPokemonStats('ALL');
+      const data = teamPokemonStats(weekSel.value);
       const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>b.dealt-a.dealt);
-      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team.</div>` :
+      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team/scope.</div>` :
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
         ${list.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
@@ -1830,7 +1834,7 @@
         </tr>`).join('')}</tbody></table>`;
     }
     teamSel.addEventListener('change', draw);
-    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs('ALL','Season'));
+    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs(weekSel.value, weekSel.value==='ALL'?'Season':weekSel.value));
     draw();
   }
 
