@@ -159,10 +159,24 @@
   #globalTable table{min-width:620px;}
 
   /* pokemon search */
-  .pokemon-search-box{display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-top:14px; margin-bottom:14px;}
-  .pokemon-search-box .search-input-wrap{flex:1; min-width:240px;}
-  .pokemon-search-box input[type=text]{font-family:var(--sans); font-size:14px;}
-  .pokemon-search-hint{font-size:12px; color:var(--text-dim); margin-top:8px;}
+  /* Search controls: keep the fields aligned at their labels, not at the bottom of helper text. */
+  .pokemon-search-box{display:grid;grid-template-columns:minmax(240px,1fr) minmax(180px,220px);gap:14px;align-items:start;margin-top:18px;margin-bottom:18px;}
+  .pokemon-search-box .search-input-wrap,.pokemon-search-box .pokemon-type-filter{min-width:0;}
+  .pokemon-search-box input[type=text],.pokemon-search-box .pokemon-type-filter select{font-family:var(--sans);font-size:14px;width:100%;box-sizing:border-box;}
+  .pokemon-search-hint{font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.45;}
+
+  /* Consistent breathing room: heading -> description -> controls/content. */
+  .panel > h2 + .note{display:block;margin-top:8px;margin-bottom:18px;}
+  .panel > h2 + .note + .row,
+  .panel > h2 + .note + .pokemon-search-box,
+  .panel > h2 + .note + .section-divider{margin-top:0;}
+  .panel > h2 + .note + #replayBrowserBody,
+  .panel > h2 + .note + #pokemonSearchTable{margin-top:18px;}
+  .panel > h2 + .note + .row + #replayBrowserBody,
+  .panel > h2 + .note + .row + #pokemonSearchTable{margin-top:18px;}
+  .panel > h2 + .note + .row{margin-bottom:18px;}
+  .panel > h2 + .note + .row + .note{margin-top:0;}
+  @media(max-width:700px){.pokemon-search-box{grid-template-columns:1fr;}}
   #pokemonSearchTable{overflow-x:auto;}
   #pokemonSearchTable table{min-width:700px;}
   .search-match{background:var(--panel-alt); border-radius:8px;}
@@ -1553,7 +1567,6 @@
     contentEl.innerHTML = `
       <div class="panel">
         <h2>Damage Leaderboard</h2>
-        <br>
         <div class="row" style="align-items:flex-end;">
           <div><label>Scope</label>${weekSelectorHtml('globalWeek')}</div>
           <div style="flex:0;"><button class="ghost" id="exportGlobal">Export CSV</button></div>
@@ -1748,7 +1761,7 @@
   }
 
   function renderTeamComparison(){
-    contentEl.innerHTML=`<div class="panel"><h2>Team / Coach Comparison</h2><br><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('compareWeek')}</div></div><div class="note" id="compareNote" style="margin-top:12px;"></div><div id="compareBody" style="margin-top:10px;"></div></div>`;
+    contentEl.innerHTML=`<div class="panel"><h2>Team / Coach Comparison</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('compareWeek')}</div></div><div class="note" id="compareNote"></div><div id="compareBody"></div></div>`;
     const sel=document.getElementById('compareWeek');
     function draw(){
       const data=teamComparisonData(sel.value); const anyWins=data.some(x=>x.wins>0); document.getElementById('compareNote').textContent=anyWins?'Win/loss records are saved with each parsed replay. Reprocess older replays once to populate them.':'Win/loss data is not present in the stored replay parses yet; reprocess the season from the Admin page to populate it.';
@@ -1766,7 +1779,6 @@
           <div style="flex:0;"><button class="ghost" id="exportGF">Export CSV</button></div>
         </div>
         <div class="note" style="margin-bottom:12px;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
-        <br>
         <div id="gfList"></div>
       </div>`;
 
@@ -1805,23 +1817,22 @@
     contentEl.innerHTML = `
       <div class="panel">
         <h2>Franchise Stats</h2>
-        <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('teamsWeek')}</div>
+        <div class="note" style="margin-bottom:18px;">Full-season franchise Pokémon statistics across all processed replays.</div>
+        <div class="row franchise-controls" style="align-items:flex-end;margin-top:4px;margin-bottom:18px;">
           <div><label>Team</label><select id="teamSelect">${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
           <div style="flex:0;"><button class="ghost" id="exportTeams">Export all teams (CSV)</button></div>
         </div>
         ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-6px 0 14px;"></div><div id="teamTable"></div>`}
       </div>`;
     if(teams.length===0) return;
-    const weekSel = document.getElementById('teamsWeek');
     const teamSel = document.getElementById('teamSelect');
     function draw(){
       const coaches = usernamesForTeamLabel(teamSel.value);
       document.getElementById('coachLine').innerHTML = coaches.length===0 ? '' :
         `Coached by <strong>${coaches.map(escapeHtml).join(', ')}</strong>`;
-      const data = teamPokemonStats(weekSel.value);
+      const data = teamPokemonStats('ALL');
       const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>b.dealt-a.dealt);
-      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team/scope.</div>` :
+      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team.</div>` :
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
         ${list.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
@@ -1834,7 +1845,7 @@
         </tr>`).join('')}</tbody></table>`;
     }
     teamSel.addEventListener('change', draw);
-    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs(weekSel.value, weekSel.value==='ALL'?'Season':weekSel.value));
+    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs('ALL', 'Season'));
     draw();
   }
 
@@ -1866,8 +1877,7 @@
       <div class="panel">
         <h2>Replay Browser</h2>
         <div class="note">Search and filter every processed replay. Click <strong>View replay</strong> to open the original Pokémon Showdown battle.</div>
-        <br>
-        <div class="row" style="align-items:flex-end;margin-top:14px;">
+        <div class="row" style="align-items:flex-end;margin-top:0;">
           <div style="min-width:210px;flex:1"><label>Search</label><input id="replaySearch" type="text" placeholder="Player, franchise, Pokémon, replay ID…"></div>
           <div><label>Week</label><select id="replayWeek"><option value="ALL">All weeks</option>${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}</select></div>
           <div><label>Player</label><select id="replayPlayer"><option value="ALL">All players</option>${players.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
