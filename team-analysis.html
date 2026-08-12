@@ -55,7 +55,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 </header>
 <div id="main"></div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
 const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
@@ -426,116 +426,29 @@ function typeChartMultiplier(attacking, defending){
   return c[attacking]?.[defending] ?? 1;
 }
 
-const TYPE_CACHE=new Map();
-
-const FORM_ALIASES={
-  'landorus-t':'landorus-therian','landorus-therian':'landorus-therian',
-  'tornadus-t':'tornadus-therian','tornadus-therian':'tornadus-therian',
-  'thundurus-t':'thundurus-therian','thundurus-therian':'thundurus-therian',
-  'enamorus-t':'enamorus-therian','enamorus-therian':'enamorus-therian',
-  'hoopa-u':'hoopa-unbound','hoopa-unbound':'hoopa-unbound',
-  'necrozma-dm':'necrozma-dusk-mane','necrozma-dusk-mane':'necrozma-dusk-mane',
-  'necrozma-dw':'necrozma-dawn-wings','necrozma-dawn-wings':'necrozma-dawn-wings',
-  'urshifu-r':'urshifu-rapid-strike','urshifu-rapid-strike':'urshifu-rapid-strike',
-  'urshifu-s':'urshifu-single-strike','urshifu-single-strike':'urshifu-single-strike',
-  'calyrex-s':'calyrex-shadow-rider','calyrex-shadow-rider':'calyrex-shadow-rider',
-  'calyrex-i':'calyrex-ice-rider','calyrex-ice-rider':'calyrex-ice-rider',
-  'darmanitan-galar-zen':'darmanitan-galar-zen','darmanitan-zen':'darmanitan-zen',
-  'lycanroc-midday':'lycanroc-midday','lycanroc-midnight':'lycanroc-midnight',
-  'lycanroc-dusk':'lycanroc-dusk',
-  'basculin-red-striped':'basculin-red-striped',
-  'basculin-blue-striped':'basculin-blue-striped',
-  'basculin-white-striped':'basculin-white-striped',
-  'indeedee-f':'indeedee-female','indeedee-m':'indeedee-male',
-  'indeedee-female':'indeedee-female','indeedee-male':'indeedee-male',
-  'meowstic-f':'meowstic-female','meowstic-m':'meowstic-male',
-  'meowstic-female':'meowstic-female','meowstic-male':'meowstic-male'
+const MON_TYPES={
+  garchomp:['Dragon','Ground'],dragapult:['Dragon','Ghost'],heatran:['Fire','Steel'],
+  corviknight:['Flying','Steel'],rotom:['Electric','Ghost'],rotomwash:['Electric','Water'],
+  kingambit:['Dark','Steel'],greattusk:['Ground','Fighting'],gholdengo:['Steel','Ghost'],
+  landorus:['Ground','Flying'],landorustherian:['Ground','Flying'],greninja:['Water','Dark'],
+  charizard:['Fire','Flying'],blastoise:['Water'],venusaur:['Grass','Poison'],pikachu:['Electric']
 };
 
-function typeCandidates(species){
-  const raw=String(species||'').trim().toLowerCase()
-    .replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
-    .replace(/\./g,'').replace(/\s+/g,'-').replace(/-+/g,'-')
-    .replace(/^-|-$/g,'');
-
-  const out=[];
-  const add=x=>{
-    if(!x)return;
-    x=x.toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-');
-    if(x&&!out.includes(x))out.push(x);
-  };
-
-  add(FORM_ALIASES[raw]||raw);
-  add(raw);
-
-  // Try base species after removing form suffixes.
-  const parts=raw.split('-');
-  for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
-
-  return out;
+function monTypes(species){
+  const key=norm(species).replace(/[^a-z0-9]/g,'');
+  return MON_TYPES[key]||MON_TYPES[key.replace(/therian$/,'')]||[];
 }
 
-async function pokemonTypes(species){
-  const key=String(species||'').trim().toLowerCase();
-  if(TYPE_CACHE.has(key))return TYPE_CACHE.get(key);
-
-  for(const slug of typeCandidates(species)){
-    try{
-      const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+encodeURIComponent(slug));
-      if(!r.ok)continue;
-      const d=await r.json();
-      const types=(d.types||[])
-        .sort((a,b)=>a.slot-b.slot)
-        .map(x=>String(x.type?.name||'').toLowerCase())
-        .filter(Boolean);
-      if(types.length){
-        TYPE_CACHE.set(key,types);
-        return types;
-      }
-    }catch(e){}
-  }
-
-  TYPE_CACHE.set(key,[]);
-  return [];
-}
-
-const TYPE_CHART={
-  normal:{rock:.5,ghost:0,steel:.5},
-  fire:{fire:.5,water:.5,grass:2,ice:2,bug:2,rock:.5,dragon:.5,steel:2},
-  water:{fire:2,water:.5,grass:.5,ground:2,rock:2,dragon:.5},
-  electric:{water:2,electric:.5,grass:.5,ground:0,flying:2,dragon:.5},
-  grass:{fire:.5,water:2,grass:.5,poison:.5,ground:2,flying:.5,bug:.5,rock:2,dragon:.5,steel:.5},
-  ice:{fire:.5,water:.5,grass:2,ground:2,flying:2,dragon:2,ice:.5,steel:.5},
-  fighting:{normal:2,ice:2,rock:2,dark:2,steel:2,poison:.5,flying:.5,psychic:.5,bug:.5,ghost:0,fairy:.5},
-  poison:{grass:2,poison:.5,ground:.5,rock:.5,ghost:.5,steel:0,fairy:2},
-  ground:{fire:2,electric:2,grass:.5,poison:2,flying:0,bug:.5,rock:2,steel:2},
-  flying:{grass:2,electric:.5,fighting:2,bug:2,rock:.5,steel:.5},
-  psychic:{fighting:2,poison:2,psychic:.5,steel:.5,dark:0},
-  bug:{fire:.5,grass:2,fighting:.5,poison:.5,flying:.5,psychic:2,ghost:.5,dark:2,steel:.5,fairy:.5},
-  rock:{fire:2,ice:2,flying:2,bug:2,fighting:.5,ground:.5,steel:.5},
-  ghost:{normal:0,psychic:2,ghost:2,dark:.5},
-  dragon:{dragon:2,steel:.5,fairy:0},
-  dark:{fighting:.5,psychic:2,ghost:2,dark:.5,fairy:.5},
-  steel:{fire:.5,water:.5,electric:.5,ice:2,rock:2,fairy:2},
-  fairy:{fire:.5,fighting:2,poison:.5,dragon:2,dark:2,steel:.5}
-};
-
-async function typeMultiplier(attacker,defender){
-  const [at,dt]=await Promise.all([pokemonTypes(attacker),pokemonTypes(defender)]);
+function broadMatchup(attacker, defender){
+  const at=monTypes(attacker), dt=monTypes(defender);
   if(!at.length||!dt.length)return null;
-
-  // Best STAB attacking type against the defender's actual typing.
   let best=0;
   for(const a of at){
     let mult=1;
-    for(const d of dt)mult*=TYPE_CHART[a]?.[d]??1;
+    for(const d of dt)mult*=typeChartMultiplier(a,d);
     best=Math.max(best,mult);
   }
   return best;
-}
-
-async function broadMatchup(attacker,defender){
-  return typeMultiplier(attacker,defender);
 }
 
 function matchupLabel(mult){
@@ -554,7 +467,7 @@ async function renderComparison(team){
 
   const controls=`<section class="panel">
     <h2>Team Comparison</h2>
-    <p class="panel-desc">Compare your roster against the opponent's roster for match preparation.</p>
+    <p class="panel-desc">Compare your roster against the opponent's roster for match preparation. Type interactions and Level 100 Speed benchmarks are shown together.</p>
     <div class="comparison-grid">
       <div class="compare-select"><label>Your Team</label><select id="compareYour">${names.map(n=>`<option value="${esc(n)}" ${n===team?'selected':''}>${esc(n)}</option>`).join('')}</select></div>
       <div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>n!==team).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div>
@@ -563,16 +476,17 @@ async function renderComparison(team){
 
   if(!currentOpponent)return controls+`<section class="panel"><div class="empty">Select an opponent franchise to compare.</div></section>`;
 
-  const speedPairs=await Promise.all(your.flatMap(y=>opp.map(async o=>{
-    const [yb,ob]=await Promise.all([fetchBaseSpeed(y.species),fetchBaseSpeed(o.species)]);
-    return {
-      y:o?y:null,o,
-      ymax:yb===null?null:maxSpeedFromBase(yb,100),
-      omax:ob===null?null:maxSpeedFromBase(ob,100)
-    };
-  })));
+  const speedRows=[];
+  for(const y of your){
+    const yb=await fetchBaseSpeed(y.species);
+    const ymax=yb===null?null:maxSpeedFromBase(yb,100);
+    for(const o of opp){
+      const ob=await fetchBaseSpeed(o.species);
+      const omax=ob===null?null:maxSpeedFromBase(ob,100);
+      speedRows.push({y,o,ymax,omax,scarf:o.maxSpeed||null,oscarf:omax===null?null:scarfSpeedFromMax(omax)});
+    }
+  }
 
-  const speedFor=(y,o)=>speedPairs.find(x=>x.y.species===y.species&&x.o.species===o.species);
   const speedText=(a,b)=>{
     if(a===null||b===null)return ['Unknown','matchup-neutral'];
     if(a>b)return ['Outspeeds','matchup-good'];
@@ -580,66 +494,63 @@ async function renderComparison(team){
     return ['Speed tie','matchup-neutral'];
   };
 
-  const matrixRows=await Promise.all(your.map(async y=>{
-    const cells=await Promise.all(opp.map(async o=>{
-      const mult=await broadMatchup(y.species,o.species);
-      const s=speedFor(y,o);
-      const [speedLabel,speedClass]=speedText(s?.ymax??null,s?.omax??null);
-      const [typeLabel,typeClass]=matchupLabel(mult);
-      return `<td class="matchup-cell">
-        <span class="matchup-pill ${typeClass}">${mult===null?'Type unknown':typeLabel}</span>
-        <div class="matchup-meta">${mult===null?'':mult+'× type'}</div>
-        <span class="matchup-pill ${speedClass}" style="margin-top:5px">${speedLabel}</span>
-      </td>`;
-    }));
-    return `<tr><th>${esc(y.species)}</th>${cells.join('')}</tr>`;
-  }));
-
   const matrix=`<section class="panel">
     <h2>What Counters What</h2>
-    <p class="panel-desc">Type effectiveness and Level 100 maximum Speed are shown together.</p>
-    <div style="overflow:auto"><table class="matchup-table">
-      <thead><tr><th>Your Pokémon</th>${opp.map(m=>`<th>${esc(m.species)}</th>`).join('')}</tr></thead>
-      <tbody>${matrixRows.join('')}</tbody>
-    </table></div>
+    <p class="panel-desc">Each matchup combines broad type effectiveness with Level 100 maximum Speed. This is a preparation aid, not a full damage calculator.</p>
+    <div style="overflow:auto"><table class="matchup-table"><thead><tr><th>Your Pokémon</th>${opp.map(m=>`<th>${esc(m.species)}</th>`).join('')}</tr></thead><tbody>
+      ${your.map(y=>`<tr><th>${esc(y.species)}</th>${opp.map(o=>{
+        const mult=broadMatchup(y.species,o.species);
+        const [speedLabel,speedClass]=speedText(
+          speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species)?.ymax??null,
+          speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species)?.omax??null
+        );
+        const [typeLabel,typeClass]=matchupLabel(mult);
+        return `<td class="matchup-cell">
+          <span class="matchup-pill ${typeClass}">${mult===null?'Type unknown':typeLabel}</span>
+          <div class="matchup-meta">${mult===null?'':mult+'× type'} </div>
+          <span class="matchup-pill ${speedClass}" style="margin-top:5px">${speedLabel}</span>
+        </td>`;
+      }).join('')}</tr>`).join('')}
+    </tbody></table></div>
   </section>`;
 
-  const answerData=await Promise.all(opp.map(async o=>{
-    const scored=await Promise.all(your.map(async y=>{
-      const mult=await broadMatchup(y.species,o.species);
-      const s=speedFor(y,o);
-      return {m:y,v:mult,faster:s?.ymax!=null&&s?.omax!=null&&s.ymax>s.omax};
-    }));
-    scored.sort((a,b)=>(b.v??-1)-(a.v??-1)||(b.faster?1:0)-(a.faster?1:0));
+  const threatData=opp.map(o=>{
+    const scored=your.map(y=>{
+      const mult=broadMatchup(y.species,o.species);
+      const row=speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species);
+      const speed=(row?.ymax!=null&&row?.omax!=null)?(row.ymax-row.omax):null;
+      return {m:y,v:mult,speed};
+    }).sort((a,b)=>(b.v??-1)-(a.v??-1)||(b.speed??-999)-(a.speed??-999));
     return {o,scored};
-  }));
+  });
 
   const answers=`<section class="panel">
     <h2>Best Answers</h2>
-    <p class="panel-desc">Your strongest candidates into each opponent Pokémon, prioritizing type advantage and then Speed.</p>
-    <div class="compare-columns">${answerData.map(x=>`<div class="answer-card">
-      <h3>${esc(x.o.species)}</h3>
-      ${x.scored.slice(0,3).map((z,i)=>`<div class="threat-row"><span>${i+1}. ${esc(z.m.species)}</span><strong>${z.v===null?'?':z.v+'×'} · ${z.faster?'Faster':'Slower/unknown'}</strong></div>`).join('')}
-    </div>`).join('')}</div>
+    <p class="panel-desc">Your strongest candidates against each opponent Pokémon, prioritizing favorable typing and then Speed.</p>
+    <div class="compare-columns">${threatData.map(x=>`<div class="answer-card"><h3>${esc(x.o.species)}</h3>${x.scored.slice(0,3).map((z,i)=>{
+      const type=z.v===null?'Unknown':z.v+'×';
+      const row=speedRows.find(r=>r.y.species===z.m.species&&r.o.species===x.o.species);
+      const speed=row?.ymax!=null&&row?.omax!=null?(row.ymax>row.omax?'Faster':row.ymax<row.omax?'Slower':'Tie'):'Speed unknown';
+      return `<div class="threat-row"><span>${i+1}. ${esc(z.m.species)}</span><strong>${type} · ${speed}</strong></div>`;
+    }).join('')}</div>`).join('')}</div>
   </section>`;
 
-  const summaryPairs=[];
-  for(const x of answerData){
-    const best=x.scored[0];
-    if(best)summaryPairs.push({opp:x.o,y:best.m,mult:best.v,faster:best.faster});
-  }
-  summaryPairs.sort((a,b)=>(b.mult??-1)-(a.mult??-1)||(b.faster?1:0)-(a.faster?1:0));
+  const biggestThreats=your.map(y=>{
+    const favorable=opp.map(o=>{
+      const mult=broadMatchup(o.species,y.species);
+      const row=speedRows.find(r=>r.y.species===y.species&&r.o.species===o.species);
+      const faster=row?.omax!=null&&row?.ymax!=null&&row.omax>row.ymax;
+      return {o,mult,faster};
+    }).sort((a,b)=>(b.faster?1:0)-(a.faster?1:0)||(b.mult??-1)-(a.mult??-1));
+    return {y,favorable};
+  });
 
   const summary=`<section class="panel">
     <h2>Matchup Summary</h2>
-    <p class="panel-desc">Quick preparation snapshot of the clearest answers and threats between the two rosters.</p>
+    <p class="panel-desc">A quick prep snapshot of where the two rosters have their clearest advantages.</p>
     <div class="compare-columns">
-      <div class="answer-card"><h3>Your strongest answers</h3>
-        ${summaryPairs.slice(0,6).map(z=>`<div class="threat-row"><span>${esc(z.y.species)} → ${esc(z.opp.species)}</span><strong>${z.mult===null?'?':z.mult+'×'} · ${z.faster?'Faster':'Slower/unknown'}</strong></div>`).join('')}
-      </div>
-      <div class="answer-card"><h3>Opponent threats</h3>
-        ${summaryPairs.slice().reverse().slice(0,6).map(z=>`<div class="threat-row"><span>${esc(z.opp.species)} → ${esc(z.y.species)}</span><strong>${z.mult===null?'?':z.mult+'×'} · ${z.faster?'Opponent slower':'Opponent faster'}</strong></div>`).join('')}
-      </div>
+      <div class="answer-card"><h3>Your strongest answers</h3>${threatData.slice().sort((a,b)=>(b.scored[0]?.v??-1)-(a.scored[0]?.v??-1)).slice(0,5).map(x=>`<div class="threat-row"><span>${esc(x.o.species)}</span><strong>${esc(x.scored[0]?.m.species||'—')}</strong></div>`).join('')}</div>
+      <div class="answer-card"><h3>Opponent's biggest threats</h3>${biggestThreats.flatMap(x=>x.favorable.slice(0,1).map(z=>({y:x.y,o:z.o,m:z.mult,f:z.faster}))).sort((a,b)=>(b.f?1:0)-(a.f?1:0)||(b.m??-1)-(a.m??-1)).slice(0,6).map(z=>`<div class="threat-row"><span>${esc(z.o.species)} → ${esc(z.y.species)}</span><strong>${z.f?'Faster':'Slower'} · ${z.m===null?'?':z.m+'×'}</strong></div>`).join('')}</div>
     </div>
   </section>`;
 
@@ -687,78 +598,36 @@ function openMon(team,key){
   $('closeDetail').addEventListener('click',()=>{detail.innerHTML='';window.scrollTo({top:0,behavior:'smooth'})});
 }
 async function load(){
-  const showError=(msg)=>{
-    console.error('Team Analysis:',msg);
-    $('teamSelect').innerHTML='<option value="">Unable to load teams</option>';
-    $('main').innerHTML=`<div class="panel"><div class="empty">${esc(msg)}</div></div>`;
-  };
-
   try{
-    // Give the Supabase SDK a moment to initialize on GitHub Pages.
-    if(!window.supabase){
-      await new Promise(resolve=>setTimeout(resolve,500));
-    }
-
-    let rows=null;
-
-    // Primary path: Supabase JS client.
-    if(window.supabase?.createClient){
-      const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-      const result=await client.from('replays').select('replay_id,replay_data');
-      if(result.error)throw result.error;
-      rows=result.data||[];
-    }else{
-      // Fallback path: direct REST request. This makes the page independent
-      // of whether the CDN UMD bundle was initialized by the browser.
-      const response=await fetch(
-        SUPABASE_URL+'/rest/v1/replays?select=replay_id%2Creplay_data',
-        {headers:{
-          apikey:SUPABASE_KEY,
-          Authorization:'Bearer '+SUPABASE_KEY
-        },
-        cache:'no-store'}
-      );
-      if(!response.ok)throw new Error('Supabase request failed ('+response.status+')');
-      rows=await response.json();
-    }
-
-    for(const row of rows){
+    const {data,error}=await supabase.from('replays').select('replay_id,replay_data');
+    if(error)throw error;
+    for(const row of data||[]){
       if(row.replay_id===STATE_ID){
-        const rd=row.replay_data||{};
-        STATE.teamMap=rd.teamMap||{};
-        STATE.settings=Object.assign(STATE.settings,rd.settings||{});
+        STATE.teamMap=row.replay_data?.teamMap||{};
+        STATE.settings=Object.assign(STATE.settings,row.replay_data?.settings||{});
       }else if(row.replay_id){
         STATE.replays[row.replay_id]=row.replay_data||{};
       }
     }
-
-    const teams=[...new Set(allRows().flatMap(r=>[
-      teamFor(r.players?.p1),
-      teamFor(r.players?.p2),
-      r.team1,r.team2,r.player1Team,r.player2Team,
-      r.teams?.p1,r.teams?.p2
-    ]).filter(x=>typeof x==='string'&&x.trim()&&x.trim()!=='Unknown'))]
-      .map(x=>x.trim())
-      .sort((a,b)=>a.localeCompare(b));
-
-    const qs=new URLSearchParams(location.search);
-    const requested=qs.get('team');
-
-    $('teamSelect').innerHTML=teams.length
-      ? teams.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')
-      : '<option value="">No teams found</option>';
-
-    if(requested&&teams.includes(requested))$('teamSelect').value=requested;
-
-    if(!teams.length){
-      showError('Replay data loaded, but no team names were found. Check the replay data/team mapping in Supabase.');
-      return;
-    }
-
-    await render();
   }catch(e){
-    showError('Could not load replay data from Supabase: '+(e.message||e));
+    $('main').innerHTML=`<div class="panel"><div class="empty">Could not load shared replay data: ${esc(e.message)}</div></div>`;
+    return;
   }
+
+  const teams=[...new Set(allRows()
+    .flatMap(r=>[teamFor(r.players?.p1),teamFor(r.players?.p2)])
+    .filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b));
+
+  const qs=new URLSearchParams(location.search);
+  const requested=qs.get('team');
+
+  $('teamSelect').innerHTML=teams.length
+    ? teams.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')
+    : '<option value="">No teams found</option>';
+
+  if(requested&&teams.includes(requested))$('teamSelect').value=requested;
+  await render();
 }
 
 $('teamSelect').addEventListener('change',async()=>{
