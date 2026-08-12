@@ -38,6 +38,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 @media(max-width:800px){.comparison-grid,.compare-columns{grid-template-columns:1fr}}
 </style>
 
+
+<style>
+.type-pill{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;border:1px solid rgba(255,255,255,.12);margin-right:4px}.type-Normal{background:#8f8f9a}.type-Fire{background:#e56b4d}.type-Water{background:#5b8fe8}.type-Electric{background:#d9b72e;color:#211b00}.type-Grass{background:#68a95a}.type-Ice{background:#6fbfc5;color:#092022}.type-Fighting{background:#b84f52}.type-Poison{background:#9b5aa3}.type-Ground{background:#b78a58}.type-Flying{background:#8f7fd0}.type-Psychic{background:#dc6686}.type-Bug{background:#86a93c}.type-Rock{background:#9b824b}.type-Ghost{background:#655b9c}.type-Dragon{background:#7055c4}.type-Dark{background:#655650}.type-Steel{background:#7d8a9b}.type-Fairy{background:#c77da8}.type-unknown{background:#555;color:#ddd}
+.type-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.mini-list{display:grid;gap:7px}.mini-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}.mini-row:last-child{border-bottom:0}.mini-row strong{font-family:var(--mono)}.coverage-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.coverage-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:14px}.coverage-card h3{margin:0 0 10px;font-size:14px}.barline{display:grid;grid-template-columns:70px 1fr 38px;gap:8px;align-items:center;font-size:11px;margin:6px 0}.barline .bar{height:7px}.barline .num{text-align:right;font-family:var(--mono)}.role-chip{border:1px solid var(--border);background:var(--panel);border-radius:999px;padding:4px 7px;font-size:10px}.recommendation{border-left:3px solid var(--amber);padding:10px 12px;background:var(--panel-alt);border-radius:0 8px 8px 0;margin-top:8px}.warning{border-left-color:var(--red)}
+@media(max-width:900px){.metric-grid,.coverage-grid{grid-template-columns:1fr}.type-pill{font-size:9px}}
+</style>
 </head>
 <body>
 <div id="app">
@@ -426,135 +432,99 @@ function typeChartMultiplier(attacking, defending){
   return c[attacking]?.[defending] ?? 1;
 }
 
-const MON_TYPES={
-  garchomp:['Dragon','Ground'],dragapult:['Dragon','Ghost'],heatran:['Fire','Steel'],
-  corviknight:['Flying','Steel'],rotom:['Electric','Ghost'],rotomwash:['Electric','Water'],
-  kingambit:['Dark','Steel'],greattusk:['Ground','Fighting'],gholdengo:['Steel','Ghost'],
-  landorus:['Ground','Flying'],landorustherian:['Ground','Flying'],greninja:['Water','Dark'],
-  charizard:['Fire','Flying'],blastoise:['Water'],venusaur:['Grass','Poison'],pikachu:['Electric']
+const TYPE_NAMES=['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
+const TYPE_CHART={
+  Normal:{Rock:.5,Steel:.5,Ghost:0},Fire:{Fire:.5,Water:.5,Grass:2,Ice:2,Bug:2,Rock:.5,Dragon:.5,Steel:2},Water:{Fire:2,Water:.5,Grass:.5,Ground:2,Rock:2,Dragon:.5},Electric:{Water:2,Electric:.5,Grass:.5,Ground:0,Flying:2,Dragon:.5},Grass:{Fire:.5,Water:2,Grass:.5,Poison:.5,Ground:2,Flying:.5,Bug:.5,Rock:2,Dragon:.5,Steel:.5},Ice:{Fire:.5,Water:.5,Grass:2,Ground:2,Flying:2,Dragon:2,Ice:.5,Steel:.5},Fighting:{Normal:2,Ice:2,Rock:2,Dark:2,Steel:2,Poison:.5,Flying:.5,Psychic:.5,Bug:.5,Ghost:0,Fairy:.5},Poison:{Grass:2,Poison:.5,Ground:.5,Rock:.5,Ghost:.5,Steel:0,Fairy:2},Ground:{Fire:2,Electric:2,Grass:.5,Poison:2,Flying:0,Bug:.5,Rock:2,Steel:2},Flying:{Grass:2,Electric:.5,Fighting:2,Bug:2,Rock:.5,Steel:.5},Psychic:{Fighting:2,Poison:2,Psychic:.5,Steel:.5,Dark:0},Bug:{Fire:.5,Grass:2,Fighting:.5,Poison:.5,Flying:.5,Psychic:2,Ghost:.5,Dark:2,Steel:.5,Fairy:.5},Rock:{Fire:2,Ice:2,Flying:2,Bug:2,Fighting:.5,Ground:.5,Steel:.5},Ghost:{Normal:0,Psychic:2,Ghost:2,Dark:.5},Dragon:{Dragon:2,Steel:.5,Fairy:0},Dark:{Fighting:.5,Psychic:2,Ghost:2,Dark:.5,Fairy:2},Steel:{Fire:.5,Water:.5,Electric:.5,Ice:2,Rock:2,Fairy:2},Fairy:{Fire:.5,Fighting:2,Poison:.5,Dragon:2,Dark:2,Steel:.5}
 };
-
-function monTypes(species){
-  const key=norm(species).replace(/[^a-z0-9]/g,'');
-  return MON_TYPES[key]||MON_TYPES[key.replace(/therian$/,'')]||[];
+function typeChartMultiplier(attacking,defending){return TYPE_CHART[attacking]?.[defending]??1}
+const TYPE_CACHE=new Map();
+function typeSlugCandidates(species){
+  const original=String(species||'').trim().toLowerCase().replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m').replace(/[.:]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  const aliases={'mr-mime':'mr-mime','mr-rime':'mr-rime','mime-jr':'mime-jr','type-null':'type-null','farfetchd':'farfetchd','sirfetchd':'sirfetchd','nidoran-f':'nidoran-f','nidoran-m':'nidoran-m','landorus-t':'landorus-therian','landorus-therian':'landorus-therian','tornadus-t':'tornadus-therian','tornadus-therian':'tornadus-therian','thundurus-t':'thundurus-therian','thundurus-therian':'thundurus-therian','enamorus-t':'enamorus-therian','enamorus-therian':'enamorus-therian','hoopa-u':'hoopa-unbound','necrozma-dm':'necrozma-dusk-mane','necrozma-dw':'necrozma-dawn-wings','urshifu-r':'urshifu-rapid-strike','urshifu-s':'urshifu-single-strike','calyrex-s':'calyrex-shadow-rider','calyrex-i':'calyrex-ice-rider','indeedee-f':'indeedee-female','indeedee-m':'indeedee-male','meowstic-f':'meowstic-female','meowstic-m':'meowstic-male'};
+  const out=[]; const add=x=>{x=String(x||'').toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-');if(x&&!out.includes(x))out.push(x)};
+  add(aliases[original]||original);add(original);add(original.replace(/-/g,''));
+  const parts=original.split('-');for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
+  return out;
 }
-
-function broadMatchup(attacker, defender){
-  const at=monTypes(attacker), dt=monTypes(defender);
-  if(!at.length||!dt.length)return null;
-  let best=0;
-  for(const a of at){
-    let mult=1;
-    for(const d of dt)mult*=typeChartMultiplier(a,d);
-    best=Math.max(best,mult);
-  }
-  return best;
+async function fetchTypes(species){
+  const key=String(species||'').trim().toLowerCase(); if(TYPE_CACHE.has(key))return TYPE_CACHE.get(key);
+  for(const slug of typeSlugCandidates(species)){try{const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+encodeURIComponent(slug));if(!r.ok)continue;const d=await r.json();const types=(d.types||[]).sort((a,b)=>a.slot-b.slot).map(x=>x.type?.name).filter(Boolean).map(x=>x[0].toUpperCase()+x.slice(1));if(types.length){TYPE_CACHE.set(key,types);return types}}catch(e){}}
+  TYPE_CACHE.set(key,[]);return [];
 }
-
-function matchupLabel(mult){
-  if(mult===null)return ['Unknown','matchup-neutral'];
-  if(mult>=2)return ['Favorable','matchup-good'];
-  if(mult<=.5)return ['Unfavorable','matchup-bad'];
-  return ['Neutral','matchup-neutral'];
-}
+function typePills(types){return types.length?`<div class="type-row">${types.map(t=>`<span class="type-pill type-${esc(t)}">${esc(t)}</span>`).join('')}</div>`:'<div class="type-row"><span class="type-pill type-unknown">Type unknown</span></div>'}
+function combinedMultiplier(attackingTypes,defendingTypes){if(!attackingTypes.length||!defendingTypes.length)return null;return Math.max(...attackingTypes.map(a=>defendingTypes.reduce((m,d)=>m*typeChartMultiplier(a,d),1)))}
+function defensiveMultiplier(attackingType,defendingTypes){if(!defendingTypes.length)return null;return defendingTypes.reduce((m,d)=>m*typeChartMultiplier(attackingType,d),1)}
+function matchupLabel(mult){if(mult===null)return ['Unknown','matchup-neutral'];if(mult>=4)return ['4×+','matchup-good'];if(mult>=2)return ['Favorable','matchup-good'];if(mult===0)return ['Immune','matchup-bad'];if(mult<=.25)return ['¼×','matchup-good'];if(mult<=.5)return ['Unfavorable','matchup-bad'];return ['Neutral','matchup-neutral']}
+function fmtMult(v){if(v===null)return '?';if(v===0)return '0×';if(v===.25)return '¼×';if(v===.5)return '½×';return Number.isInteger(v)?v+'×':v.toFixed(2)+'×'}
+function moveKey(s){return norm(s).replace(/[^a-z0-9]/g,'')}
+const ROLE_RULES=[
+  ['Hazard setter',['stealthrock','spikes','toxicspikes','stickyweb']],
+  ['Hazard remover',['rapidspin','defog','mortalspin']],
+  ['Setup sweeper',['swordsdance','nastyplot','dragondance','quiverdance','calmmind','bulkup','agility','shellsmash','shiftgear','autotomize','curse','workup','tailglow','filletaway']],
+  ['Speed control',['tailwind','trickroom','electroweb','icywind','stringshot']],
+  ['Status spreader',['willowisp','thunderwave','toxic','spore','sleeppowder','stunspore','glare','yawn']],
+  ['Pivot',['uturn','voltswitch','flipturn','partingshot','teleport']],
+  ['Screens',['reflect','lightscreen','auroraveil']],
+  ['Recovery',['recover','roost','slackoff','softboiled','wish','moonlight','morningsun','synthesis','shoreup','rest']],
+  ['Physical attacker',['closecombat','earthquake','flareblitz','bravebird','stoneedge','knockoff','crunch','ironhead','playrough','liquidation','drainpunch','machpunch','suckerpunch','bulletpunch']],
+  ['Special attacker',['fireblast','flamethrower','hydropump','surf','icebeam','thunderbolt','thunder','shadowball','darkpulse','psychic','psychic','moonblast','energyball','gigadrain','makeitrain','dracometeor','dragonpulse']],
+];
+function inferRoles(m){const moves=new Set((m.gameSets||[]).flatMap(g=>g.moves||[]).map(moveKey));const roles=[];for(const [role,keys] of ROLE_RULES){if(keys.some(k=>moves.has(k)))roles.push(role)}return roles.length?roles:['Unclassified'];}
+function aggregateMoveCounts(mons){const counts={};for(const m of mons)for(const g of m.gameSets||[])for(const move of g.moves||[]){const k=String(move).trim();if(!k)continue;counts[k]=(counts[k]||0)+1}return counts}
+function leadFromReplay(r,side){const candidates=[r.leads?.[side],r.lead?.[side],r.firstPokemon?.[side],r.firstSwitch?.[side]];for(const c of candidates){if(typeof c==='string'&&c)return c;if(c?.species)return c.species}return null}
+function teamLeads(team){const counts={};for(const r of rowsForTeam(team)){const side=sideForTeam(r,team);const lead=side?leadFromReplay(r,side):null;if(lead)counts[lead]=(counts[lead]||0)+1}return counts}
+function weaknessSummary(typesByMon){const out={};for(const t of TYPE_NAMES)out[t]={weak:0,resist:0,immune:0};for(const types of Object.values(typesByMon)){for(const atk of TYPE_NAMES){const m=defensiveMultiplier(atk,types);if(m>=2)out[atk].weak++;else if(m===0)out[atk].immune++;else if(m<=.5)out[atk].resist++}}return out}
+function pct(n,d){return d?Math.round(n/d*100):0}
 
 async function renderComparison(team){
   const names=teamNames();
   const opponentDefault=names.find(x=>x!==team)||'';
   const currentOpponent=STATE.compareOpponent||opponentDefault;
-  const your=franchiseMons(team);
-  const opp=franchiseMons(currentOpponent);
-
-  const controls=`<section class="panel">
-    <h2>Team Comparison</h2>
-    <p class="panel-desc">Compare your roster against the opponent's roster for match preparation. Type interactions and Level 100 Speed benchmarks are shown together.</p>
-    <div class="comparison-grid">
-      <div class="compare-select"><label>Your Team</label><select id="compareYour">${names.map(n=>`<option value="${esc(n)}" ${n===team?'selected':''}>${esc(n)}</option>`).join('')}</select></div>
-      <div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>n!==team).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div>
-    </div>
-  </section>`;
-
+  const your=franchiseMons(team),opp=franchiseMons(currentOpponent);
+  const all=[...your,...opp];
+  const typesArr=await Promise.all(all.map(async m=>[m.species,await fetchTypes(m.species)]));
+  const typeMap={};typesArr.forEach(([s,t])=>typeMap[s]=t);
+  const yourTypes=Object.fromEntries(your.map(m=>[m.species,typeMap[m.species]||[]]));
+  const oppTypes=Object.fromEntries(opp.map(m=>[m.species,typeMap[m.species]||[]]));
+  const controls=`<section class="panel"><h2>Team Comparison</h2><p class="panel-desc">Compare roster typing, offensive and defensive matchups, speed, observed moves, roles and preparation priorities.</p><div class="comparison-grid"><div class="compare-select"><label>Your Team</label><select id="compareYour">${names.map(n=>`<option value="${esc(n)}" ${n===team?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>n!==team).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div></section>`;
   if(!currentOpponent)return controls+`<section class="panel"><div class="empty">Select an opponent franchise to compare.</div></section>`;
 
   const speedRows=[];
-  for(const y of your){
-    const yb=await fetchBaseSpeed(y.species);
-    const ymax=yb===null?null:maxSpeedFromBase(yb,100);
-    for(const o of opp){
-      const ob=await fetchBaseSpeed(o.species);
-      const omax=ob===null?null:maxSpeedFromBase(ob,100);
-      speedRows.push({y,o,ymax,omax,scarf:o.maxSpeed||null,oscarf:omax===null?null:scarfSpeedFromMax(omax)});
-    }
-  }
+  for(const y of your){const yb=await fetchBaseSpeed(y.species);const ymax=yb===null?null:maxSpeedFromBase(yb,100);for(const o of opp){const ob=await fetchBaseSpeed(o.species);const omax=ob===null?null:maxSpeedFromBase(ob,100);speedRows.push({y,o,ymax,omax,scarf:ymax===null?null:scarfSpeedFromMax(ymax),oscarf:omax===null?null:scarfSpeedFromMax(omax)});}}
+  const getSpeed=(y,o)=>speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species)||{};
+  const speedText=(a,b)=>a==null||b==null?['Unknown','matchup-neutral']:a>b?['Outspeeds','matchup-good']:a<b?['Outsped','matchup-bad']:['Speed tie','matchup-neutral'];
 
-  const speedText=(a,b)=>{
-    if(a===null||b===null)return ['Unknown','matchup-neutral'];
-    if(a>b)return ['Outspeeds','matchup-good'];
-    if(a<b)return ['Outsped','matchup-bad'];
-    return ['Speed tie','matchup-neutral'];
-  };
+  const offenseMatrix=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Best available type effectiveness for each of your Pokémon into each opponent. The multiplier is type-only and does not account for move power, ability, stats or STAB.</p><div style="overflow:auto"><table class="matchup-table"><thead><tr><th>Your Pokémon</th>${opp.map(o=>`<th><div class="matchup-name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</th>`).join('')}</tr></thead><tbody>${your.map(y=>`<tr><th><div class="matchup-name">${esc(y.species)}</div>${typePills(yourTypes[y.species]||[])}</th>${opp.map(o=>{const mult=combinedMultiplier(yourTypes[y.species]||[],oppTypes[o.species]||[]);const [tl,tc]=matchupLabel(mult);const [sl,sc]=speedText(getSpeed(y,o).ymax,getSpeed(y,o).omax);return `<td class="matchup-cell"><span class="matchup-pill ${tc}">${fmtMult(mult)} · ${tl}</span><div class="matchup-meta">Best attacking type</div><span class="matchup-pill ${sc}" style="margin-top:5px">${sl}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></div></section>`;
 
-  const matrix=`<section class="panel">
-    <h2>What Counters What</h2>
-    <p class="panel-desc">Each matchup combines broad type effectiveness with Level 100 maximum Speed. This is a preparation aid, not a full damage calculator.</p>
-    <div style="overflow:auto"><table class="matchup-table"><thead><tr><th>Your Pokémon</th>${opp.map(m=>`<th>${esc(m.species)}</th>`).join('')}</tr></thead><tbody>
-      ${your.map(y=>`<tr><th>${esc(y.species)}</th>${opp.map(o=>{
-        const mult=broadMatchup(y.species,o.species);
-        const [speedLabel,speedClass]=speedText(
-          speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species)?.ymax??null,
-          speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species)?.omax??null
-        );
-        const [typeLabel,typeClass]=matchupLabel(mult);
-        return `<td class="matchup-cell">
-          <span class="matchup-pill ${typeClass}">${mult===null?'Type unknown':typeLabel}</span>
-          <div class="matchup-meta">${mult===null?'':mult+'× type'} </div>
-          <span class="matchup-pill ${speedClass}" style="margin-top:5px">${speedLabel}</span>
-        </td>`;
-      }).join('')}</tr>`).join('')}
-    </tbody></table></div>
-  </section>`;
+  const defensiveMatrix=`<section class="panel"><h2>Defensive Matchups</h2><p class="panel-desc">How strongly each opponent Pokémon's typing pressures your Pokémon. This surfaces weaknesses, resistances and immunities.</p><div style="overflow:auto"><table class="matchup-table"><thead><tr><th>Your Pokémon</th>${opp.map(o=>`<th><div class="matchup-name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</th>`).join('')}</tr></thead><tbody>${your.map(y=>`<tr><th><div class="matchup-name">${esc(y.species)}</div>${typePills(yourTypes[y.species]||[])}</th>${opp.map(o=>{const vals=(oppTypes[o.species]||[]).map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]));const max=vals.length?Math.max(...vals):null;const [l,c]=matchupLabel(max);return `<td class="matchup-cell"><span class="matchup-pill ${c}">${fmtMult(max)} · ${l}</span><div class="matchup-meta">Strongest opposing type</div></td>`}).join('')}</tr>`).join('')}</tbody></table></div></section>`;
 
-  const threatData=opp.map(o=>{
-    const scored=your.map(y=>{
-      const mult=broadMatchup(y.species,o.species);
-      const row=speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species);
-      const speed=(row?.ymax!=null&&row?.omax!=null)?(row.ymax-row.omax):null;
-      return {m:y,v:mult,speed};
-    }).sort((a,b)=>(b.v??-1)-(a.v??-1)||(b.speed??-999)-(a.speed??-999));
-    return {o,scored};
-  });
+  const yourWeak=weaknessSummary(yourTypes),oppWeak=weaknessSummary(oppTypes);
+  const weakRows=(data,mode)=>TYPE_NAMES.map(t=>({t,n:mode==='weak'?data[t].weak:mode==='resist'?data[t].resist:data[t].immune})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n||a.t.localeCompare(b.t)).slice(0,8);
+  const coverageCard=(title,data,mode,label)=>`<div class="coverage-card"><h3>${title}</h3>${weakRows(data,mode).map(x=>`<div class="barline"><span>${x.t}</span><div class="bar"><i style="width:${Math.min(100,x.n/Math.max(1,Math.max(...TYPE_NAMES.map(t=>data[t][mode==='weak'?'weak':mode==='resist'?'resist':'immune'])))*100)}%"></i></div><span class="num">${x.n}</span></div>`).join('')||'<div class="small">No recorded entries.</div>'}</div>`;
+  const coverage=`<section class="panel"><h2>Team Type Profile</h2><p class="panel-desc">Team-wide defensive pressure points and usable type coverage derived from the recorded roster.</p><div class="coverage-grid">${coverageCard('Your weaknesses',yourWeak,'weak')} ${coverageCard('Opponent weaknesses',oppWeak,'weak')} ${coverageCard('Your resistances / immunities',yourWeak,'resist')} ${coverageCard('Opponent resistances / immunities',oppWeak,'resist')}</div></section>`;
 
-  const answers=`<section class="panel">
-    <h2>Best Answers</h2>
-    <p class="panel-desc">Your strongest candidates against each opponent Pokémon, prioritizing favorable typing and then Speed.</p>
-    <div class="compare-columns">${threatData.map(x=>`<div class="answer-card"><h3>${esc(x.o.species)}</h3>${x.scored.slice(0,3).map((z,i)=>{
-      const type=z.v===null?'Unknown':z.v+'×';
-      const row=speedRows.find(r=>r.y.species===z.m.species&&r.o.species===x.o.species);
-      const speed=row?.ymax!=null&&row?.omax!=null?(row.ymax>row.omax?'Faster':row.ymax<row.omax?'Slower':'Tie'):'Speed unknown';
-      return `<div class="threat-row"><span>${i+1}. ${esc(z.m.species)}</span><strong>${type} · ${speed}</strong></div>`;
-    }).join('')}</div>`).join('')}</div>
-  </section>`;
+  const yourMoves=aggregateMoveCounts(your),oppMoves=aggregateMoveCounts(opp);
+  const moveCard=(title,mons,moves)=>{const total=Math.max(1,mons.length);const rows=Object.entries(moves).sort((a,b)=>b[1]-a[1]).slice(0,10);return `<div class="coverage-card"><h3>${title}</h3><div class="mini-list">${rows.map(([m,n])=>`<div class="mini-row"><span>${esc(m)}</span><strong>${n}</strong></div>`).join('')||'<div class="small">No move lines captured.</div>'}</div><div class="small" style="margin-top:8px">Count = recorded move-set appearances, not confirmed usage rate.</div></div>`};
+  const moveSection=`<section class="panel"><h2>Observed Move Tendencies</h2><p class="panel-desc">Moves are aggregated from the individual replay sets currently stored for each Pokémon.</p><div class="coverage-grid">${moveCard('Your team',your,yourMoves)}${moveCard('Opponent',opp,oppMoves)}</div></section>`;
 
-  const biggestThreats=your.map(y=>{
-    const favorable=opp.map(o=>{
-      const mult=broadMatchup(o.species,y.species);
-      const row=speedRows.find(r=>r.y.species===y.species&&r.o.species===o.species);
-      const faster=row?.omax!=null&&row?.ymax!=null&&row.omax>row.ymax;
-      return {o,mult,faster};
-    }).sort((a,b)=>(b.faster?1:0)-(a.faster?1:0)||(b.mult??-1)-(a.mult??-1));
-    return {y,favorable};
-  });
+  const roleCard=(mons)=>`<div class="coverage-card"><h3>Observed roles</h3>${mons.map(m=>`<div class="mini-row"><span>${esc(m.species)}<div class="type-row">${inferRoles(m).map(r=>`<span class="role-chip">${esc(r)}</span>`).join('')}</div></span><strong>${m.gameSets?.length||0}</strong></div>`).join('')}</div>`;
+  const rolesSection=`<section class="panel"><h2>Role & Function Scouting</h2><p class="panel-desc">Roles are inferred from observed moves. They are evidence-based labels, not guaranteed team roles.</p><div class="coverage-grid">${roleCard(your)}${roleCard(opp)}</div></section>`;
 
-  const summary=`<section class="panel">
-    <h2>Matchup Summary</h2>
-    <p class="panel-desc">A quick prep snapshot of where the two rosters have their clearest advantages.</p>
-    <div class="compare-columns">
-      <div class="answer-card"><h3>Your strongest answers</h3>${threatData.slice().sort((a,b)=>(b.scored[0]?.v??-1)-(a.scored[0]?.v??-1)).slice(0,5).map(x=>`<div class="threat-row"><span>${esc(x.o.species)}</span><strong>${esc(x.scored[0]?.m.species||'—')}</strong></div>`).join('')}</div>
-      <div class="answer-card"><h3>Opponent's biggest threats</h3>${biggestThreats.flatMap(x=>x.favorable.slice(0,1).map(z=>({y:x.y,o:z.o,m:z.mult,f:z.faster}))).sort((a,b)=>(b.f?1:0)-(a.f?1:0)||(b.m??-1)-(a.m??-1)).slice(0,6).map(z=>`<div class="threat-row"><span>${esc(z.o.species)} → ${esc(z.y.species)}</span><strong>${z.f?'Faster':'Slower'} · ${z.m===null?'?':z.m+'×'}</strong></div>`).join('')}</div>
-    </div>
-  </section>`;
+  const leadYour=teamLeads(team),leadOpp=teamLeads(currentOpponent);const leadTotalY=Object.values(leadYour).reduce((a,b)=>a+b,0),leadTotalO=Object.values(leadOpp).reduce((a,b)=>a+b,0);
+  const leadCard=(title,data,total)=>`<div class="coverage-card"><h3>${title}</h3>${Object.entries(data).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([m,n])=>`<div class="mini-row"><span>${esc(m)}</span><strong>${pct(n,total)}%</strong></div>`).join('')||'<div class="small">Lead data is not present in the current replay schema.</div>'}</div>`;
+  const leadsSection=`<section class="panel"><h2>Lead Tendencies</h2><p class="panel-desc">Uses explicit lead fields when they exist in replay data. No lead is guessed from roster order.</p><div class="coverage-grid">${leadCard('Your leads',leadYour,leadTotalY)}${leadCard('Opponent leads',leadOpp,leadTotalO)}</div></section>`;
 
-  return controls+summary+answers+matrix;
+  const threatData=opp.map(o=>{const scored=your.map(y=>{const off=combinedMultiplier(yourTypes[y.species]||[],oppTypes[o.species]||[]);const def=(oppTypes[o.species]||[]).length?Math.max(...oppTypes[o.species].map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]))):null;const row=getSpeed(y,o);const speed=(row.ymax!=null&&row.omax!=null)?row.ymax-row.omax:null;return {m:y,off,def,speed}}).sort((a,b)=>(b.off??-1)-(a.off??-1)||(b.speed??-999)-(a.speed??-999));return {o,scored}});
+  const answers=`<section class="panel"><h2>Best Answers</h2><p class="panel-desc">Candidates are ranked primarily by favorable offensive typing, then Speed. Use observed moves and roles as context before committing to an answer.</p><div class="compare-columns">${threatData.map(x=>`<div class="answer-card"><h3>${esc(x.o.species)} ${typePills(oppTypes[x.o.species]||[])}</h3>${x.scored.slice(0,3).map((z,i)=>{const row=getSpeed(z.m,x.o);const speed=row.ymax!=null&&row.omax!=null?(row.ymax>row.omax?'Faster':row.ymax<row.omax?'Slower':'Tie'):'Speed unknown';return `<div class="threat-row"><span>${i+1}. ${esc(z.m.species)}</span><strong>${fmtMult(z.off)} · ${speed}</strong></div>`}).join('')}</div>`).join('')}</div></section>`;
+
+  const teamWeaknesses=TYPE_NAMES.map(t=>({t,y:yourWeak[t].weak,o:oppWeak[t].weak})).sort((a,b)=>(b.o-b.y)-(a.o-a.y));
+  const strongestAnswers=threatData.map(x=>({op:x.o,ans:x.scored[0]})).filter(x=>x.ans).sort((a,b)=>(b.ans.off??-1)-(a.ans.off??-1)).slice(0,5);
+  const biggestThreats=your.map(y=>{const best=opp.map(o=>{const pressure=(oppTypes[o.species]||[]).length?Math.max(...oppTypes[o.species].map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]))):null;const row=getSpeed(y,o);return {o,pressure,faster:row.omax!=null&&row.ymax!=null&&row.omax>row.ymax}}).sort((a,b)=>(b.faster?1:0)-(a.faster?1:0)||(b.pressure??-1)-(a.pressure??-1))[0];return {y,best}}).filter(x=>x.best);
+  const prep=`<section class="panel"><h2>Match Preparation</h2><p class="panel-desc">A concise scouting layer combining type pressure, Speed and observed roster evidence.</p><div class="metric-grid"><div class="answer-card"><h3>Best preparation answers</h3>${strongestAnswers.map(x=>`<div class="recommendation"><strong>${esc(x.op.species)}</strong> → ${esc(x.ans.m.species)}<div class="small">${fmtMult(x.ans.off)} typing · ${x.ans.speed!=null?(x.ans.speed>0?'faster':'slower'):'speed unknown'}</div></div>`).join('')||'<div class="small">No clear answer available.</div>'}</div><div class="answer-card"><h3>Biggest threats</h3>${biggestThreats.slice(0,6).map(x=>`<div class="recommendation warning"><strong>${esc(x.best.o.species)}</strong> → ${esc(x.y)}<div class="small">${x.best.faster?'Speed advantage · ':''}${fmtMult(x.best.pressure)} defensive pressure</div></div>`).join('')||'<div class="small">No clear threat found.</div>'}</div><div class="answer-card"><h3>Pressure points</h3>${teamWeaknesses.slice(0,6).map(x=>`<div class="mini-row"><span>${x.t}</span><strong>You ${x.y} · Opp ${x.o}</strong></div>`).join('')}</div></div></section>`;
+
+  const speedSection=`<section class="panel"><h2>Speed Control</h2><p class="panel-desc">Level 100 maximum Speed assumes 31 IVs, 252 Speed EVs and a beneficial nature; Scarf is 1.5×. These are benchmarks, not observed sets.</p><div style="overflow:auto"><table><thead><tr><th>Your Pokémon</th><th class="num">Max</th><th class="num">Scarf</th><th>Key opponent benchmarks</th></tr></thead><tbody>${your.map(y=>{const row=opp.map(o=>{const s=getSpeed(y,o);return s.omax!=null&&s.ymax!=null?`${esc(o.species)} ${s.ymax>s.omax?'✓':'✕'}`:null}).filter(Boolean).slice(0,4);const s=getSpeed(y,opp[0]||{});return `<tr><td>${esc(y.species)}</td><td class="num">${s.ymax??'—'}</td><td class="num">${s.scarf??'—'}</td><td>${row.join(' · ')||'—'}</td></tr>`}).join('')}</tbody></table></div></section>`;
+
+  return controls+prep+coverage+offenseMatrix+defensiveMatrix+speedSection+answers+moveSection+rolesSection+leadsSection;
 }
 
 async function render(){
