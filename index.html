@@ -173,6 +173,21 @@
   .gf-diff{font-family:var(--mono); font-size:20px; color:var(--teal); min-width:60px; text-align:right;}
   .gf-diff.neg{color:var(--red);}
 
+
+  .profile-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;}
+  .profile-grid>div{background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:11px 12px;}
+  .profile-grid span{display:block;font-size:10px;text-transform:uppercase;color:var(--text-dim);letter-spacing:.05em;margin-bottom:4px;}
+  .profile-grid strong{font-family:var(--mono);font-size:17px;}
+  .profile-two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .mini-heading{font-size:12px;text-transform:uppercase;color:var(--text-dim);letter-spacing:.06em;margin:0 0 8px;}
+  .selected-row{outline:1px solid var(--amber);outline-offset:-1px;background:var(--panel-alt);}
+  .record-grid{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;}
+  .record-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:15px;min-height:92px;}
+  .record-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
+  .record-value{font-family:var(--mono);font-size:19px;margin-top:8px;line-height:1.25;}
+  .record-sub{font-size:11px;margin-top:7px;}
+  @media(max-width:850px){.profile-grid{grid-template-columns:repeat(2,1fr)}.profile-two-col{grid-template-columns:1fr}.record-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}}
+
   /* audit modal */
   td.auditable{cursor:pointer; text-decoration:underline dotted var(--text-dim); text-underline-offset:3px;}
   td.auditable:hover{color:var(--amber);}
@@ -233,7 +248,10 @@
     <button data-tab="global">Leaderboards</button>
     <button data-tab="pokemonsearch">Pokémon Search</button>
     <button data-tab="goldenfist">Golden Fist</button>
+    <button data-tab="causes">Death Causes</button>
     <button data-tab="teams">Franchise Stats</button>
+    <button data-tab="teamcompare">Team Comparison</button>
+    <button data-tab="records">Records</button>
     <button data-tab="players">Replays by Player</button>
     <button data-tab="settings">Settings</button>
   </nav>
@@ -473,6 +491,7 @@
     const appearedThisReplay = new Set();
     let lastMove = null; // {source, target, move}
     let currentTurn = 0;
+    let winner = null;
     // NOTE: these three all store direct references to a mon's *stats object*
     // (captured at the moment of the event via ensureMon), never a slot label.
     // A slot label like "p1a" gets reused by a different mon later in the game,
@@ -533,6 +552,8 @@
       } else if(cmd === 'turn'){
         const t = parseInt(parts[2], 10);
         if(!isNaN(t)) currentTurn = t;
+      } else if(cmd === 'win'){
+        winner = (parts[2] || '').trim() || null;
       } else if(cmd === 'switch' || cmd === 'drag'){
         const slotFull = parts[2]; // "p1a: Nickname"
         const slot = slotFull.split(':')[0].trim();
@@ -748,7 +769,7 @@
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons };
+      players, mons, winner };
   }
 
   // ---------- processing ----------
@@ -1045,13 +1066,16 @@
   }
 
   function render(){
-    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'players' || activeTab === 'pokemonsearch');
+    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'players' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'records');
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     if(activeTab === 'process') return renderProcess();
     if(activeTab === 'global') return renderLeaderboards();
     if(activeTab === 'pokemonsearch') return renderPokemonSearch();
     if(activeTab === 'goldenfist') return renderGoldenFist();
+    if(activeTab === 'causes') return renderDeathCauses();
     if(activeTab === 'teams') return renderTeams();
+    if(activeTab === 'teamcompare') return renderTeamComparison();
+    if(activeTab === 'records') return renderRecords();
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'settings') return renderSettings();
   }
@@ -1230,7 +1254,7 @@
       table.innerHTML = `<table><thead><tr>
         <th>Pokémon</th><th>Coach / Team</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th>
       </tr></thead><tbody>
-        ${stats.map(s=>`<tr class="search-match">
+        ${stats.map(s=>`<tr class="search-match" data-profile="${escapeHtml(s.species)}" style="cursor:pointer;">
           <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
           <td>${escapeHtml(Array.from(s.coaches).sort().join(', ') || 'Unknown')}</td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
@@ -1240,13 +1264,148 @@
           <td class="num">${s.games}</td>
           <td class="num">${(s.games ? s.dealt/s.games : 0).toFixed(1)}</td>
         </tr>`).join('')}
-      </tbody></table>`;
+      </tbody></table><div id="pokemonProfile" style="margin-top:16px;"><div class="empty-state">Click a Pokémon row to open its full profile.</div></div>`;
+      table.querySelectorAll('[data-profile]').forEach(row=>row.addEventListener('click',(e)=>{
+        if(e.target.closest('td.auditable')) return;
+        table.querySelectorAll('[data-profile]').forEach(r=>r.classList.remove('selected-row'));
+        row.classList.add('selected-row');
+        document.getElementById('pokemonProfile').innerHTML=renderPokemonProfile(row.dataset.profile, weekSel.value);
+      }));
     }
 
     input.addEventListener('input', draw);
     weekSel.addEventListener('change', draw);
     setTimeout(()=>input.focus(), 0);
     draw();
+  }
+
+
+  // ---------- Pokémon profile / death causes / team comparison / records ----------
+  function pokemonProfileData(species, weekFilter){
+    const target = normName(species);
+    const rows = [];
+    const coaches = new Set();
+    for(const r of allReplays(weekFilter)){
+      for(const k in r.mons){
+        const m = r.mons[k];
+        if(normName(m.species) !== target) continue;
+        coaches.add(teamFor(r.players[m.side]));
+        rows.push({replay:r, mon:m});
+      }
+    }
+    const agg = {species: rows[0]?.mon?.species || species, dealt:0,taken:0,kills:0,deaths:0,games:0,killLog:[],deathLog:[],coaches};
+    rows.forEach(({mon})=>{
+      agg.dealt += mon.damageDealt||0; agg.taken += mon.damageTaken||0;
+      agg.kills += mon.kills||0; agg.deaths += mon.deaths||0; agg.games += mon.appearances||0;
+      agg.killLog.push(...(mon.killLog||[])); agg.deathLog.push(...(mon.deathLog||[]));
+    });
+    return agg;
+  }
+
+  function renderPokemonProfile(species, weekFilter){
+    const s = pokemonProfileData(species, weekFilter);
+    if(!s.games) return `<div class="empty-state">No data for ${escapeHtml(species)} in this scope.</div>`;
+    const kd = s.deaths ? (s.kills/s.deaths).toFixed(2) : (s.kills ? '∞' : '0');
+    const avg = s.games ? (s.dealt/s.games).toFixed(1) : '0';
+    const causeCounts = {};
+    s.deathLog.forEach(d=>{ const c=d.cause||'Unattributed'; causeCounts[c]=(causeCounts[c]||0)+1; });
+    const causes = Object.entries(causeCounts).sort((a,b)=>b[1]-a[1]);
+    return `<div class="panel pokemon-profile">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        ${spriteImg(s.species,'sprite-xl')}
+        <div><h2 style="margin:0;color:var(--text);text-transform:none;letter-spacing:0;font-size:20px;">${escapeHtml(s.species)}</h2>
+        <div class="note" style="margin-top:3px;">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div></div>
+      </div>
+      <div class="profile-grid">
+        <div><span>Games</span><strong>${s.games}</strong></div><div><span>Kills</span><strong class="kills">${s.kills}</strong></div>
+        <div><span>Deaths</span><strong class="taken">${s.deaths}</strong></div><div><span>K/D</span><strong>${kd}</strong></div>
+        <div><span>Damage dealt</span><strong class="dealt">${s.dealt.toFixed(1)}</strong></div><div><span>Damage taken</span><strong class="taken">${s.taken.toFixed(1)}</strong></div>
+        <div><span>Avg dmg/game</span><strong>${avg}</strong></div><div><span>Kill rate/game</span><strong>${s.games?(s.kills/s.games).toFixed(2):'0'}</strong></div>
+      </div>
+      <div class="section-divider"></div>
+      <div class="profile-two-col">
+        <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>b.turn-a.turn).map(x=>`<tr><td>${x.turn}</td><td>${escapeHtml(x.victim||'?')}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
+        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>b.turn-a.turn).map(x=>`<tr><td>${x.turn}</td><td>${escapeHtml(x.killer||'Unattributed')}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
+      </div>
+      ${causes.length ? `<div class="section-divider"></div><div class="note"><strong>Death causes:</strong> ${causes.map(([c,n])=>`${escapeHtml(c)} (${n})`).join(' · ')}</div>`:''}
+    </div>`;
+  }
+
+  function renderDeathCauses(){
+    contentEl.innerHTML=`<div class="panel"><h2>Death Causes</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('causeWeek')}</div></div><div id="causeBody"></div></div>`;
+    const sel=document.getElementById('causeWeek');
+    function draw(){
+      const counts={}; const pokemon={}; const causeLogs={};
+      for(const r of allReplays(sel.value)) for(const k in r.mons){
+        const m=r.mons[k];
+        for(const d of (m.deathLog||[])){
+          const c=d.cause||'Unattributed'; counts[c]=(counts[c]||0)+1;
+          if(!pokemon[c]) pokemon[c]={}; const sp=m.species; pokemon[c][sp]=(pokemon[c][sp]||0)+1;
+          if(!causeLogs[c]) causeLogs[c]=[]; causeLogs[c].push({pokemon:sp,...d});
+        }
+      }
+      const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+      document.getElementById('causeBody').innerHTML=!rows.length?`<div class="empty-state">No deaths recorded.</div>`:`<table><thead><tr><th class="rank">#</th><th>Cause</th><th class="num">Deaths</th><th>Most affected Pokémon</th></tr></thead><tbody>${rows.map(([c,n],i)=>{const top=Object.entries(pokemon[c]).sort((a,b)=>b[1]-a[1]).slice(0,5);return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(c)}</td><td class="num taken">${n}</td><td>${top.map(([sp,v])=>`${escapeHtml(sp)} <span class="badge">${v}</span>`).join(' ')}</td></tr>`}).join('')}</tbody></table>`;
+    }
+    sel.addEventListener('change',draw); draw();
+  }
+
+  function teamComparisonData(weekFilter){
+    const out={};
+    for(const r of allReplays(weekFilter)){
+      const sides=['p1','p2'];
+      for(const side of sides){
+        const team=teamFor(r.players[side]); const key=groupKey(team);
+        if(!out[key]) out[key]={team,players:new Set(),games:0,wins:0,kills:0,deaths:0,dealt:0,taken:0};
+        const t=out[key]; t.games++; t.players.add(r.players[side]||'?');
+        if(r.winner && r.winner.toLowerCase()===(r.players[side]||'').toLowerCase()) t.wins++;
+        for(const k in r.mons){ const m=r.mons[k]; if(m.side===side){t.kills+=m.kills||0;t.deaths+=m.deaths||0;t.dealt+=m.damageDealt||0;t.taken+=m.damageTaken||0;} }
+      }
+    }
+    return Object.values(out).sort((a,b)=>b.wins-a.wins || (b.kills-b.deaths)-(a.kills-a.deaths) || b.dealt-a.dealt);
+  }
+
+  function renderTeamComparison(){
+    contentEl.innerHTML=`<div class="panel"><h2>Team / Coach Comparison</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('compareWeek')}</div></div><div class="note" id="compareNote"></div><div id="compareBody"></div></div>`;
+    const sel=document.getElementById('compareWeek');
+    function draw(){
+      const data=teamComparisonData(sel.value); const anyWins=data.some(x=>x.wins>0); document.getElementById('compareNote').textContent=anyWins?'Win rate is based on replay |win| events. Reprocess older replays if they were parsed before winner tracking was added.':'Win data is not present in the stored replay parses yet; reprocess the season from the Admin page to populate win rates.';
+      document.getElementById('compareBody').innerHTML=!data.length?`<div class="empty-state">No team data.</div>`:`<table><thead><tr><th class="rank">#</th><th>Team / Coach</th><th class="num">Games</th><th class="num">Wins</th><th class="num">Win %</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">K/D</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th></tr></thead><tbody>${data.map((x,i)=>{const kd=x.deaths?x.kills/x.deaths:(x.kills?'∞':0);return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(x.team)}</td><td class="num">${x.games}</td><td class="num kills">${x.wins}</td><td class="num">${x.games?(100*x.wins/x.games).toFixed(1)+'%':'—'}</td><td class="num kills">${x.kills}</td><td class="num taken">${x.deaths}</td><td class="num">${typeof kd==='number'?kd.toFixed(2):kd}</td><td class="num dealt">${x.dealt.toFixed(1)}</td><td class="num taken">${x.taken.toFixed(1)}</td></tr>`}).join('')}</tbody></table>`;
+    }
+    sel.addEventListener('change',draw); draw();
+  }
+
+  function renderRecords(){
+    contentEl.innerHTML=`<div class="panel"><h2>League Records</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('recordWeek')}</div></div><div id="recordsBody"></div></div>`;
+    const sel=document.getElementById('recordWeek');
+    function draw(){
+      const reps=allReplays(sel.value); const pokemon=[]; const kills=[]; const deaths=[]; const replayStats=[];
+      for(const r of reps){
+        let rk=0,rd=0,damage=0,taken=0; const appearances=[];
+        for(const k in r.mons){const m=r.mons[k]; rk+=m.kills||0;rd+=m.deaths||0;damage+=m.damageDealt||0;taken+=m.damageTaken||0; if(m.appearances) appearances.push(m); for(const x of (m.killLog||[])) kills.push({...x,attacker:m.species,week:r.week}); for(const x of (m.deathLog||[])) deaths.push({...x,victim:m.species,week:r.week}); pokemon.push({species:m.species,kills:m.kills||0,deaths:m.deaths||0,games:m.appearances||0,damage:m.damageDealt||0,taken:m.damageTaken||0,replayId:r.id,week:r.week});}
+        replayStats.push({r,rk,rd,damage,taken});
+      }
+      const maxBy=(arr,key)=>arr.length?arr.slice().sort((a,b)=>(b[key]||0)-(a[key]||0))[0]:null;
+      const maxKill= maxBy(kills,'turn') && kills.length ? kills.slice().sort((a,b)=>0)[0] : null;
+      const totalKills=kills.length, totalDeaths=deaths.length;
+      const mostKillsOne= maxBy(replayStats,'rk'), mostDeathsOne=maxBy(replayStats,'rd'), mostDamage=maxBy(replayStats,'damage'), mostTaken=maxBy(replayStats,'taken');
+      const bestKD=pokemon.filter(x=>x.games>0).map(x=>({...x,kd:x.deaths?x.kills/x.deaths:(x.kills?Infinity:0)})).sort((a,b)=>b.kd-a.kd)[0];
+      const bestGameKD=replayStats.map(x=>({...x,kd:x.rd?x.rk/x.rd:(x.rk?Infinity:0)})).sort((a,b)=>b.kd-a.kd)[0];
+      const monRecord=(field)=>{let best=null;for(const r of reps){for(const k in r.mons){const m=r.mons[k];const value=m[field]||0;if(value>0){const v={species:m.species,value,replayId:r.id,week:r.week};if(!best||v.value>best.value)best=v;}}}return best;};
+      const mostKillsMon=monRecord('kills'), mostDeathsMon=monRecord('deaths'), mostDamageMon=monRecord('damageDealt'), mostTakenMon=monRecord('damageTaken');
+      const cards=[
+        ['Most kills in one replay',mostKillsOne?`${mostKillsOne.rk}`:'—',mostKillsOne],
+        ['Most deaths in one replay',mostDeathsOne?`${mostDeathsOne.rd}`:'—',mostDeathsOne],
+        ['Most damage in one replay',mostDamage?mostDamage.damage.toFixed(1):'—',mostDamage],
+        ['Most damage taken in one replay',mostTaken?mostTaken.taken.toFixed(1):'—',mostTaken],
+        ['Best Pokémon K/D',bestKD?`${bestKD.species} · ${bestKD.kd===Infinity?'∞':bestKD.kd.toFixed(2)}`:'—',bestKD],
+        ['Most kills by one Pokémon in a replay',mostKillsMon?`${mostKillsMon.species} · ${mostKillsMon.value}`:'—',mostKillsMon],
+        ['Most damage by one Pokémon in a replay',mostDamageMon?`${mostDamageMon.species} · ${mostDamageMon.value.toFixed(1)}`:'—',mostDamageMon],
+        ['Most deaths by one Pokémon in a replay',mostDeathsMon?`${mostDeathsMon.species} · ${mostDeathsMon.value}`:'—',mostDeathsMon]
+      ];
+      document.getElementById('recordsBody').innerHTML=`<div class="record-grid">${cards.map(c=>`<div class="record-card"><div class="record-label">${c[0]}</div><div class="record-value">${escapeHtml(c[1])}</div>${c[2]?.r?`<div class="record-sub"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(c[2].r.id)}" target="_blank" rel="noopener">View replay</a></div>`:c[2]?.replayId?`<div class="record-sub"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(c[2].replayId)}" target="_blank" rel="noopener">View replay</a></div>`:''}</div>`).join('')}</div>`;
+    }
+    sel.addEventListener('change',draw); draw();
   }
 
   function renderGoldenFist(){
