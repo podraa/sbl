@@ -88,7 +88,7 @@
   table{width:100%; border-collapse:collapse; font-size:13px;}
   th{
     text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--text-dim); padding:8px 10px; border-bottom:1px solid var(--border);
+    color:#fff; padding:8px 10px; border-bottom:1px solid var(--border);
   }
   td{padding:8px 10px; border-bottom:1px solid var(--border);}
   tr:last-child td{border-bottom:none;}
@@ -775,6 +775,7 @@
     const start=mondayStartMs(Math.min(...times)); STATE.settings.seasonStartMonday=start; return start;
   }
   function autoWeekForReplay(replay){
+    if(replay?.weekOverride) return replay.weekOverride;
     const ts=replayTimestampMs(replay); if(!ts) return 'Unassigned';
     let start=ensureSeasonStart(); if(!start || mondayStartMs(ts)<start){ start=mondayStartMs(ts); STATE.settings.seasonStartMonday=start; }
     return `Week ${Math.floor((mondayStartMs(ts)-start)/604800000)+1}`;
@@ -784,6 +785,60 @@
     if(!times.length) return;
     STATE.settings.seasonStartMonday=mondayStartMs(Math.min(...times));
     for(const r of Object.values(STATE.replays)) r.week=autoWeekForReplay(r);
+  }
+
+  // ---------- automatic player-name consolidation ----------
+  // In a draft league, repeated-letter variants are only merged when their
+  // replay rosters share at least one drafted Pokémon. Exact case variants
+  // (e.g. Lynxzz/lynxzz) are always merged. The most-used spelling wins.
+  function consolidatePlayerAliases(){
+    const users={};
+    for(const r of Object.values(STATE.replays)){
+      for(const side of ['p1','p2']){
+        const u=(r.players?.[side]||'').trim(); if(!u) continue;
+        const key=u.toLowerCase();
+        if(!users[key]) users[key]={display:u,games:0,mons:new Set()};
+        users[key].games++;
+        (r.teamRoster?.[side]||[]).forEach(sp=>users[key].mons.add(normName(sp)));
+      }
+    }
+    const byFuzzy={};
+    for(const u of Object.values(users)){
+      const fk=fuzzyKey(u.display);
+      if(!fk) continue;
+      (byFuzzy[fk] ||= []).push(u);
+    }
+    const rename={};
+    for(const group of Object.values(byFuzzy)){
+      if(group.length<2) continue;
+      group.sort((a,b)=>b.games-a.games || a.display.localeCompare(b.display));
+      const canonical=group[0];
+      for(const candidate of group.slice(1)){
+        const exactCaseInsensitive = candidate.display.toLowerCase()===canonical.display.toLowerCase();
+        let overlap=false;
+        for(const mon of candidate.mons){ if(canonical.mons.has(mon)){ overlap=true; break; } }
+        if(exactCaseInsensitive || overlap) rename[candidate.display.toLowerCase()]=canonical.display;
+      }
+    }
+    let changed=false;
+    for(const r of Object.values(STATE.replays)){
+      for(const side of ['p1','p2']){
+        const u=(r.players?.[side]||'').trim();
+        const canonical=rename[u.toLowerCase()];
+        if(canonical && canonical!==u){ r.players[side]=canonical; changed=true; }
+      }
+      if(r.winner){
+        const canonical=rename[String(r.winner).toLowerCase()];
+        if(canonical && canonical!==r.winner){ r.winner=canonical; changed=true; }
+      }
+    }
+    // Carry team mappings across aliases, preferring the canonical spelling.
+    for(const [alias,canonical] of Object.entries(rename)){
+      const oldTeam=STATE.teamMap[alias];
+      if(oldTeam && !STATE.teamMap[canonical.toLowerCase()]) STATE.teamMap[canonical.toLowerCase()]=oldTeam;
+      if(oldTeam) delete STATE.teamMap[alias];
+    }
+    return changed;
   }
 
   // ---------- processing ----------
@@ -800,6 +855,7 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
+        parsed.weekOverride = oldOverride;
         parsed.week = autoWeekForReplay(parsed);
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
@@ -810,7 +866,7 @@
         failed++;
       }
     }
-    if(added > 0){ recalculateAllWeeks(); await saveReplays(); }
+    if(added > 0){ consolidatePlayerAliases(); recalculateAllWeeks(); await saveReplays(); await saveTeamMap(); }
     appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${failed} failed.`, false);
     renderTicker();
     render(); // refresh whatever tab is open
@@ -1032,7 +1088,7 @@
         <div class="lbl">Dmg Dealt</div>
         <div class="pname-cell">${spriteImg(s.species,'sprite')}<div>
           <div class="name">${escapeHtml(s.species)}</div>
-          <div class="val">${s.dealt.toFixed(0)}%</div>
+          <div class="val">${s.dealt.toFixed(0)} dmg</div>
         </div></div>
       </div>`).join('');
   }
@@ -1137,7 +1193,7 @@
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
     for(const id of ids){
-      const oldWeek = STATE.replays[id].week;
+      const oldOverride = STATE.replays[id].weekOverride || null;
       try{
         const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
         if(!resp.ok) throw new Error('not found (' + resp.status + ')');
@@ -1153,20 +1209,30 @@
         failed++;
       }
     }
+    consolidatePlayerAliases();
     recalculateAllWeeks();
     await saveReplays();
+    await saveTeamMap();
     appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
     renderTicker();
     render();
   }
 
   function renderReplayTable(){
-    const list = Object.values(STATE.replays).sort((a,b)=>b.processedAt-a.processedAt);
+    const list = Object.values(STATE.replays).sort((a,b)=>replayTimestampMs(b)-replayTimestampMs(a));
+    const maxWeek = Math.max(1,...Object.values(STATE.replays).map(r=>parseInt(String(r.week||'').match(/\d+/)?.[0]||'0',10)));
+    const weekOptions = Array.from({length:maxWeek+2},(_,i)=>`<option value="Week ${i+1}">Week ${i+1}</option>`).join('');
     const rows = list.map(r => `
       <tr>
         <td>${escapeHtml(r.week||'Unassigned')}</td>
         <td>${escapeHtml(r.players.p1||'?')} <span style="color:var(--text-dim)">vs</span> ${escapeHtml(r.players.p2||'?')}</td>
         <td style="color:var(--text-dim)">${escapeHtml(r.format||'')}</td>
+        <td>
+          <select class="week-override" data-week-override="${escapeHtml(r.id)}" title="Override this replay's automatic week">
+            <option value="">Auto (${escapeHtml(r.week||'Unassigned')})</option>
+            ${weekOptions.replace(`value="${escapeHtml(r.week||'')}"`,`value="${escapeHtml(r.week||'')}" selected`)}
+          </select>
+        </td>
         <td class="num"><button class="ghost small danger-btn" data-remove="${r.id}">Remove</button></td>
       </tr>`).join('');
     setTimeout(()=>{
@@ -1178,132 +1244,19 @@
           render();
         });
       });
+      document.querySelectorAll('[data-week-override]').forEach(sel=>{
+        sel.addEventListener('change', async ()=>{
+          const r=STATE.replays[sel.dataset.weekOverride];
+          if(!r) return;
+          r.weekOverride=sel.value || null;
+          r.week=autoWeekForReplay(r);
+          await saveReplays();
+          renderTicker();
+          render();
+        });
+      });
     }, 0);
-    return `<table><thead><tr><th>Week</th><th>Matchup</th><th>Format</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
-  }
-
-  function weekSelectorHtml(id){
-    const weeks = weeksList();
-    return `<select id="${id}">
-      <option value="ALL">All season</option>
-      ${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}
-    </select>`;
-  }
-
-  function renderLeaderboards(){
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Damage Leaderboard</h2>
-        <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('globalWeek')}</div>
-          <div style="flex:0;"><button class="ghost" id="exportGlobal">Export CSV</button></div>
-        </div>
-        <div id="globalTable"></div>
-        <a class="nav-link" id="toTeamsLink">Want per-team breakdowns? → View Franchise Stats</a>
-      </div>`;
-
-    document.getElementById('toTeamsLink').addEventListener('click', ()=> goToTab('teams'));
-
-    const sel = document.getElementById('globalWeek');
-    function drawGlobal(){
-      const stats = globalPokemonStats(sel.value);
-      document.getElementById('globalTable').innerHTML = stats.length===0 ? `<div class="empty-state">No data for this scope yet.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
-        ${stats.map((s,i)=>`<tr>
-          <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
-          <td class="num dealt">${s.dealt.toFixed(1)}</td>
-          <td class="num taken">${s.taken.toFixed(1)}</td>
-          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
-          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
-          <td class="num">${s.games}</td>
-          <td class="num">${(s.games? s.dealt/s.games:0).toFixed(1)}</td>
-        </tr>`).join('')}</tbody></table>`;
-    }
-    sel.addEventListener('change', drawGlobal);
-    document.getElementById('exportGlobal').addEventListener('click', ()=> exportGlobalCSV(sel.value, sel.value==='ALL'?'Season':sel.value));
-    drawGlobal();
-  }
-
-  function renderGoldenFist(){
-    contentEl.innerHTML = `
-      <div class="panel gf-panel">
-        <h2>🥇 Golden Fist</h2>
-        <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('gfWeek')}</div>
-          <div style="flex:0;"><button class="ghost" id="exportGF">Export CSV</button></div>
-        </div>
-        <div class="note" style="margin-bottom:12px;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
-        <div id="gfList"></div>
-      </div>`;
-
-    const gfSel = document.getElementById('gfWeek');
-    function drawGF(){
-      const stats = globalPokemonStats(gfSel.value)
-        .map(s => ({...s, diff: s.kills - s.deaths}))
-        .sort((a,b)=> b.diff - a.diff || b.kills - a.kills);
-      const el = document.getElementById('gfList');
-      if(stats.length === 0){ el.innerHTML = `<div class="empty-state">No data for this scope yet.</div>`; return; }
-      const medals = ['🥇','🥈','🥉'];
-      el.innerHTML = `<div class="gf-list">${stats.map((s,i)=>`
-        <div class="gf-row ${i<3?'top'+(i+1):''} auditable-row" ${auditDataAttr(s.species,'kills',s.killLog,false)}>
-          <div class="gf-rank">${medals[i] || (i+1)}</div>
-          ${spriteImg(s.species,'gf-sprite')}
-          <div class="gf-info">
-            <div class="gf-name">${escapeHtml(s.species)}</div>
-            <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
-            <div class="gf-sub">${s.kills} kills · ${s.deaths} deaths · ${s.games} games</div>
-          </div>
-          <div class="gf-diff ${s.diff<0?'neg':''}">${s.diff>0?'+':''}${s.diff}</div>
-        </div>`).join('')}</div>`;
-    }
-    gfSel.addEventListener('change', drawGF);
-    document.getElementById('exportGF').addEventListener('click', ()=>{
-      const stats = globalPokemonStats(gfSel.value).map(s=>({...s, diff:s.kills-s.deaths})).sort((a,b)=>b.diff-a.diff || b.kills-a.kills);
-      const rows = [['Rank','Pokemon','Kills','Deaths','Differential','Games Played','Coach(es)']];
-      stats.forEach((s,i)=> rows.push([i+1, s.species, s.kills, s.deaths, s.diff, s.games, Array.from(s.coaches).sort().join('; ')]));
-      download(`Golden Fist - ${gfSel.value==='ALL'?'Season':gfSel.value}.csv`, toCSV(rows));
-    });
-    drawGF();
-  }
-
-  function renderTeams(){
-    const teams = Object.keys(teamPokemonStats('ALL')).sort();
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Franchise Stats</h2>
-        <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('teamsWeek')}</div>
-          <div><label>Team</label><select id="teamSelect">${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
-          <div style="flex:0;"><button class="ghost" id="exportTeams">Export all teams (CSV)</button></div>
-        </div>
-        ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-6px 0 14px;"></div><div id="teamTable"></div>`}
-      </div>`;
-    if(teams.length===0) return;
-    const weekSel = document.getElementById('teamsWeek');
-    const teamSel = document.getElementById('teamSelect');
-    function draw(){
-      const coaches = usernamesForTeamLabel(teamSel.value);
-      document.getElementById('coachLine').innerHTML = coaches.length===0 ? '' :
-        `Coached by <strong>${coaches.map(escapeHtml).join(', ')}</strong>`;
-      const data = teamPokemonStats(weekSel.value);
-      const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>b.dealt-a.dealt);
-      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team/scope.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
-        ${list.map((s,i)=>`<tr>
-          <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
-          <td class="num dealt">${s.dealt.toFixed(1)}</td>
-          <td class="num taken">${s.taken.toFixed(1)}</td>
-          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
-          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
-          <td class="num">${s.games}</td>
-        </tr>`).join('')}</tbody></table>`;
-    }
-    weekSel.addEventListener('change', draw);
-    teamSel.addEventListener('change', draw);
-    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs(weekSel.value, weekSel.value==='ALL'?'Season':weekSel.value));
-    draw();
+    return `<table><thead><tr><th>Week</th><th>Matchup</th><th>Format</th><th>Week override</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   // ---------- replays grouped by player ----------
