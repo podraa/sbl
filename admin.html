@@ -586,7 +586,68 @@
   }
 
   // ---------- processing ----------
-  async function processUrls(urlsRaw, week, logEl){
+  // Automatic season week assignment: weeks run Monday -> Sunday.
+  // Week 1 begins on the Monday of the earliest replay in the season.
+  // Manual overrides (weekOverride === true) are never touched by this logic.
+  function replayTimestamp(replay){
+    const raw = replay && replay.uploadtime;
+    if(raw == null || raw === '') return NaN;
+    const n = Number(raw);
+    if(!Number.isNaN(n)){
+      // Showdown uploadtime is normally Unix seconds; tolerate milliseconds too.
+      return n < 1e12 ? n * 1000 : n;
+    }
+    const t = Date.parse(raw);
+    return Number.isNaN(t) ? NaN : t;
+  }
+
+  function mondayStart(ts){
+    const d = new Date(ts);
+    if(Number.isNaN(d.getTime())) return null;
+    d.setHours(0,0,0,0);
+    const day = d.getDay(); // Sun=0, Mon=1
+    const daysSinceMonday = (day + 6) % 7;
+    d.setDate(d.getDate() - daysSinceMonday);
+    return d;
+  }
+
+  function ensureWeekStart(){
+    if(STATE.settings && STATE.settings.weekStartDate){
+      const d = new Date(STATE.settings.weekStartDate + 'T00:00:00');
+      if(!Number.isNaN(d.getTime())) return d;
+    }
+    const dates = Object.values(STATE.replays)
+      .map(replayTimestamp)
+      .filter(Number.isFinite);
+    if(!dates.length) return null;
+    const start = mondayStart(Math.min(...dates));
+    if(start){
+      STATE.settings.weekStartDate = start.toISOString().slice(0,10);
+    }
+    return start;
+  }
+
+  function automaticWeekForReplay(replay){
+    const ts = replayTimestamp(replay);
+    const start = ensureWeekStart();
+    if(!Number.isFinite(ts) || !start) return 'Unassigned';
+    const replayWeek = mondayStart(ts);
+    const diffDays = Math.floor((replayWeek.getTime() - start.getTime()) / 86400000);
+    const weekNum = Math.floor(diffDays / 7) + 1;
+    return `Week ${Math.max(1, weekNum)}`;
+  }
+
+  function assignAutomaticWeeks(){
+    const start = ensureWeekStart();
+    if(!start) return;
+    for(const replay of Object.values(STATE.replays)){
+      if(!replay.weekOverride){
+        replay.week = automaticWeekForReplay(replay);
+      }
+    }
+  }
+
+  async function processUrls(urlsRaw, logEl){
     const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
     let added = 0, skipped = 0, failed = 0;
@@ -599,9 +660,11 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        parsed.week = week || 'Unassigned';
+        parsed.weekOverride = false;
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
+        // Recalculate automatic weeks chronologically after adding the replay.
+        assignAutomaticWeeks();
         appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
         added++;
       }catch(e){
@@ -609,7 +672,11 @@
         failed++;
       }
     }
-    if(added > 0) await saveReplays();
+    if(added > 0){
+      assignAutomaticWeeks();
+      await saveSettings();
+      await saveReplays();
+    }
     appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${failed} failed.`, false);
     renderTicker();
     render(); // refresh whatever tab is open
@@ -898,12 +965,7 @@
         <h2>Add replays</h2>
         <label>Showdown replay links (one per line)</label>
         <textarea id="urlsInput" placeholder="https://replay.pokemonshowdown.com/gen9natdexdraft-xxxxxxxx"></textarea>
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label>Week label (for this batch's snapshot)</label>
-            <input type="text" id="weekInput" placeholder="Week 9" value="${escapeHtml(lastWeek||'')}">
-          </div>
-        </div>
+        <div class="sub" style="margin-top:10px;">Weeks are assigned automatically from the replay date, Monday through Sunday. You can manually override an individual replay below.</div>
         <button class="primary" id="processBtn">Process replays</button>
         <div class="log" id="processLog"></div>
       </div>
@@ -919,11 +981,10 @@
     document.getElementById('processBtn').addEventListener('click', async ()=>{
       const btn = document.getElementById('processBtn');
       const urls = document.getElementById('urlsInput').value;
-      lastWeek = document.getElementById('weekInput').value.trim();
       const logEl = document.getElementById('processLog');
       logEl.innerHTML = '';
       btn.disabled = true;
-      await processUrls(urls, lastWeek, logEl);
+      await processUrls(urls, logEl);
       btn.disabled = false;
     });
     const reBtn = document.getElementById('reprocessAll');
@@ -934,8 +995,6 @@
       reBtn.disabled = false;
     });
   }
-  let lastWeek = '';
-
   async function reprocessAll(logEl){
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
@@ -947,11 +1006,12 @@
         const json = await resp.json();
         const oldReplay = STATE.replays[id];
         const parsed = parseLog(json, id);
-        // Preserve the existing week exactly when reprocessing. In particular,
-        // a manually overridden week must never be replaced by the parser's
-        // automatic week assignment.
-        parsed.week = oldReplay.week || 'Unassigned';
+        // Manual overrides are preserved exactly. Automatic weeks are rebuilt
+        // from the replay date so reprocessing can correct/refresh chronology.
         parsed.weekOverride = !!oldReplay.weekOverride;
+        parsed.week = oldReplay.weekOverride
+          ? (oldReplay.week || 'Unassigned')
+          : automaticWeekForReplay(parsed);
         parsed.processedAt = oldReplay.processedAt;
         STATE.replays[id] = parsed;
         appendLog(logEl, `✓ reprocessed ${id}`, false, true);
@@ -961,6 +1021,8 @@
         failed++;
       }
     }
+    assignAutomaticWeeks();
+    await saveSettings();
     await saveReplays();
     appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
     renderTicker();

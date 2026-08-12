@@ -429,10 +429,10 @@
     <button data-tab="global">Damage Board</button>
     <button data-tab="goldenfist">Golden Fist</button>
     <button data-tab="causes">Death Causes</button>
-    <button data-tab="misc">Misc</button>
     <button data-tab="teamcompare">Standings</button>
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="replays">Replay Browser</button>
+    <button data-tab="misc">Misc</button>
   </nav>
 
   <div id="content"></div>
@@ -1576,7 +1576,7 @@
       else if(r==='most-kos-game'||r==='most-deaths-game'){ const a=games.map(g=>{const rr=STATE.replays[g.id]; const ks=Object.values(rr.mons||{}); return {...g,kos:ks.reduce((n,x)=>n+(x.kills||0),0),deaths:ks.reduce((n,x)=>n+(x.deaths||0),0)}}).sort((a,b)=>(r==='most-kos-game'?b.kos-a.kos:b.deaths-a.deaths)); title=r==='most-kos-game'?'Most KOs in one game':'Most deaths in one game'; rows=a.slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${r==='most-kos-game'?x.kos:x.deaths} · ${x.week}`]);}
       else if(r==='most-switches-game'){ const a=games.sort((a,b)=>b.switches-a.switches); title='Most switches in one game'; rows=a.slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${x.switches} switches · ${x.week}`]);}
       else { title='Record'; rows=[['Season total',`${d.totals.totalCrits} crits · ${d.totals.totalSwitches} switches · ${d.totals.totalHazards} hazards set · ${d.totals.totalFlinches} flinches · ${d.totals.totalProtects} protects · ${d.totals.totalSubstitutes} substitutes · ${d.totals.totalMisses} misses`]]; }
-      out.innerHTML=`<div class="misc-card"><h3>${escapeHtml(title)}</h3>${rows.length?`<table><thead><tr><th>#</th><th>Record</th><th>Value</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td>${pokemonLink(x[0],escapeHtml(x[0]),'',false)}</td><td class="num">${escapeHtml(x[1])}</td></tr>`).join('')}</tbody></table>`:'<div class="empty-state">No data yet. Reprocess your replays to populate detailed Misc statistics.</div>'}</div>`;
+      out.innerHTML=`<div class="misc-card"><h3>${escapeHtml(title)}</h3>${rows.length?`<table><thead><tr><th>#</th><th>Record</th><th>Value</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td>${pokemonLink(x[0],escapeHtml(x[0]),'',false)}</td><td class="num">${escapeHtml(x[1])}</td></tr>`).join('')}</tbody></table>`:'<div class="empty-state">No detailed Misc data yet. Reprocess your replays in Admin to populate these records.</div>'}</div>`;
     }
     week.addEventListener('change',draw); rec.addEventListener('change',draw); draw();
   }
