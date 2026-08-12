@@ -590,7 +590,7 @@
   // Week 1 begins on the Monday of the earliest replay in the season.
   // Manual overrides (weekOverride === true) are never touched by this logic.
   function replayTimestamp(replay){
-    const raw = replay && replay.uploadtime;
+    const raw = replay && (replay.uploadtime ?? replay.timestamp ?? replay.replayTimestamp);
     if(raw == null || raw === '') return NaN;
     const n = Number(raw);
     if(!Number.isNaN(n)){
@@ -660,6 +660,7 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
+        parsed.uploadtime = json.uploadtime;
         parsed.weekOverride = false;
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
@@ -1006,6 +1007,7 @@
         const json = await resp.json();
         const oldReplay = STATE.replays[id];
         const parsed = parseLog(json, id);
+        parsed.uploadtime = json.uploadtime;
         // Manual overrides are preserved exactly. Automatic weeks are rebuilt
         // from the replay date so reprocessing can correct/refresh chronology.
         parsed.weekOverride = !!oldReplay.weekOverride;
@@ -1440,6 +1442,11 @@
   });
   (async function init(){
     await loadState();
+    // Automatically assign non-overridden replays to Monday-Sunday weeks.
+    // Manual overrides remain untouched.
+    assignAutomaticWeeks();
+    await saveReplays();
+    await saveSettings();
     renderTicker();
     render();
   })();
