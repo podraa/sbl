@@ -24,6 +24,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   <p class="sub">Scout a franchise in depth. Review Pokémon usage, moves, observed battle patterns and available stat evidence without adding scouting logic to the main Stats Dashboard.</p>
   <div class="toolbar">
     <div><label>Franchise</label><select id="teamSelect"><option value="">Loading teams…</option></select></div>
+    <div><label>View</label><select id="viewSelect">
+      <option value="overview">Team Overview</option>
+      <option value="speed">Speed Tiers</option>
+    </select></div>
     <div class="fixed"><button id="backDashboard">← Stats Dashboard</button></div>
   </div>
 </header>
@@ -114,50 +118,272 @@ const SPEED_ALIASES={
   'landorus therian':'landorus','tornadus therian':'tornadus','thundurus therian':'thundurus'
 };
 function speedKey(name){
-  let k=norm(name).replace(/[^a-z0-9]/g,'');
-  if(BASE_SPEED[k]!==undefined)return k;
-  const n=norm(name);
-  if(SPEED_ALIASES[n]!==undefined)return SPEED_ALIASES[n];
-  return k;
-}
-  return null;
+  let raw=String(name||'').trim().toLowerCase();
+
+  // Normalize punctuation while preserving the hyphen as a form separator.
+  raw=raw
+    .replace(/[’']/g,'')
+    .replace(/[♀]/g,'-f')
+    .replace(/[♂]/g,'-m')
+    .replace(/[.:]/g,'')
+    .replace(/\s+/g,'-')
+    .replace(/-+/g,'-')
+    .replace(/^-|-$/g,'');
+
+  const aliases={
+    'mr-mime':'mrmime',
+    'mr-rime':'mrrime',
+    'mime-jr':'mimejr',
+    'type-null':'typenull',
+    'farfetchd':'farfetchd',
+    'sirfetchd':'sirfetchd',
+    'nidoran-f':'nidoranf',
+    'nidoran-m':'nidoranm',
+    'landorus-therian':'landorus',
+    'landorus-incarnate':'landorus',
+    'tornadus-therian':'tornadus',
+    'tornadus-incarnate':'tornadus',
+    'thundurus-therian':'thundurus',
+    'thundurus-incarnate':'thundurus',
+    'enamorus-therian':'enamorus',
+    'enamorus-incarnate':'enamorus',
+    'keldeo-resolute':'keldeo',
+    'keldeo-ordinary':'keldeo',
+    'meloetta-pirouette':'meloetta',
+    'meloetta-aria':'meloetta',
+    'hoopa-unbound':'hoopa',
+    'hoopa-confined':'hoopa',
+    'lycanroc-midday':'lycanroc',
+    'lycanroc-midnight':'lycanroc',
+    'lycanroc-dusk':'lycanroc',
+    'oricorio-baile':'oricorio',
+    'oricorio-pom-pom':'oricorio',
+    'oricorio-pau':'oricorio',
+    'oricorio-sensu':'oricorio',
+    'basculin-red-striped':'basculin',
+    'basculin-blue-striped':'basculin',
+    'basculin-white-striped':'basculin',
+    'darmanitan-standard':'darmanitan',
+    'darmanitan-zen':'darmanitan',
+    'zygarde-10':'zygarde',
+    'zygarde-50':'zygarde',
+    'zygarde-complete':'zygarde',
+    'necrozma-dusk-mane':'necrozma',
+    'necrozma-dawn-wings':'necrozma',
+    'necrozma-ultra':'necrozma',
+    'calyrex-ice-rider':'calyrex',
+    'calyrex-shadow-rider':'calyrex',
+    'urshifu-single-strike':'urshifu',
+    'urshifu-rapid-strike':'urshifu',
+    'indeedee-female':'indeedee',
+    'indeedee-male':'indeedee',
+    'meowstic-female':'meowstic',
+    'meowstic-male':'meowstic'
+  };
+
+  if(aliases[raw]) return aliases[raw];
+  const compact=raw.replace(/-/g,'');
+  if(BASE_SPEED[compact]!==undefined) return compact;
+
+  // First try the complete hyphenated form, then progressively remove
+  // form suffixes until a base species remains.
+  const parts=raw.split('-');
+  for(let i=parts.length;i>=1;i--){
+    const candidate=parts.slice(0,i).join('').replace(/[^a-z0-9]/g,'');
+    if(BASE_SPEED[candidate]!==undefined)return candidate;
+  }
+  return compact;
 }
 function baseSpeedForSpecies(species){
   const k=speedKey(species);
   if(BASE_SPEED[k]!==undefined)return BASE_SPEED[k];
-  const compact=String(species||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+
+  const raw=String(species||'').trim().toLowerCase()
+    .replace(/[’']/g,'')
+    .replace(/[♀]/g,'-f')
+    .replace(/[♂]/g,'-m')
+    .replace(/[.:]/g,'')
+    .replace(/\s+/g,'-')
+    .replace(/-+/g,'-')
+    .replace(/^-|-$/g,'');
+
+  // Try compacting the full hyphenated name.
+  const compact=raw.replace(/[^a-z0-9]/g,'');
   if(BASE_SPEED[compact]!==undefined)return BASE_SPEED[compact];
-  // Last-resort match for a canonical species name contained at the start of a form name.
-  let best=null;
-  for(const base of Object.keys(BASE_SPEED)){
-    if(base.length>=5 && compact.startsWith(base) && (!best || base.length>best.length))best=base;
+
+  // Try the species portion before a form suffix.
+  const parts=raw.split('-');
+  for(let i=parts.length-1;i>=1;i--){
+    const candidate=parts.slice(0,i).join('').replace(/[^a-z0-9]/g,'');
+    if(BASE_SPEED[candidate]!==undefined)return BASE_SPEED[candidate];
   }
-  return best?BASE_SPEED[best]:null;
+
+  // Final prefix fallback for uncommon form labels.
+  for(const base of Object.keys(BASE_SPEED)){
+    if(compact.startsWith(base) && base.length>=5)return BASE_SPEED[base];
+  }
+  return null;
 }
-function speedTableForTeam(team){
+const SPEED_CACHE = new Map();
+
+function speciesCandidates(species){
+  const original=String(species||'').trim();
+  const cleaned=original
+    .replace(/[’']/g,'')
+    .replace(/[♀]/g,'-f')
+    .replace(/[♂]/g,'-m')
+    .replace(/\./g,'')
+    .replace(/\s+/g,'-')
+    .replace(/-+/g,'-')
+    .replace(/^-|-$/g,'');
+
+  const lower=cleaned.toLowerCase();
+  const compact=lower.replace(/[^a-z0-9]/g,'');
+
+  const aliases={
+    'landorus-t':'landorus-therian',
+    'landorus-therian':'landorus-therian',
+    'tornadus-t':'tornadus-therian',
+    'tornadus-therian':'tornadus-therian',
+    'thundurus-t':'thundurus-therian',
+    'thundurus-therian':'thundurus-therian',
+    'enamorus-t':'enamorus-therian',
+    'enamorus-therian':'enamorus-therian',
+    'hoopa-u':'hoopa-unbound',
+    'hoopa-unbound':'hoopa-unbound',
+    'necrozma-dm':'necrozma-dusk-mane',
+    'necrozma-dusk-mane':'necrozma-dusk-mane',
+    'necrozma-dw':'necrozma-dawn-wings',
+    'necrozma-dawn-wings':'necrozma-dawn-wings',
+    'necrozma-ultra':'necrozma-ultra',
+    'urshifu-r':'urshifu-rapid-strike',
+    'urshifu-rapid-strike':'urshifu-rapid-strike',
+    'urshifu-s':'urshifu-single-strike',
+    'urshifu-single-strike':'urshifu-single-strike',
+    'calyrex-s':'calyrex-shadow-rider',
+    'calyrex-shadow-rider':'calyrex-shadow-rider',
+    'calyrex-i':'calyrex-ice-rider',
+    'calyrex-ice-rider':'calyrex-ice-rider',
+    'nidoran-f':'nidoran-f',
+    'nidoran-m':'nidoran-m',
+    'indeedee-f':'indeedee-female',
+    'indeedee-female':'indeedee-female',
+    'indeedee-m':'indeedee-male',
+    'indeedee-male':'indeedee-male',
+    'meowstic-f':'meowstic-female',
+    'meowstic-female':'meowstic-female',
+    'meowstic-m':'meowstic-male',
+    'meowstic-male':'meowstic-male',
+    'darmanitan-galar-zen':'darmanitan-galar-zen',
+    'darmanitan-zen':'darmanitan-zen',
+    'darmanitan-galar':'darmanitan-galar',
+    'lycanroc-midday':'lycanroc-midday',
+    'lycanroc-midnight':'lycanroc-midnight',
+    'lycanroc-dusk':'lycanroc-dusk',
+    'basculin-red-striped':'basculin-red-striped',
+    'basculin-blue-striped':'basculin-blue-striped',
+    'basculin-white-striped':'basculin-white-striped'
+  };
+
+  const out=[];
+  const add=x=>{
+    if(!x)return;
+    x=x.toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-');
+    if(x&&!out.includes(x))out.push(x);
+  };
+
+  add(aliases[lower]||lower);
+  add(lower);
+  add(compact);
+
+  // Showdown can use shortened form names. Try the corresponding
+  // canonical form before falling back to the base species.
+  const canonical=aliases[lower];
+  if(canonical)add(canonical);
+
+  // Remove common form suffixes one at a time.
+  const parts=lower.split('-');
+  for(let i=parts.length-1;i>=1;i--) add(parts.slice(0,i).join('-'));
+
+  // Also try the normalized base species from our embedded table.
+  const base=speedKey(species);
+  if(base) add(base);
+
+  return out;
+}
+
+async function fetchBaseSpeed(species){
+  const cacheKey=String(species||'').trim().toLowerCase();
+  if(SPEED_CACHE.has(cacheKey))return SPEED_CACHE.get(cacheKey);
+
+  // First use the embedded data when it has an exact/base match.
+  const embedded=baseSpeedForSpecies(species);
+  if(embedded!==null){
+    SPEED_CACHE.set(cacheKey,embedded);
+    return embedded;
+  }
+
+  // Robust fallback: query PokéAPI using several canonicalized candidates.
+  // This handles Showdown hyphenated forme names instead of guessing by
+  // string prefix alone.
+  for(const slug of speciesCandidates(species)){
+    try{
+      const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+encodeURIComponent(slug));
+      if(!r.ok)continue;
+      const d=await r.json();
+      const st=(d.stats||[]).find(x=>x.stat?.name==='speed');
+      if(st){
+        const value=Number(st.base_stat);
+        if(Number.isFinite(value)){
+          SPEED_CACHE.set(cacheKey,value);
+          return value;
+        }
+      }
+    }catch(e){}
+  }
+
+  SPEED_CACHE.set(cacheKey,null);
+  return null;
+}
+
+function maxSpeedFromBase(base,level=100){
+  const raw=Math.floor(((2*Number(base)+31+63)*level)/100)+5;
+  return Math.floor(raw*1.1);
+}
+function scarfSpeedFromMax(max){ return Math.floor(max*1.5); }
+
+async function speedTableForTeam(team){
   const a=aggregate(team);
   const list=Object.values(a.mons).sort((x,y)=>x.species.localeCompare(y.species));
-  return `<section class="panel"><h2>Speed Tiers</h2>
-    <p class="panel-desc">Maximum Level 100 Speed for every Pokémon recorded for <strong>${esc(team)}</strong>. Maximum assumes 31 IVs, 252 Speed EVs and a beneficial Speed nature. Choice Scarf applies the 1.5× multiplier. Base Speed values are from Pokémon Database's Gen 9 Pokédex data. citeturn0search3turn0search4</p>
-    ${list.length?`<div class="notice" style="margin-bottom:14px">All values below are Level 100. Base Speed is the species value; Max Speed is the maximum normal stat; Max + Choice Scarf is the maximum while holding Choice Scarf.</div>
+  if(!list.length)return `<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">No Pokémon have been recorded for this franchise.</p></section>`;
+  const rows=await Promise.all(list.map(async m=>{
+    const base=await fetchBaseSpeed(m.species);
+    if(base===null){
+      return `<tr><td>${esc(m.species)}</td><td class="num">Unavailable</td><td class="num">—</td><td class="num">—</td></tr>`;
+    }
+    const max=maxSpeedFromBase(base,100);
+    return `<tr><td>${esc(m.species)}</td><td class="num">${base}</td><td class="num">${max}</td><td class="num">${scarfSpeedFromMax(max)}</td></tr>`;
+  }));
+  return `<section class="panel">
+    <h2>Speed Tiers</h2>
+    <p class="panel-desc">All values are <strong>Level 100</strong>. Base Speed is the species' base stat. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial Speed nature. Choice Scarf is calculated at 1.5× the maximum Speed.</p>
+    <div class="notice" style="margin-bottom:14px">Source convention: Pokémon Database's Level 100 stat ranges use 31 IVs, 252 EVs and a beneficial nature for maximum values. citeturn0search3turn0search4</div>
     <table><thead><tr><th>Pokémon</th><th class="num">Base Speed</th><th class="num">Max Speed</th><th class="num">Max + Choice Scarf</th></tr></thead>
-    <tbody>${list.map(m=>{
-      const base=baseSpeedForSpecies(m.species);
-      if(base===null)return `<tr><td>${esc(m.species)}</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
-      const max=maxSpeedFromBase(base,100);
-      return `<tr><td>${esc(m.species)}</td><td class="num">${base}</td><td class="num">${max}</td><td class="num">${scarfSpeedFromMax(max)}</td></tr>`;
-    }).join('')}</tbody></table>`:'<div class="empty">No Pokémon have been recorded for this franchise.</div>'}
+    <tbody>${rows.join('')}</tbody></table>
   </section>`;
 }
 
-function render(){
+async function render(){
   const sel=$('teamSelect');const team=sel.value;
   if(!team){$('main').innerHTML='<div class="panel"><div class="empty">No franchise data available.</div></div>';return}
-  if($('viewSelect')?.value==='speed'){
-    $('main').innerHTML=speedTableForTeam(team);
+  if($('viewSelect') && $('viewSelect').value==='speed'){
+    $('main').innerHTML='<div class="panel"><div class="empty">Loading Speed Tiers…</div></div>';
+    $('main').innerHTML=await speedTableForTeam(team);
     return;
   }
-  const a=aggregate(team);const list=Object.values(a.mons).sort((x,y)=>y.appearances-x.appearances||y.kills-x.kills);const pairs=Object.entries(a.pairCounts).sort((x,y)=>y[1]-x[1]).slice(0,8);
+  const a=aggregate(team);
+  const list=Object.values(a.mons).sort((x,y)=>y.appearances-x.appearances||y.kills-x.kills);
+  const pairs=Object.entries(a.pairCounts).sort((x,y)=>y[1]-x[1]).slice(0,8);
   $('main').innerHTML=`<section class="panel"><h2>${esc(team)}</h2><p class="panel-desc">This is the scouting workspace for <strong>${esc(team)}</strong>. It uses the same shared replay data as the dashboard, but keeps opponent-prep analysis separate from league statistics.</p><div class="grid overview"><div class="statbox"><div class="k">Games analyzed</div><div class="v">${a.games.length}</div></div><div class="statbox"><div class="k">Record</div><div class="v">${a.wins}-${a.losses}</div></div><div class="statbox"><div class="k">Unique Pokémon</div><div class="v">${list.length}</div></div><div class="statbox"><div class="k">Pokémon appearances</div><div class="v">${list.reduce((n,m)=>n+m.appearances,0)}</div></div></div></section>
   <section class="panel"><h2>Pokémon scouting</h2><p class="panel-desc">Select a Pokémon to inspect the exact moves it brought in each individual replay, along with performance.</p><div class="grid pokemon-grid">${list.map(m=>`<div class="mon-card" data-mon="${esc(norm(m.species))}"><div class="mon-head">${sprite(m.species)}<div><div class="mon-name">${esc(m.species)}</div><div class="muted">${m.replays.size} replay${m.replays.size===1?'':'s'} · ${m.appearances} appearances</div></div></div><div class="chips"><span class="chip"><b>${m.kills}</b> K</span><span class="chip"><b>${m.deaths}</b> D</span><span class="chip"><b>${m.dealt.toFixed(0)}</b> dmg</span><span class="chip"><b>${m.gameSets.filter(g=>g.moves.length).length}</b> sets recorded</span></div></div>`).join('')}</div></section>
   <section class="panel"><h2>Common Pokémon pairs</h2><p class="panel-desc">Pairs are counted when both Pokémon appeared for the selected franchise in the same replay.</p>${pairs.length?`<table><thead><tr><th>Pair</th><th class="num">Games</th></tr></thead><tbody>${pairs.map(([key,n])=>{const [x,y]=key.split('|');const names=list.filter(m=>norm(m.species)===x||norm(m.species)===y).map(m=>m.species);return `<tr><td>${names.join(' + ')||key.replace('|',' + ')}</td><td class="num">${n}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Not enough roster data.</div>'}</section>
@@ -173,9 +399,55 @@ function openMon(team,key){
   detail.scrollIntoView({behavior:'smooth',block:'start'});
   $('closeDetail').addEventListener('click',()=>{detail.innerHTML='';window.scrollTo({top:0,behavior:'smooth'})});
 }
-async function load(){try{const {data,error}=await supabase.from('replays').select('replay_id,replay_data');if(error)throw error;for(const row of data||[]){if(row.replay_id===STATE_ID){STATE.teamMap=row.replay_data?.teamMap||{};STATE.settings=Object.assign(STATE.settings,row.replay_data?.settings||{})}else if(row.replay_id)STATE.replays[row.replay_id]=row.replay_data||{}}}catch(e){$('main').innerHTML=`<div class="panel"><div class="empty">Could not load shared replay data: ${esc(e.message)}</div></div>`;return}const teams=[...new Set(allRows().flatMap(r=>[teamFor(r.players?.p1),teamFor(r.players?.p2)]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));const qs=new URLSearchParams(location.search);const requested=qs.get('team');$('teamSelect').innerHTML=teams.length?teams.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join(''):'<option value="">No teams found</option>';if(requested&&teams.includes(requested))$('teamSelect').value=requested;render()}
-$('teamSelect').addEventListener('change',()=>{const u=new URL(location.href);u.searchParams.set('team',$('teamSelect').value);history.replaceState(null,'',u);render()});
-$('viewSelect').addEventListener('change',()=>render());$('backDashboard').addEventListener('click',()=>location.href='index.html');(async()=>{await load()})();
+async function load(){
+  try{
+    const {data,error}=await supabase.from('replays').select('replay_id,replay_data');
+    if(error)throw error;
+    for(const row of data||[]){
+      if(row.replay_id===STATE_ID){
+        STATE.teamMap=row.replay_data?.teamMap||{};
+        STATE.settings=Object.assign(STATE.settings,row.replay_data?.settings||{});
+      }else if(row.replay_id){
+        STATE.replays[row.replay_id]=row.replay_data||{};
+      }
+    }
+  }catch(e){
+    $('main').innerHTML=`<div class="panel"><div class="empty">Could not load shared replay data: ${esc(e.message)}</div></div>`;
+    return;
+  }
+
+  const teams=[...new Set(allRows()
+    .flatMap(r=>[teamFor(r.players?.p1),teamFor(r.players?.p2)])
+    .filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b));
+
+  const qs=new URLSearchParams(location.search);
+  const requested=qs.get('team');
+
+  $('teamSelect').innerHTML=teams.length
+    ? teams.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')
+    : '<option value="">No teams found</option>';
+
+  if(requested&&teams.includes(requested))$('teamSelect').value=requested;
+  await render();
+}
+
+$('teamSelect').addEventListener('change',async()=>{
+  const u=new URL(location.href);
+  u.searchParams.set('team',$('teamSelect').value);
+  history.replaceState(null,'',u);
+  await render();
+});
+
+$('viewSelect').addEventListener('change',async()=>{
+  await render();
+});
+
+$('backDashboard').addEventListener('click',()=>{
+  location.href='index.html';
+});
+
+load();
 })();
 </script>
 </body>
