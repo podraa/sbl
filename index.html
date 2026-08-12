@@ -86,6 +86,10 @@
   .log .err{color:var(--red);}
 
   table{width:100%; border-collapse:collapse; font-size:13px;}
+  /* Keep dense tables usable at every viewport width. */
+  .panel{overflow:hidden;}
+  .panel table{display:block; width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; white-space:nowrap;}
+  .panel table thead,.panel table tbody{width:max-content; min-width:100%;}
   th{
     text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em;
     color:var(--text-dim); padding:8px 10px; border-bottom:1px solid var(--border);
@@ -118,6 +122,15 @@
     width:48px; height:48px; object-fit:contain; vertical-align:middle;
     image-rendering:pixelated; background:var(--panel-alt); border-radius:8px; margin-right:10px;
   }
+  .pokemon-click{
+    display:inline-flex; align-items:center; gap:8px; color:inherit; text-decoration:none;
+    cursor:pointer; border-radius:8px; padding:2px 4px; margin:-2px -4px; transition:background .12s, transform .12s;
+  }
+  .pokemon-click:hover{background:var(--panel-alt); color:var(--amber); transform:translateY(-1px);}
+  .pokemon-click:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  .pokemon-click .sprite,.pokemon-click .sprite-xl{margin-right:0;}
+  .pokemon-text-link{color:inherit; text-decoration:none; cursor:pointer;}
+  .pokemon-text-link:hover{color:var(--amber); text-decoration:underline;}
   .sprite-xl{
     width:64px; height:64px; object-fit:contain; vertical-align:middle;
     image-rendering:pixelated; background:var(--panel-alt); border-radius:10px; margin-right:12px;
@@ -186,7 +199,61 @@
   .record-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
   .record-value{font-family:var(--mono);font-size:19px;margin-top:8px;line-height:1.25;}
   .record-sub{font-size:11px;margin-top:7px;}
-  @media(max-width:850px){.profile-grid{grid-template-columns:repeat(2,1fr)}.profile-two-col{grid-template-columns:1fr}.record-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}}
+  @media(max-width:850px){
+    #app{padding:16px 12px 44px;}
+    .profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .profile-two-col{grid-template-columns:1fr}
+    .record-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .wide .panel{padding:16px;}
+    nav.tabs{gap:2px;}
+    nav.tabs button{padding:9px 10px;font-size:12px;}
+    .ticker{margin-right:-2px;}
+    .tick{flex-basis:132px;min-width:132px;padding:10px 12px;}
+  }
+  @media(max-width:520px){
+    h1{font-size:19px;}
+    .sub{font-size:12px;}
+    .panel{padding:14px;}
+    .profile-grid{grid-template-columns:1fr 1fr;gap:7px;}
+    .profile-grid>div{padding:9px;}
+    .profile-grid strong{font-size:15px;}
+    .record-grid{grid-template-columns:1fr;}
+    .gf-row{gap:9px;padding:9px;}
+    .gf-sprite{width:52px;height:52px;}
+    .gf-diff{font-size:17px;min-width:44px;}
+    .summary-header h3{font-size:18px;}
+    .summary-side{padding:10px;}
+  }
+
+  /* Pokémon profile modal */
+  .pokemon-overlay{
+    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    padding:24px; overflow:auto; background:rgba(4,7,12,.62);
+    backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+    animation:pokemonOverlayIn .16s ease-out;
+  }
+  .pokemon-modal{
+    width:min(1100px,100%); max-height:calc(100vh - 48px); overflow:auto;
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    box-shadow:0 24px 80px rgba(0,0,0,.55); transform-origin:center;
+    animation:pokemonModalIn .18s cubic-bezier(.2,.8,.2,1);
+  }
+  .pokemon-modal-head{
+    position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; align-items:center;
+    gap:12px; padding:12px 16px; background:rgba(22,28,38,.94); border-bottom:1px solid var(--border);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  }
+  .pokemon-modal-head strong{font-size:13px;}
+  .pokemon-modal-body{padding:16px;}
+  .pokemon-modal-body>.pokemon-profile{margin:0; border:none; padding:0; background:transparent;}
+  @keyframes pokemonOverlayIn{from{opacity:0}to{opacity:1}}
+  @keyframes pokemonModalIn{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
+  @media(max-width:700px){
+    .pokemon-overlay{padding:8px;}
+    .pokemon-modal{max-height:calc(100vh - 16px);border-radius:12px;}
+    .pokemon-modal-body{padding:12px;}
+    .pokemon-modal-head{padding:10px 12px;}
+  }
 
   /* audit modal */
   td.auditable{cursor:pointer; text-decoration:underline dotted var(--text-dim); text-underline-offset:3px;}
@@ -233,6 +300,29 @@
   .auth-box h1{margin-bottom:4px;}
   .auth-box input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:13px;}
   .auth-error{display:none;color:var(--red);font-size:12px;margin-top:12px;line-height:1.4;}
+
+  .replay-summary-box{max-width:900px;}
+  .summary-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:14px;}
+  .summary-kicker{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.08em;}
+  .summary-header h3{font-size:21px;margin:5px 0 3px;}
+  .summary-vs{color:var(--text-dim);font-weight:400;}
+  .summary-result{font-weight:700;color:var(--teal);font-size:13px;}
+  .summary-meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;color:var(--text-dim);font-size:11px;text-align:right;}
+  .summary-cause{padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel-alt);font-size:12px;margin-bottom:14px;}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .summary-side{border:1px solid var(--border);border-radius:10px;background:var(--panel-alt);padding:12px;}
+  .summary-side-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .summary-team{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .summary-score{font-size:11px;color:var(--text-dim);}
+  .summary-line{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;font-size:11px;color:var(--text-dim);}
+  .summary-mons{display:grid;gap:6px;}
+  .summary-mon{display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:7px;}
+  .summary-mon-main{min-width:0;flex:1;}
+  .summary-mon-stats{font-size:10px;color:var(--text-dim);margin-top:2px;}
+  .summary-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+  .danger-badge{color:var(--red);}
+  @media(max-width:700px){.summary-grid{grid-template-columns:1fr}.summary-header{flex-direction:column}.summary-meta{align-items:flex-start;text-align:left}}
+
 </style>
 </head>
 <body data-admin="false">
@@ -252,7 +342,7 @@
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="teamcompare">Team Comparison</button>
     <button data-tab="records">Records</button>
-    <button data-tab="players">Replays by Player</button>
+    <button data-tab="replays">Replay Browser</button>
     <button data-tab="settings">Settings</button>
   </nav>
 
@@ -447,6 +537,13 @@
   function spriteImg(species, cls){
     const safe = escapeHtml(species);
     return `<img class="${cls}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
+  }
+  function pokemonLink(species, innerHtml, title){
+    const safe = escapeHtml(species);
+    return `<span class="pokemon-click" role="button" tabindex="0" data-pokemon="${safe}" title="${escapeHtml(title || `Open ${species} profile`)}">${innerHtml}</span>`;
+  }
+  function pokemonName(species, withSprite=true, spriteClass='sprite'){
+    return pokemonLink(species, withSprite ? `${spriteImg(species,spriteClass)}<span>${escapeHtml(species)}</span>` : `<span>${escapeHtml(species)}</span>`);
   }
   function teamFor(username){
     const key = (username||'').trim().toLowerCase();
@@ -1016,14 +1113,89 @@
     ticker.innerHTML = top.map(s => `
       <div class="tick">
         <div class="lbl">Dmg Dealt</div>
-        <div class="pname-cell">${spriteImg(s.species,'sprite')}<div>
+        ${pokemonLink(s.species, `${spriteImg(s.species,'sprite')}<div>
           <div class="name">${escapeHtml(s.species)}</div>
           <div class="val">${s.dealt.toFixed(0)}%</div>
-        </div></div>
+        </div>`)}
       </div>`).join('');
   }
 
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+
+  function closePokemonProfile(){
+    const el=document.getElementById('pokemonProfileModal');
+    if(el) el.remove();
+    document.body.style.overflow='';
+  }
+  function openPokemonProfile(species){
+    const modalId='pokemonProfileModal';
+    closePokemonProfile();
+    const root=document.createElement('div');
+    root.innerHTML=`<div class="pokemon-overlay" id="${modalId}">
+      <div class="pokemon-modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(species)} profile">
+        <div class="pokemon-modal-head">
+          <strong>Pokémon Profile</strong>
+          <button class="ghost small" id="pokemonProfileClose" type="button">Close ✕</button>
+        </div>
+        <div class="pokemon-modal-body">${renderPokemonProfile(species,'ALL')}</div>
+      </div>
+    </div>`;
+    document.body.appendChild(root.firstElementChild);
+    document.body.style.overflow='hidden';
+    const overlay=document.getElementById(modalId);
+    document.getElementById('pokemonProfileClose').addEventListener('click',closePokemonProfile);
+    overlay.addEventListener('click',e=>{ if(e.target===overlay) closePokemonProfile(); });
+    requestAnimationFrame(()=>document.getElementById('pokemonProfileClose')?.focus());
+  }
+
+  function openReplaySummary(replayId){
+    const r = STATE.replays[replayId];
+    if(!r){ return; }
+    const p1 = (r.players?.p1 || '?').trim() || '?';
+    const p2 = (r.players?.p2 || '?').trim() || '?';
+    const winner = (r.winner || '').trim();
+    const resultText = winner ? `${winner} won` : 'Result unavailable';
+    const mons = Object.values(r.mons || {});
+    const sideMons = side => mons.filter(m=>m.side===side).sort((a,b)=>
+      (b.kills-a.kills) || (a.deaths-b.deaths) || (b.damageDealt-a.damageDealt));
+    const causeCounts = {};
+    mons.flatMap(m=>m.deathLog||[]).forEach(d=>{
+      const c = d.cause || 'unattributed';
+      causeCounts[c] = (causeCounts[c] || 0) + 1;
+    });
+    const causeText = Object.entries(causeCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`${escapeHtml(c)} ×${n}`).join(' · ') || 'No recorded deaths';
+    const sideCard = (side, player) => {
+      const list = sideMons(side);
+      const team = teamFor(player);
+      const kills = list.reduce((n,m)=>n+m.kills,0);
+      const deaths = list.reduce((n,m)=>n+m.deaths,0);
+      const dealt = list.reduce((n,m)=>n+m.damageDealt,0);
+      const taken = list.reduce((n,m)=>n+m.damageTaken,0);
+      return `<div class="summary-side">
+        <div class="summary-side-head"><div><strong>${escapeHtml(player)}</strong><div class="summary-team">${escapeHtml(team)}</div></div><div class="summary-score">${deaths} fainted</div></div>
+        <div class="summary-line"><span>${kills} kills</span><span>${dealt.toFixed(1)}% damage dealt</span><span>${taken.toFixed(1)}% taken</span></div>
+        <div class="summary-mons">${list.map(m=>`<div class="summary-mon">
+          ${pokemonLink(m.species, `${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><div class="pname-cell"><strong>${escapeHtml(m.species)}</strong></div><div class="summary-mon-stats">${m.kills} K · ${m.deaths} D · ${m.damageDealt.toFixed(1)}% dmg</div></div>`)}
+          ${m.deaths ? '<span class="badge danger-badge">Fainted</span>' : '<span class="badge">Survived</span>'}
+        </div>`).join('') || '<div class="empty-state">No Pokémon recorded.</div>'}</div>
+      </div>`;
+    };
+    document.getElementById('auditModal').innerHTML = `
+      <div class="audit-overlay" id="replaySummaryOverlay">
+        <div class="audit-box replay-summary-box">
+          <div class="summary-header">
+            <div><div class="summary-kicker">${escapeHtml(r.week || 'Unassigned')} · ${escapeHtml(r.format || 'Replay')}</div><h3>${escapeHtml(p1)} <span class="summary-vs">vs</span> ${escapeHtml(p2)}</h3><div class="summary-result">${escapeHtml(resultText)}</div></div>
+            <div class="summary-meta"><span>${mons.length} Pokémon recorded</span><span>Replay ${escapeHtml(r.id)}</span></div>
+          </div>
+          <div class="summary-cause"><strong>Death causes:</strong> ${causeText}</div>
+          <div class="summary-grid">${sideCard('p1',p1)}${sideCard('p2',p2)}</div>
+          <div class="summary-actions"><a class="primary nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(r.id)}" target="_blank" rel="noopener">Open Showdown replay</a><button class="ghost" id="summaryClose">Close</button></div>
+        </div>
+      </div>`;
+    document.getElementById('summaryClose').addEventListener('click', closeAudit);
+    document.getElementById('replaySummaryOverlay').addEventListener('click', e=>{ if(e.target.id==='replaySummaryOverlay') closeAudit(); });
+  }
 
   // ---------- kill/death audit trail ----------
   // Encodes a mon's kill or death log onto a table cell so it can be clicked open
@@ -1050,11 +1222,11 @@
     document.getElementById('auditModal').innerHTML = `
       <div class="audit-overlay" id="auditOverlay">
         <div class="audit-box">
-          <h3>${escapeHtml(species)} — ${label} (${rows.length})</h3>
+          <h3>${pokemonLink(species, escapeHtml(species))} — ${label} (${rows.length})</h3>
           <div class="audit-sub">Every ${type==='kills'?'kill':'death'} credited to this Pokémon this scope, with the turn${showLink?', replay,':''} and why it was credited.</div>
           ${rows.length===0 ? `<div class="empty-state">No entries.</div>` : `<ul class="audit-list">
             ${rows.map(r=>`<li>
-              <span>Turn ${r.turn} — ${type==='kills' ? 'vs ' + escapeHtml(r.victim||'?') : (r.killer ? 'by ' + escapeHtml(r.killer) : 'unattributed')} <span class="audit-cause">(${escapeHtml(r.cause||'—')})</span></span>
+              <span>Turn ${r.turn} — ${type==='kills' ? 'vs ' + (r.victim ? pokemonLink(r.victim, escapeHtml(r.victim)) : '?') : (r.killer ? 'by ' + pokemonLink(r.killer, escapeHtml(r.killer)) : 'unattributed')} <span class="audit-cause">(${escapeHtml(r.cause||'—')})</span></span>
               ${showLink ? `<a href="https://replay.pokemonshowdown.com/${escapeHtml(r.replayId)}" target="_blank" rel="noopener">${escapeHtml(r.replayId)}</a>` : ''}
             </li>`).join('')}
           </ul>`}
@@ -1066,7 +1238,7 @@
   }
 
   function render(){
-    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'players' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'records');
+    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'players' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'records' || activeTab === 'replays');
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     if(activeTab === 'process') return renderProcess();
     if(activeTab === 'global') return renderLeaderboards();
@@ -1076,7 +1248,7 @@
     if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'teamcompare') return renderTeamComparison();
     if(activeTab === 'records') return renderRecords();
-    if(activeTab === 'players') return renderPlayers();
+    if(activeTab === 'replays') return renderReplayBrowser();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
@@ -1208,7 +1380,7 @@
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
         ${stats.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
+          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
@@ -1255,7 +1427,7 @@
         <th>Pokémon</th><th>Coach / Team</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th>
       </tr></thead><tbody>
         ${stats.map(s=>`<tr class="search-match" data-profile="${escapeHtml(s.species)}" style="cursor:pointer;">
-          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
+          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
           <td>${escapeHtml(Array.from(s.coaches).sort().join(', ') || 'Unknown')}</td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
@@ -1313,7 +1485,7 @@
     return `<div class="panel pokemon-profile">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
         ${spriteImg(s.species,'sprite-xl')}
-        <div><h2 style="margin:0;color:var(--text);text-transform:none;letter-spacing:0;font-size:20px;">${escapeHtml(s.species)}</h2>
+        <div><h2 style="margin:0;color:var(--text);text-transform:none;letter-spacing:0;font-size:20px;">${pokemonLink(s.species, escapeHtml(s.species))}</h2>
         <div class="note" style="margin-top:3px;">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div></div>
       </div>
       <div class="profile-grid">
@@ -1324,8 +1496,8 @@
       </div>
       <div class="section-divider"></div>
       <div class="profile-two-col">
-        <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>b.turn-a.turn).map(x=>`<tr><td>${x.turn}</td><td>${escapeHtml(x.victim||'?')}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
-        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>b.turn-a.turn).map(x=>`<tr><td>${x.turn}</td><td>${escapeHtml(x.killer||'Unattributed')}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
+        <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>b.turn-a.turn).map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim)) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
+        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>b.turn-a.turn).map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer)) : 'Unattributed'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
       </div>
       ${causes.length ? `<div class="section-divider"></div><div class="note"><strong>Death causes:</strong> ${causes.map(([c,n])=>`${escapeHtml(c)} (${n})`).join(' · ')}</div>`:''}
     </div>`;
@@ -1345,7 +1517,7 @@
         }
       }
       const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-      document.getElementById('causeBody').innerHTML=!rows.length?`<div class="empty-state">No deaths recorded.</div>`:`<table><thead><tr><th class="rank">#</th><th>Cause</th><th class="num">Deaths</th><th>Most affected Pokémon</th></tr></thead><tbody>${rows.map(([c,n],i)=>{const top=Object.entries(pokemon[c]).sort((a,b)=>b[1]-a[1]).slice(0,5);return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(c)}</td><td class="num taken">${n}</td><td>${top.map(([sp,v])=>`${escapeHtml(sp)} <span class="badge">${v}</span>`).join(' ')}</td></tr>`}).join('')}</tbody></table>`;
+      document.getElementById('causeBody').innerHTML=!rows.length?`<div class="empty-state">No deaths recorded.</div>`:`<table><thead><tr><th class="rank">#</th><th>Cause</th><th class="num">Deaths</th><th>Most affected Pokémon</th></tr></thead><tbody>${rows.map(([c,n],i)=>{const top=Object.entries(pokemon[c]).sort((a,b)=>b[1]-a[1]).slice(0,5);return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(c)}</td><td class="num taken">${n}</td><td>${top.map(([sp,v])=>`${pokemonLink(sp, escapeHtml(sp))} <span class="badge">${v}</span>`).join(' ')}</td></tr>`}).join('')}</tbody></table>`;
     }
     sel.addEventListener('change',draw); draw();
   }
@@ -1356,9 +1528,11 @@
       const sides=['p1','p2'];
       for(const side of sides){
         const team=teamFor(r.players[side]); const key=groupKey(team);
-        if(!out[key]) out[key]={team,players:new Set(),games:0,wins:0,kills:0,deaths:0,dealt:0,taken:0};
+        if(!out[key]) out[key]={team,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0};
         const t=out[key]; t.games++; t.players.add(r.players[side]||'?');
-        if(r.winner && r.winner.toLowerCase()===(r.players[side]||'').toLowerCase()) t.wins++;
+        const result = r.results && r.results[side] ? r.results[side] : (r.winner && r.winner.toLowerCase()===(r.players[side]||'').toLowerCase() ? 'W' : (r.winner ? 'L' : null));
+        if(result==='W') t.wins++;
+        else if(result==='L') t.losses++;
         for(const k in r.mons){ const m=r.mons[k]; if(m.side===side){t.kills+=m.kills||0;t.deaths+=m.deaths||0;t.dealt+=m.damageDealt||0;t.taken+=m.damageTaken||0;} }
       }
     }
@@ -1369,8 +1543,8 @@
     contentEl.innerHTML=`<div class="panel"><h2>Team / Coach Comparison</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('compareWeek')}</div></div><div class="note" id="compareNote"></div><div id="compareBody"></div></div>`;
     const sel=document.getElementById('compareWeek');
     function draw(){
-      const data=teamComparisonData(sel.value); const anyWins=data.some(x=>x.wins>0); document.getElementById('compareNote').textContent=anyWins?'Win rate is based on replay |win| events. Reprocess older replays if they were parsed before winner tracking was added.':'Win data is not present in the stored replay parses yet; reprocess the season from the Admin page to populate win rates.';
-      document.getElementById('compareBody').innerHTML=!data.length?`<div class="empty-state">No team data.</div>`:`<table><thead><tr><th class="rank">#</th><th>Team / Coach</th><th class="num">Games</th><th class="num">Wins</th><th class="num">Win %</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">K/D</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th></tr></thead><tbody>${data.map((x,i)=>{const kd=x.deaths?x.kills/x.deaths:(x.kills?'∞':0);return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(x.team)}</td><td class="num">${x.games}</td><td class="num kills">${x.wins}</td><td class="num">${x.games?(100*x.wins/x.games).toFixed(1)+'%':'—'}</td><td class="num kills">${x.kills}</td><td class="num taken">${x.deaths}</td><td class="num">${typeof kd==='number'?kd.toFixed(2):kd}</td><td class="num dealt">${x.dealt.toFixed(1)}</td><td class="num taken">${x.taken.toFixed(1)}</td></tr>`}).join('')}</tbody></table>`;
+      const data=teamComparisonData(sel.value); const anyWins=data.some(x=>x.wins>0); document.getElementById('compareNote').textContent=anyWins?'Win/loss records are saved with each parsed replay. Reprocess older replays once to populate them.':'Win/loss data is not present in the stored replay parses yet; reprocess the season from the Admin page to populate it.';
+      document.getElementById('compareBody').innerHTML=!data.length?`<div class="empty-state">No team data.</div>`:`<table><thead><tr><th class="rank">#</th><th>Team / Coach</th><th class="num">Games</th><th class="num">Wins</th><th class="num">Losses</th><th class="num">Win %</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">K/D</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th></tr></thead><tbody>${data.map((x,i)=>{const kd=x.deaths?x.kills/x.deaths:(x.kills?'∞':0);return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(x.team)}</td><td class="num">${x.games}</td><td class="num kills">${x.wins}</td><td class="num taken">${x.losses}</td><td class="num">${x.games?(100*x.wins/x.games).toFixed(1)+'%':'—'}</td><td class="num kills">${x.kills}</td><td class="num taken">${x.deaths}</td><td class="num">${typeof kd==='number'?kd.toFixed(2):kd}</td><td class="num dealt">${x.dealt.toFixed(1)}</td><td class="num taken">${x.taken.toFixed(1)}</td></tr>`}).join('')}</tbody></table>`;
     }
     sel.addEventListener('change',draw); draw();
   }
@@ -1403,7 +1577,12 @@
         ['Most damage by one Pokémon in a replay',mostDamageMon?`${mostDamageMon.species} · ${mostDamageMon.value.toFixed(1)}`:'—',mostDamageMon],
         ['Most deaths by one Pokémon in a replay',mostDeathsMon?`${mostDeathsMon.species} · ${mostDeathsMon.value}`:'—',mostDeathsMon]
       ];
-      document.getElementById('recordsBody').innerHTML=`<div class="record-grid">${cards.map(c=>`<div class="record-card"><div class="record-label">${c[0]}</div><div class="record-value">${escapeHtml(c[1])}</div>${c[2]?.r?`<div class="record-sub"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(c[2].r.id)}" target="_blank" rel="noopener">View replay</a></div>`:c[2]?.replayId?`<div class="record-sub"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(c[2].replayId)}" target="_blank" rel="noopener">View replay</a></div>`:''}</div>`).join('')}</div>`;
+      const recordValueHtml = c => {
+        if(!c[2]?.species) return escapeHtml(c[1]);
+        const valueText = String(c[1]).replace(c[2].species,'').replace(/^\s*[·-]\s*/,'').trim();
+        return `${pokemonLink(c[2].species, escapeHtml(c[2].species))}${valueText ? ` <span style="color:var(--text-dim)">· ${escapeHtml(valueText)}</span>` : ''}`;
+      };
+      document.getElementById('recordsBody').innerHTML=`<div class="record-grid">${cards.map(c=>`<div class="record-card"><div class="record-label">${c[0]}</div><div class="record-value">${recordValueHtml(c)}</div>${c[2]?.r?`<div class="record-sub"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(c[2].r.id)}" target="_blank" rel="noopener">View replay</a></div>`:c[2]?.replayId?`<div class="record-sub"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(c[2].replayId)}" target="_blank" rel="noopener">View replay</a></div>`:''}</div>`).join('')}</div>`;
     }
     sel.addEventListener('change',draw); draw();
   }
@@ -1433,7 +1612,7 @@
           <div class="gf-rank">${medals[i] || (i+1)}</div>
           ${spriteImg(s.species,'gf-sprite')}
           <div class="gf-info">
-            <div class="gf-name">${escapeHtml(s.species)}</div>
+            <div class="gf-name">${pokemonLink(s.species, escapeHtml(s.species))}</div>
             <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
             <div class="gf-sub">${s.kills} kills · ${s.deaths} deaths · ${s.games} games</div>
           </div>
@@ -1475,7 +1654,7 @@
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
         ${list.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
+          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
@@ -1489,65 +1668,81 @@
     draw();
   }
 
-  // ---------- replays grouped by player ----------
-  function playerReplayGroups(){
-    const groups = {}; // lowercase username -> {label, team, replays:[]}
-    for(const r of Object.values(STATE.replays)){
-      for(const side of ['p1','p2']){
-        const uname = (r.players[side]||'').trim();
-        if(!uname) continue;
-        const key = uname.toLowerCase();
-        if(!groups[key]) groups[key] = { label: uname, team: teamFor(uname), replays: [] };
-        const oppSide = side === 'p1' ? 'p2' : 'p1';
-        groups[key].replays.push({
-          id: r.id,
-          week: r.week || 'Unassigned',
-          format: r.format || '',
-          opponent: (r.players[oppSide] || '?').trim() || '?',
-          processedAt: r.processedAt || 0
-        });
+  // ---------- replay browser ----------
+  function replayBrowserData(){
+    return Object.values(STATE.replays).map(r=>{
+      const p1=(r.players?.p1||'?').trim()||'?';
+      const p2=(r.players?.p2||'?').trim()||'?';
+      const winner=(r.winner||'').trim();
+      let result='Unknown';
+      if(winner){
+        if(winner.toLowerCase()===p1.toLowerCase()) result=`${p1} won`;
+        else if(winner.toLowerCase()===p2.toLowerCase()) result=`${p2} won`;
+        else result=`${winner} won`;
       }
-    }
-    return Object.values(groups).sort((a,b)=> a.label.localeCompare(b.label));
+      const mons=Object.values(r.mons||{});
+      const pokemon=[...new Set(mons.map(m=>m.species).filter(Boolean))];
+      const teams=[teamFor(p1),teamFor(p2)];
+      return {r,p1,p2,winner,result,pokemon,teams,week:r.week||'Unassigned',format:r.format||'—'};
+    }).sort((a,b)=> (String(b.week).localeCompare(String(a.week),undefined,{numeric:true})) || ((b.r.processedAt||0)-(a.r.processedAt||0)));
   }
 
-  function renderPlayers(){
-    const groups = playerReplayGroups();
-    contentEl.innerHTML = `
+  function renderReplayBrowser(){
+    const data=replayBrowserData();
+    const weeks=[...new Set(data.map(x=>x.week))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
+    const players=[...new Set(data.flatMap(x=>[x.p1,x.p2]).filter(x=>x&&x!=='?'))].sort((a,b)=>a.localeCompare(b));
+    const teams=[...new Set(data.flatMap(x=>x.teams).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    const pokemon=[...new Set(data.flatMap(x=>x.pokemon))].sort((a,b)=>a.localeCompare(b));
+    contentEl.innerHTML=`
       <div class="panel">
-        <h2>Replays by Player</h2>
-        <div class="note">Every processed replay this season, grouped by Showdown username. Click a player to expand their list.</div>
-        ${groups.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `
-          <input type="text" id="playerFilter" class="player-filter" placeholder="Filter by username or team…">
-          <div id="playerGroups"></div>`}
+        <h2>Replay Browser</h2>
+        <div class="note">Search and filter every processed replay. Click <strong>View replay</strong> to open the original Pokémon Showdown battle.</div>
+        <div class="row" style="align-items:flex-end;margin-top:14px;">
+          <div style="min-width:210px;flex:1"><label>Search</label><input id="replaySearch" type="text" placeholder="Player, franchise, Pokémon, replay ID…"></div>
+          <div><label>Week</label><select id="replayWeek"><option value="ALL">All weeks</option>${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}</select></div>
+          <div><label>Player</label><select id="replayPlayer"><option value="ALL">All players</option>${players.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
+          <div><label>Franchise</label><select id="replayTeam"><option value="ALL">All franchises</option>${teams.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
+          <div><label>Pokémon</label><select id="replayPokemon"><option value="ALL">All Pokémon</option>${pokemon.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
+          <div><label>Result</label><select id="replayResult"><option value="ALL">All results</option><option value="KNOWN">Completed</option><option value="UNKNOWN">Unknown result</option></select></div>
+        </div>
+        <div id="replayCount" class="note" style="margin-top:12px;"></div>
+        <div id="replayBrowserBody" style="margin-top:10px;"></div>
       </div>`;
-    if(groups.length===0) return;
 
-    const wrap = document.getElementById('playerGroups');
-    function draw(filter){
-      const f = (filter||'').trim().toLowerCase();
-      const filtered = !f ? groups : groups.filter(g =>
-        g.label.toLowerCase().includes(f) || g.team.toLowerCase().includes(f));
-      wrap.innerHTML = filtered.length===0 ? `<div class="empty-state">No players match "${escapeHtml(filter)}".</div>` :
-        filtered.map(g=>{
-          const list = g.replays.slice().sort((a,b)=> b.processedAt - a.processedAt);
-          return `<details class="player-group">
-            <summary><span class="pg-name">${escapeHtml(g.label)}</span><span class="pg-team badge">${escapeHtml(g.team)}</span><span class="badge">${list.length} replay${list.length===1?'':'s'}</span></summary>
-            <div class="player-table-wrap">
-              <table><thead><tr><th>Week</th><th>Opponent</th><th>Format</th><th></th></tr></thead><tbody>
-                ${list.map(rp=>`<tr>
-                  <td>${escapeHtml(rp.week)}</td>
-                  <td>${escapeHtml(rp.opponent)}</td>
-                  <td style="color:var(--text-dim)">${escapeHtml(rp.format)}</td>
-                  <td class="num"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(rp.id)}" target="_blank" rel="noopener">View replay</a></td>
-                </tr>`).join('')}
-              </tbody></table>
-            </div>
-          </details>`;
-        }).join('');
+    const search=document.getElementById('replaySearch');
+    const controls=['replayWeek','replayPlayer','replayTeam','replayPokemon','replayResult'].map(id=>document.getElementById(id));
+    function draw(){
+      const q=search.value.trim().toLowerCase();
+      const [week,player,team,mon,result]=controls.map(x=>x.value);
+      const filtered=data.filter(x=>{
+        if(week!=='ALL' && x.week!==week) return false;
+        if(player!=='ALL' && x.p1!==player && x.p2!==player) return false;
+        if(team!=='ALL' && !x.teams.includes(team)) return false;
+        if(mon!=='ALL' && !x.pokemon.some(p=>p.toLowerCase()===mon.toLowerCase())) return false;
+        if(result==='KNOWN' && !x.winner) return false;
+        if(result==='UNKNOWN' && x.winner) return false;
+        if(q){
+          const hay=[x.r.id,x.week,x.p1,x.p2,x.result,x.format,...x.teams,...x.pokemon].join(' ').toLowerCase();
+          if(!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      document.getElementById('replayCount').textContent=`Showing ${filtered.length} of ${data.length} replay${data.length===1?'':'s'}.`;
+      document.getElementById('replayBrowserBody').innerHTML=!filtered.length?`<div class="empty-state">No replays match those filters.</div>`:`<table><thead><tr><th class="rank">#</th><th>Week</th><th>Matchup</th><th>Franchises</th><th>Format</th><th>Result</th><th class="num">Pokémon</th><th></th><th></th></tr></thead><tbody>${filtered.map((x,i)=>`<tr>
+        <td class="rank">${i+1}</td>
+        <td>${escapeHtml(x.week)}</td>
+        <td class="pname">${escapeHtml(x.p1)} <span style="color:var(--text-dim)">vs</span> ${escapeHtml(x.p2)}</td>
+        <td><span class="badge">${escapeHtml(x.teams[0]||'?')}</span> <span style="color:var(--text-dim)">vs</span> <span class="badge">${escapeHtml(x.teams[1]||'?')}</span></td>
+        <td style="color:var(--text-dim)">${escapeHtml(x.format)}</td>
+        <td>${x.winner ? `<span class="kills">${escapeHtml(x.result)}</span>` : `<span class="badge">Unknown</span>`}</td>
+        <td class="num">${x.pokemon.length}</td>
+        <td class="num"><button class="ghost small" data-replay-summary="${escapeHtml(x.r.id)}">Summary</button></td>
+        <td class="num"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.r.id)}" target="_blank" rel="noopener">View replay</a></td>
+      </tr>`).join('')}</tbody></table>`;
     }
-    document.getElementById('playerFilter').addEventListener('input', (e)=> draw(e.target.value));
-    draw('');
+    search.addEventListener('input',draw);
+    controls.forEach(c=>c.addEventListener('change',draw));
+    draw();
   }
 
   function renderSettings(){
@@ -1755,7 +1950,27 @@
     e.preventDefault();
     goToTab('pokemonsearch');
   });
+  document.addEventListener('keydown', (e)=>{
+    if((e.key==='Enter' || e.key===' ') && e.target.closest('[data-pokemon]')){
+      e.preventDefault();
+      e.target.closest('[data-pokemon]').click();
+    }
+    if(e.key==='Escape') closePokemonProfile();
+  });
   document.addEventListener('click', (e)=>{
+    const pokemon = e.target.closest('[data-pokemon]');
+    if(pokemon){
+      e.preventDefault();
+      e.stopPropagation();
+      openPokemonProfile(pokemon.dataset.pokemon);
+      return;
+    }
+    const summaryBtn = e.target.closest('[data-replay-summary]');
+    if(summaryBtn){
+      e.preventDefault();
+      openReplaySummary(summaryBtn.dataset.replaySummary);
+      return;
+    }
     const cell = e.target.closest('[data-audit]');
     if(!cell) return;
     try{

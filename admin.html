@@ -458,6 +458,8 @@
   function parseLog(json, replayId){
     const lines = json.log.split('\n');
     const players = {p1:'', p2:''};
+    const results = {p1:null, p2:null};
+    let winner = null;
     const slots = {}; // slotId -> {species, hp, side}
     const mons = {}; // "p1|species" -> stats
     const appearedThisReplay = new Set();
@@ -520,6 +522,14 @@
       if(cmd === 'player' && parts[3]){
         const side = parts[2];
         if(side === 'p1' || side === 'p2') players[side] = parts[3];
+      } else if(cmd === 'win' && parts[2]){
+        winner = parts[2].trim();
+        for(const side of ['p1','p2']){
+          if((players[side]||'').toLowerCase() === winner.toLowerCase()){
+            results[side] = 'W';
+            results[side === 'p1' ? 'p2' : 'p1'] = 'L';
+          }
+        }
       } else if(cmd === 'turn'){
         const t = parseInt(parts[2], 10);
         if(!isNaN(t)) currentTurn = t;
@@ -738,7 +748,7 @@
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons };
+      players, mons, winner, results };
   }
 
   // ---------- processing ----------
@@ -758,7 +768,7 @@
         parsed.week = week || 'Unassigned';
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
-        appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
+        appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})${parsed.winner ? ` — ${parsed.winner} won` : ' — result unavailable'}`, false, true);
         added++;
       }catch(e){
         appendLog(logEl, `✗ ${id} — ${e.message}`, true);
