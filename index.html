@@ -1477,10 +1477,14 @@
       }
     }
     const agg = {species: rows[0]?.mon?.species || species, dealt:0,taken:0,kills:0,deaths:0,games:0,killLog:[],deathLog:[],coaches};
-    rows.forEach(({mon})=>{
+    rows.forEach(({replay,mon})=>{
       agg.dealt += mon.damageDealt||0; agg.taken += mon.damageTaken||0;
       agg.kills += mon.kills||0; agg.deaths += mon.deaths||0; agg.games += mon.appearances||0;
-      agg.killLog.push(...(mon.killLog||[])); agg.deathLog.push(...(mon.deathLog||[]));
+      // Keep the replay timestamp with each event so profile history can be
+      // ordered by when the battle was played/uploaded rather than by turn.
+      const replayDate = Number(replay.uploadtime || replay.processedAt || 0);
+      agg.killLog.push(...(mon.killLog||[]).map(x=>({...x, replayDate})));
+      agg.deathLog.push(...(mon.deathLog||[]).map(x=>({...x, replayDate})));
     });
     return agg;
   }
@@ -1504,8 +1508,8 @@
       </div>
       <div class="section-divider"></div>
       <div class="profile-two-col">
-        <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>b.turn-a.turn).map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim)) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
-        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>b.turn-a.turn).map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer)) : 'Unattributed'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
+        <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim)) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
+        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer)) : 'Unattributed'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
       </div>
     </div>`;
   }
