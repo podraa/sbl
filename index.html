@@ -411,6 +411,7 @@
 .pokemon-type-filter{min-width:150px;}
 .pokemon-type-filter label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
 .pokemon-type-filter select{width:100%;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px;font:inherit;}
+  .misc-wrap{display:flex;flex-direction:column;gap:14px}.misc-row{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:12px 0;border-bottom:1px solid var(--border)}.misc-row:last-child{border-bottom:none}.misc-row b{display:block}.misc-row span{display:block;color:var(--text-dim);font-size:12px;margin-top:3px}.misc-row strong{font-family:var(--mono);color:var(--amber);white-space:nowrap}
 </style>
 </head>
 <body data-admin="false">
@@ -1500,174 +1501,63 @@
     document.getElementById('auditOverlay').addEventListener('click', (e)=>{ if(e.target.id === 'auditOverlay') closeAudit(); });
   }
 
-function miscRecords(scope='ALL'){
-    const replays=Object.values(STATE.replays).filter(r=>scope==='ALL'||r.week===scope);
-    const moves={}, mons={}, games=[];
-    let totals={totalCrits:0,totalSwitches:0,totalHazards:0,totalFlinches:0,totalProtects:0,totalSubstitutes:0,totalMisses:0,totalHazardDamage:0,totalStatusInflicted:0,totalStatusKOs:0};
-    for(const r of replays){
-      const rs=r.replayStats||{};
-      totals.totalCrits += r.totalCrits || rs.crits || 0;
-      totals.totalSwitches += rs.switches || 0;
-      totals.totalHazards += rs.hazardsSet || 0;
-      totals.totalFlinches += rs.flinches || 0;
-      totals.totalProtects += rs.protects || 0;
-      totals.totalSubstitutes += rs.substitutions || 0;
-      totals.totalMisses += rs.misses || 0;
-      totals.totalHazardDamage += rs.hazardDamage || 0;
-      totals.totalStatusInflicted += rs.statusInflicted || 0;
-      totals.totalStatusKOs += rs.statusKOs || 0;
 
-      const game={id:r.id,players:r.players||{p1:'?',p2:'?'},turns:rs.turns||0,
-        crits:r.totalCrits||rs.crits||0,switches:rs.switches||0,misses:rs.misses||0,
-        kos:Object.values(r.mons||{}).reduce((n,x)=>n+(x.kills||0),0),
-        deaths:Object.values(r.mons||{}).reduce((n,x)=>n+(x.deaths||0),0),
-        consecutiveKOs:rs.maxConsecutiveKOs||0,hazardDamage:rs.hazardDamage||0,
-        statusKOs:rs.statusKOs||0,lowHp:rs.lowHpSurvivals||0,week:r.week||'Unassigned'};
-      games.push(game);
-
-      for(const m of Object.values(r.moveStats||{})){
-        const k=normName(m.move);
-        if(!k) continue;
-        if(!moves[k]) moves[k]={move:m.move,uses:0,misses:0,outcomes:0,hits:0,crits:0,damage:0,maxDamage:0,kos:0};
-        for(const x of ['uses','misses','outcomes','hits','crits','damage','maxDamage','kos']) moves[k][x]+=Number(m[x]||0);
+  function miscN(v){const n=Number(v);return Number.isFinite(n)?n:0;}
+  function miscPct(h,u){return u?100*h/u:0;}
+  function miscData(scope){
+    const rows=(REPLAYS||[]).filter(r=>scope==='all'||String(r.week)===String(scope));
+    const moves={},mons={},games=[]; let hd=0,hk=0,si=0,sk=0,lh=0;
+    for(const r of rows){
+      for(const [name,s0] of Object.entries(r.moveStats||{})){
+        const s=s0||{},a=moves[name]||(moves[name]={move:name,uses:0,hits:0,misses:0,crits:0,kos:0,damage:0,maxDamage:0});
+        ['uses','hits','misses','crits','kos','damage'].forEach(k=>a[k]+=miscN(s[k]));
+        a.maxDamage=Math.max(a.maxDamage,miscN(s.maxDamage));
       }
-      for(const m of Object.values(r.mons||{})){
-        const key=normName(m.species);
-        if(!key) continue;
-        if(!mons[key]) mons[key]={species:m.species,crits:0,kos:0,deaths:0,damage:0,damageTaken:0,misses:0,
-          lowHpSurvivals:0,hazardDamage:0,statusInflicted:0,statusKOs:0,consecutiveKOs:0,
-          moveUses:{}};
-        const a=mons[key];
-        a.crits+=m.crits||0; a.kos+=m.kills||0; a.deaths+=m.deaths||0;
-        a.damage+=m.damageDealt||0; a.damageTaken+=m.damageTaken||0;
-        a.misses+=m.misses||0; a.lowHpSurvivals+=m.lowHpSurvivals||0;
-        a.hazardDamage+=m.hazardDamage||0; a.statusInflicted+=m.statusInflicted||0;
-        a.statusKOs+=m.statusKOs||0; a.consecutiveKOs=Math.max(a.consecutiveKOs,m.consecutiveKOs||0);
-        const mm=r.monMoveStats?.[m.side+'|'+normName(m.species)]||{};
-        for(const x of Object.values(mm)) a.moveUses[normName(x.move)]={move:x.move,uses:x.uses||0};
+      for(const [mon,byMove] of Object.entries(r.monMoveStats||{})){
+        const a=mons[mon]||(mons[mon]={name:mon,uses:0,kos:0,damage:0,damageTaken:0,crits:0,misses:0});
+        for(const s of Object.values(byMove||{})){
+          a.uses+=miscN(s.uses);a.kos+=miscN(s.kos);a.damage+=miscN(s.damage);
+          a.crits+=miscN(s.crits);a.misses+=miscN(s.misses);
+        }
       }
+      for(const [k,m] of Object.entries(r.mons||{})){
+        const n=m.species||k.split('|')[1]||'Unknown',a=mons[n]||(mons[n]={name:n,uses:0,kos:0,damage:0,damageTaken:0,crits:0,misses:0});
+        a.kos+=miscN(m.kos||m.kills);a.damage+=miscN(m.damage||m.dealt);a.damageTaken+=miscN(m.damageTaken||m.taken);
+        a.crits+=miscN(m.crits);a.misses+=miscN(m.misses);
+      }
+      games.push({id:r.id||'',turns:miscN(r.turns||r.turnCount),switches:miscN(r.switches||r.switchCount),kos:miscN(r.koCount||r.kos),deaths:miscN(r.deathCount||r.deaths),crits:miscN(r.crits||r.critCount),misses:miscN(r.misses||r.missCount)});
+      hd+=miscN(r.hazardDamage);hk+=miscN(r.hazardKOs);si+=miscN(r.statusInflicted);sk+=miscN(r.statusKOs);lh+=miscN(r.lowHpSurvivals);
     }
-
-    // Move-by-Pokémon records.
-    const moveByMon=[];
-    for(const m of Object.values(mons)) for(const x of Object.values(m.moveUses||{}))
-      if(x.uses>0) moveByMon.push({species:m.species,move:x.move,uses:x.uses});
-
-    // Roster records: brought but never actually appeared.
-    const unused=[];
-    for(const r of replays){
-      for(const side of ['p1','p2']){
-        const appeared=new Set(Object.values(r.mons||{}).filter(m=>m.side===side && (m.appearances||0)>0).map(m=>normName(m.species)));
-        for(const sp of (r.teamRoster?.[side]||[])) if(!appeared.has(normName(sp)))
-          unused.push({species:sp,player:r.players?.[side]||'?',replayId:r.id,week:r.week||'Unassigned'});
-      }
-    }
-
-    return {replays,moves:Object.values(moves),mons:Object.values(mons),games,moveByMon,unused,totals};
+    const M=Object.values(moves),P=Object.values(mons),hi=(a,k)=>a.filter(x=>miscN(x[k])>0).sort((x,y)=>miscN(y[k])-miscN(x[k]))[0]||null;
+    const lo=(a,k)=>a.filter(x=>miscN(x[k])>0).sort((x,y)=>miscN(x[k])-miscN(y[k]))[0]||null;
+    return {mostUsed:hi(M,'uses'),leastUsed:lo(M,'uses'),
+      mostAccurate:M.filter(x=>x.uses).sort((a,b)=>miscPct(b.hits,b.uses)-miscPct(a.hits,a.uses))[0]||null,
+      leastAccurate:M.filter(x=>x.uses).sort((a,b)=>miscPct(a.hits,a.uses)-miscPct(b.hits,b.uses))[0]||null,
+      mostDamaging:hi(M,'damage'),highestSingle:hi(M,'maxDamage'),mostMoveKOs:hi(M,'kos'),mostMoveCrits:hi(M,'crits'),mostMoveMisses:hi(M,'misses'),
+      mostMonCrits:hi(P,'crits'),mostMonKOs:hi(P,'kos'),mostMonDamage:hi(P,'damage'),mostMonTaken:hi(P,'damageTaken'),
+      hd,hk,si,sk,lh,longest:games.slice().sort((a,b)=>b.turns-a.turns)[0]||null,shortest:games.filter(x=>x.turns).sort((a,b)=>a.turns-b.turns)[0]||null,
+      mostKOs:games.slice().sort((a,b)=>b.kos-a.kos)[0]||null,mostDeaths:games.slice().sort((a,b)=>b.deaths-a.deaths)[0]||null,
+      mostSwitches:games.slice().sort((a,b)=>b.switches-a.switches)[0]||null,mostCritsGame:games.slice().sort((a,b)=>b.crits-a.crits)[0]||null,
+      mostMissesGame:games.slice().sort((a,b)=>b.misses-a.misses)[0]||null};
   }
-
-function renderMisc(){
-    contentEl.innerHTML=`<div class="panel">
-      <h2>Misc</h2>
-      <div class="note">Season records and unusual battle statistics. Accuracy uses only explicitly recorded hit/miss outcomes.</div>
-      <div class="row" style="align-items:flex-end;margin-top:14px">
-        <div><label>Scope</label>${weekSelectorHtml('miscWeek')}</div>
-        <div><label>Record</label><select id="miscRecord">
-          <optgroup label="Moves">
-            <option value="most-used">Most used move</option><option value="least-used">Least used move</option>
-            <option value="most-accurate">Most accurate move</option><option value="least-accurate">Least accurate move</option>
-            <option value="most-damage">Most damaging move</option><option value="highest-hit">Highest single-hit damage</option>
-            <option value="most-kos-move">Most KOs by a move</option><option value="most-crits-move">Most crits by a move</option>
-            <option value="most-misses">Most misses by a move</option><option value="most-used-by-mon">Most used move by a Pokémon</option>
-          </optgroup>
-          <optgroup label="Combat">
-            <option value="most-crits">Most crits by a Pokémon</option><option value="most-kos">Most KOs by a Pokémon</option>
-            <option value="most-damage-mon">Most damage by a Pokémon</option><option value="most-taken">Most damage taken by a Pokémon</option>
-            <option value="most-consecutive-kos">Most consecutive KOs</option><option value="most-crit-game">Most crits in one game</option>
-          </optgroup>
-          <optgroup label="Hazards & Status">
-            <option value="hazard-kos">Most hazard KOs</option><option value="hazard-damage">Most hazard damage</option>
-            <option value="status-kos">Most status KOs</option><option value="status-inflicted">Most status inflicted</option>
-          </optgroup>
-          <optgroup label="Games">
-            <option value="longest-game">Longest game</option><option value="shortest-game">Shortest game</option>
-            <option value="most-kos-game">Most KOs in one game</option><option value="most-deaths-game">Most deaths in one game</option>
-            <option value="most-switches-game">Most switches in one game</option>
-          </optgroup>
-          <optgroup label="Fun Records">
-            <option value="most-1hp">Most low-HP survivals</option><option value="most-misses-game">Most misses in one game</option>
-            <option value="most-brought-unused">Most Pokémon brought but never used</option>
-          </optgroup>
-        </select></div>
-      </div>
-      <div id="miscResult" style="margin-top:18px"></div>
+  function renderMisc(){
+    const scope=window.miscScopeValue||'all',d=miscData(scope),fmt=x=>miscN(x).toLocaleString(),name=x=>x?(x.move||x.name||x.id||'—'):'—';
+    const weeks=[...new Set((REPLAYS||[]).map(r=>Number(r.week)).filter(Boolean))].sort((a,b)=>a-b);
+    const row=(label,x,val)=>`<div class="misc-row"><div><b>${label}</b><span>${name(x)}</span></div><strong>${x?val(x):'—'}</strong></div>`;
+    return `<div class="misc-wrap">
+      <div class="panel"><h2>Miscellaneous Records</h2><label>Scope</label><select id="miscScopeSelect"><option value="all"${scope==='all'?' selected':''}>All Weeks</option>${weeks.map(w=>`<option value="${w}"${String(scope)===String(w)?' selected':''}>Week ${w}</option>`).join('')}</select></div>
+      <div class="panel"><h2>Moves</h2>
+      ${row('Most Used Move',d.mostUsed,x=>fmt(x.uses))}${row('Least Used Move',d.leastUsed,x=>fmt(x.uses))}
+      ${row('Most Accurate Move',d.mostAccurate,x=>miscPct(x.hits,x.uses).toFixed(1)+'%')}${row('Least Accurate Move',d.leastAccurate,x=>miscPct(x.hits,x.uses).toFixed(1)+'%')}
+      ${row('Most Damaging Move',d.mostDamaging,x=>fmt(x.damage))}${row('Highest Single-Hit Damage',d.highestSingle,x=>fmt(x.maxDamage))}
+      ${row('Most KOs by a Move',d.mostMoveKOs,x=>fmt(x.kos))}${row('Most Crits by a Move',d.mostMoveCrits,x=>fmt(x.crits))}${row('Most Misses by a Move',d.mostMoveMisses,x=>fmt(x.misses))}</div>
+      <div class="panel"><h2>Combat</h2>${row('Most Crits by a Pokémon',d.mostMonCrits,x=>fmt(x.crits))}${row('Most KOs by a Pokémon',d.mostMonKOs,x=>fmt(x.kos))}${row('Most Damage by a Pokémon',d.mostMonDamage,x=>fmt(x.damage))}${row('Most Damage Taken by a Pokémon',d.mostMonTaken,x=>fmt(x.damageTaken))}</div>
+      <div class="panel"><h2>Hazards & Status</h2>${row('Most Hazard Damage',{name:'Hazards',v:d.hd},x=>fmt(x.v))}${row('Most Hazard KOs',{name:'Hazards',v:d.hk},x=>fmt(x.v))}${row('Most Status Inflicted',{name:'Status',v:d.si},x=>fmt(x.v))}${row('Most Status KOs',{name:'Status',v:d.sk},x=>fmt(x.v))}</div>
+      <div class="panel"><h2>Games</h2>${row('Longest Game',d.longest,x=>fmt(x.turns)+' turns')}${row('Shortest Game',d.shortest,x=>fmt(x.turns)+' turns')}${row('Most KOs in One Game',d.mostKOs,x=>fmt(x.kos)+' KOs')}${row('Most Deaths in One Game',d.mostDeaths,x=>fmt(x.deaths)+' deaths')}${row('Most Switches in One Game',d.mostSwitches,x=>fmt(x.switches)+' switches')}${row('Most Crits in One Game',d.mostCritsGame,x=>fmt(x.crits)+' crits')}${row('Most Misses in One Game',d.mostMissesGame,x=>fmt(x.misses)+' misses')}</div>
+      <div class="panel"><h2>Fun Records</h2>${row('Most Low-HP Survivals',{name:'Survivals',v:d.lh},x=>fmt(x.v))}</div>
     </div>`;
-    const week=document.getElementById('miscWeek'), rec=document.getElementById('miscRecord'), out=document.getElementById('miscResult');
-    function draw(){
-      const d=miscRecords(week.value), r=rec.value;
-      const moves=d.moves.filter(x=>x.uses>0), mons=d.mons, games=d.games;
-      const acc=x=>x.outcomes>0?(100*x.hits/x.outcomes):null;
-      let title='', rows=[];
-      if(r==='most-used'||r==='least-used'){
-        const a=[...moves].sort((a,b)=>r==='most-used'?b.uses-a.uses:a.uses-b.uses);
-        title=r==='most-used'?'Most used move':'Least used move'; rows=a.slice(0,10).map(x=>[x.move,`${x.uses} uses`]);
-      } else if(r==='most-accurate'||r==='least-accurate'){
-        const a=moves.filter(x=>x.outcomes>0).sort((a,b)=>(r==='most-accurate'?acc(b)-acc(a):acc(a)-acc(b)));
-        title=r==='most-accurate'?'Most accurate move':'Least accurate move'; rows=a.slice(0,10).map(x=>[x.move,`${acc(x).toFixed(1)}% (${x.hits}/${x.outcomes})`]);
-      } else if(r==='most-damage'){
-        rows=[...moves].sort((a,b)=>b.damage-a.damage).slice(0,10).map(x=>[x.move,`${x.damage.toFixed(1)} total damage`]); title='Most damaging move';
-      } else if(r==='highest-hit'){
-        rows=[...moves].sort((a,b)=>b.maxDamage-a.maxDamage).slice(0,10).map(x=>[x.move,`${x.maxDamage.toFixed(1)} damage`]); title='Highest single-hit damage';
-      } else if(r==='most-kos-move'){
-        rows=[...moves].sort((a,b)=>b.kos-a.kos).slice(0,10).map(x=>[x.move,`${x.kos} KOs`]); title='Most KOs by a move';
-      } else if(r==='most-crits-move'){
-        rows=[...moves].sort((a,b)=>b.crits-a.crits).slice(0,10).map(x=>[x.move,`${x.crits} crits`]); title='Most crits by a move';
-      } else if(r==='most-misses'){
-        rows=[...moves].sort((a,b)=>b.misses-a.misses).slice(0,10).map(x=>[x.move,`${x.misses} misses`]); title='Most misses by a move';
-      } else if(r==='most-used-by-mon'){
-        rows=[...d.moveByMon].sort((a,b)=>b.uses-a.uses).slice(0,10).map(x=>[`${x.species} — ${x.move}`,`${x.uses} uses`]); title='Most used move by a Pokémon';
-      } else if(r==='most-crits'){
-        rows=[...mons].sort((a,b)=>b.crits-a.crits).slice(0,10).map(x=>[x.species,`${x.crits} crits`]); title='Most crits by a Pokémon';
-      } else if(r==='most-kos'){
-        rows=[...mons].sort((a,b)=>b.kos-a.kos).slice(0,10).map(x=>[x.species,`${x.kos} KOs`]); title='Most KOs by a Pokémon';
-      } else if(r==='most-damage-mon'){
-        rows=[...mons].sort((a,b)=>b.damage-a.damage).slice(0,10).map(x=>[x.species,`${x.damage.toFixed(1)} damage`]); title='Most damage by a Pokémon';
-      } else if(r==='most-taken'){
-        rows=[...mons].sort((a,b)=>b.damageTaken-a.damageTaken).slice(0,10).map(x=>[x.species,`${x.damageTaken.toFixed(1)} damage`]); title='Most damage taken by a Pokémon';
-      } else if(r==='most-consecutive-kos'){
-        rows=[...mons].filter(x=>x.consecutiveKOs>0).sort((a,b)=>b.consecutiveKOs-a.consecutiveKOs).slice(0,10).map(x=>[x.species,`${x.consecutiveKOs} consecutive KOs`]); title='Most consecutive KOs';
-      } else if(r==='most-crit-game'){
-        rows=[...games].sort((a,b)=>b.crits-a.crits).slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${x.crits} crits · ${x.week}`]); title='Most crits in one game';
-      } else if(r==='hazard-kos'){
-        rows=[...mons].filter(x=>x.deathLog?.length).map(x=>({species:x.species,n:(x.deathLog||[]).filter(z=>/hazard|stealth rock|spikes|sticky web|toxic spikes/i.test(z.cause||'')).length})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).slice(0,10).map(x=>[x.species,`${x.n} hazard KOs`]); title='Most hazard KOs';
-      } else if(r==='hazard-damage'){
-        rows=[...mons].filter(x=>x.hazardDamage>0).sort((a,b)=>b.hazardDamage-a.hazardDamage).slice(0,10).map(x=>[x.species,`${x.hazardDamage.toFixed(1)} hazard damage`]); title='Most hazard damage';
-      } else if(r==='status-kos'){
-        rows=[...mons].filter(x=>x.statusKOs>0).sort((a,b)=>b.statusKOs-a.statusKOs).slice(0,10).map(x=>[x.species,`${x.statusKOs} status KOs`]); title='Most status KOs';
-      } else if(r==='status-inflicted'){
-        rows=[...mons].filter(x=>x.statusInflicted>0).sort((a,b)=>b.statusInflicted-a.statusInflicted).slice(0,10).map(x=>[x.species,`${x.statusInflicted} status conditions`]); title='Most status inflicted';
-      } else if(r==='longest-game'||r==='shortest-game'){
-        const a=[...games].filter(x=>x.turns>0).sort((a,b)=>r==='longest-game'?b.turns-a.turns:a.turns-b.turns);
-        title=r==='longest-game'?'Longest game':'Shortest game'; rows=a.slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${x.turns} turns · ${x.week}`]);
-      } else if(r==='most-kos-game'||r==='most-deaths-game'){
-        const a=[...games].sort((a,b)=>r==='most-kos-game'?b.kos-a.kos:b.deaths-a.deaths);
-        title=r==='most-kos-game'?'Most KOs in one game':'Most deaths in one game'; rows=a.slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${r==='most-kos-game'?x.kos:x.deaths} · ${x.week}`]);
-      } else if(r==='most-switches-game'){
-        rows=[...games].sort((a,b)=>b.switches-a.switches).slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${x.switches} switches · ${x.week}`]); title='Most switches in one game';
-      } else if(r==='most-1hp'){
-        rows=[...mons].filter(x=>x.lowHpSurvivals>0).sort((a,b)=>b.lowHpSurvivals-a.lowHpSurvivals).slice(0,10).map(x=>[x.species,`${x.lowHpSurvivals} low-HP survivals`]); title='Most low-HP survivals';
-      } else if(r==='most-misses-game'){
-        rows=[...games].sort((a,b)=>b.misses-a.misses).slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${x.misses} misses · ${x.week}`]); title='Most misses in one game';
-      } else if(r==='most-brought-unused'){
-        const counts={};
-        for(const x of d.unused){ const k=normName(x.species); if(!counts[k]) counts[k]={species:x.species,count:0}; counts[k].count++; }
-        rows=Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,10).map(x=>[x.species,`${x.count} games brought but unused`]); title='Most Pokémon brought but never used';
-      }
-      const tableRows=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${pokemonLink(x[0],escapeHtml(x[0]),'',false)}</td><td class="num">${escapeHtml(x[1])}</td></tr>`).join('');
-      out.innerHTML=`<div class="misc-card"><h3>${escapeHtml(title)}</h3>${tableRows?`<table><thead><tr><th>#</th><th>Record</th><th>Value</th></tr></thead><tbody>${tableRows}</tbody></table>`:'<div class="empty-state">No matching records have been recorded yet. Reprocess your replays in Admin after updating the parser.</div>'}</div>`;
-    }
-    week.addEventListener('change',draw); rec.addEventListener('change',draw); draw();
   }
+
 
   function render(){
     document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'replays' || activeTab === 'misc' || activeTab === 'overview');
