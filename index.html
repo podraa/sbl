@@ -168,7 +168,7 @@
   /* golden fist */
   .gf-list{display:flex; flex-direction:column; gap:8px;}
   .gf-row{
-    display:grid; grid-template-columns:36px 72px minmax(300px,1fr) minmax(240px,1fr) 110px; align-items:center; gap:14px; padding:12px 16px; border-radius:12px;
+    position:relative; display:grid; grid-template-columns:36px 72px minmax(0,1fr) 110px; align-items:center; gap:14px; padding:12px 16px; border-radius:12px;
     background:var(--panel-alt); border:1px solid var(--border); min-width:0;
   }
   .gf-row.top1{border-color:#ffd166; box-shadow:0 0 0 1px #ffd16655 inset;}
@@ -184,18 +184,18 @@
   .gf-info{min-width:0;}
   .gf-name{font-weight:750; font-size:18px; line-height:1.2;}
   .gf-sub{font-size:12px; color:var(--text-dim); margin-top:5px;}
-  .gf-coach{font-size:15px; color:var(--teal); text-align:center; line-height:1.35; overflow-wrap:anywhere; justify-self:center; width:100%;}
+  .gf-coach{position:absolute; left:50%; transform:translateX(-50%); width:min(30%,320px); font-size:15px; color:var(--teal); text-align:center; line-height:1.35; overflow-wrap:anywhere;}
   .gf-diff{font-family:var(--mono); font-size:22px; color:var(--teal); min-width:0; text-align:right; font-weight:700;}
   .gf-diff.neg{color:var(--red);}
   @media (max-width: 900px){
-    .gf-row{grid-template-columns:32px 60px minmax(190px,1fr) minmax(160px,.9fr) 90px; gap:10px; padding:10px 12px;}
+    .gf-row{grid-template-columns:32px 60px minmax(0,1fr) 90px; gap:10px; padding:10px 12px;}
     .gf-sprite{width:56px;height:56px;}
     .gf-name{font-size:16px;}
     .gf-coach{font-size:13px;}
     .gf-diff{font-size:19px;}
   }
   @media (max-width: 640px){
-    .gf-row{grid-template-columns:30px 52px minmax(150px,1fr) minmax(120px,.9fr) 72px; gap:8px; padding:9px 10px;}
+    .gf-row{grid-template-columns:30px 52px minmax(0,1fr) 72px; gap:8px; padding:9px 10px;}
     .gf-sprite{width:48px;height:48px;}
     .gf-name{font-size:15px;}
     .gf-sub{font-size:11px;}
@@ -235,7 +235,7 @@
     .profile-grid>div{padding:9px;}
     .profile-grid strong{font-size:15px;}
     .record-grid{grid-template-columns:1fr;}
-    .gf-row{grid-template-columns:28px 56px minmax(150px,1fr) minmax(100px,.7fr) 60px;gap:9px;padding:10px;}
+    .gf-row{grid-template-columns:28px 56px minmax(0,1fr) 60px;gap:9px;padding:10px;}
     .gf-sprite{width:56px;height:56px;}
     .gf-name{font-size:15px;}
     .gf-coach{font-size:12px;}
@@ -249,9 +249,9 @@
     #app,#app.wide{width:calc(100% - 20px);padding-top:22px;}
     header{margin-bottom:22px;}
     nav.tabs{margin:22px 0 20px;}
-    .gf-row{grid-template-columns:24px 50px minmax(120px,1fr);}
-    .gf-coach{grid-column:3;text-align:left;margin-top:2px;}
-    .gf-diff{grid-column:3;text-align:left;margin-top:2px;}
+    .gf-row{grid-template-columns:24px 50px minmax(0,1fr) 60px;}
+    .gf-coach{position:absolute; left:50%; transform:translateX(-50%); width:34%; font-size:11px;}
+    .gf-diff{grid-column:4;text-align:right;margin-top:0;}
   }
 
   .banner-controls{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 10px;}
@@ -383,6 +383,16 @@
   .summary-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
   .danger-badge{color:var(--red);}
   @media(max-width:700px){.summary-grid{grid-template-columns:1fr}.summary-header{flex-direction:column}.summary-meta{align-items:flex-start;text-align:left}}
+
+
+  /* compact league overview cards */
+  .overview-grid{gap:12px;}
+  .overview-card{min-height:118px !important; padding:14px 16px !important; border-radius:10px !important;}
+  .overview-card .team-name{font-weight:500 !important; font-size:17px !important;}
+  .overview-card .team-record{font-weight:400 !important; font-size:15px !important;}
+  .overview-card img{width:72px !important; height:72px !important;}
+  .overview-card *{font-weight:400;}
+  .overview-card .team-name{font-weight:500 !important;}
 
 </style>
 </head>
@@ -1384,7 +1394,7 @@
     if(mode==='golden'){
       cards=globalPokemonStats('ALL').map(s=>({...s,diff:s.kills-s.deaths})).sort((a,b)=>b.diff-a.diff||b.kills-a.kills).slice(0,5).map((s,i)=>`<div class="banner-pokemon"><div style="font-family:var(--mono);color:var(--text-dim);width:24px">${i+1}</div>${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.diff>0?'+':''}${s.diff}</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
     } else if(mode==='top'){
-      cards=globalPokemonStats('ALL').slice(0,5).map(s=>`<div class="banner-pokemon">${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.dealt.toFixed(0)} dmg</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
+      cards=globalPokemonStats('ALL').slice(0,5).map(s=>`<div class="banner-pokemon">${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.dealt.toFixed(0)} ⚔</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
     } else {
       const selected=teams.find(t=>t.team===STATE.settings.bannerTeam)||teams[0];
       if(selected){
