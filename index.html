@@ -141,6 +141,15 @@
   #globalTable{overflow-x:auto;}
   #globalTable table{min-width:620px;}
 
+  /* pokemon search */
+  .pokemon-search-box{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px;}
+  .pokemon-search-box .search-input-wrap{flex:1; min-width:240px;}
+  .pokemon-search-box input[type=text]{font-family:var(--sans); font-size:14px;}
+  .pokemon-search-hint{font-size:12px; color:var(--text-dim); margin-top:8px;}
+  #pokemonSearchTable{overflow-x:auto;}
+  #pokemonSearchTable table{min-width:700px;}
+  .search-match{background:var(--panel-alt); border-radius:8px;}
+
   /* golden fist */
   .gf-list{display:flex; flex-direction:column; gap:8px;}
   .gf-row{
@@ -222,6 +231,7 @@
   <nav class="tabs" id="tabs">
     <button data-tab="process" class="active">Process Replays</button>
     <button data-tab="global">Leaderboards</button>
+    <button data-tab="pokemonsearch">Pokémon Search</button>
     <button data-tab="goldenfist">Golden Fist</button>
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="players">Replays by Player</button>
@@ -1035,10 +1045,11 @@
   }
 
   function render(){
-    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'players');
+    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'players' || activeTab === 'pokemonsearch');
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     if(activeTab === 'process') return renderProcess();
     if(activeTab === 'global') return renderLeaderboards();
+    if(activeTab === 'pokemonsearch') return renderPokemonSearch();
     if(activeTab === 'goldenfist') return renderGoldenFist();
     if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'players') return renderPlayers();
@@ -1185,6 +1196,57 @@
     sel.addEventListener('change', drawGlobal);
     document.getElementById('exportGlobal').addEventListener('click', ()=> exportGlobalCSV(sel.value, sel.value==='ALL'?'Season':sel.value));
     drawGlobal();
+  }
+
+  function renderPokemonSearch(){
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Pokémon Search</h2>
+        <div class="pokemon-search-box">
+          <div class="search-input-wrap">
+            <label>Search by Pokémon name</label>
+            <input type="text" id="pokemonSearchInput" placeholder="e.g. Slowking-Galar, Haxorus, Cinderace…" autocomplete="off">
+            <div class="pokemon-search-hint">Search is live as you type. Press <strong>/</strong> anywhere on the dashboard to jump here.</div>
+          </div>
+          <div>
+            <label>Scope</label>
+            ${weekSelectorHtml('pokemonSearchWeek')}
+          </div>
+        </div>
+        <div id="pokemonSearchTable"></div>
+      </div>`;
+
+    const input = document.getElementById('pokemonSearchInput');
+    const weekSel = document.getElementById('pokemonSearchWeek');
+    const table = document.getElementById('pokemonSearchTable');
+
+    function draw(){
+      const q = input.value.trim().toLowerCase();
+      const stats = globalPokemonStats(weekSel.value).filter(s => !q || s.species.toLowerCase().includes(q));
+      if(!stats.length){
+        table.innerHTML = `<div class="empty-state">${q ? `No Pokémon matching <strong>${escapeHtml(input.value.trim())}</strong> in this scope.` : 'No Pokémon data for this scope yet.'}</div>`;
+        return;
+      }
+      table.innerHTML = `<table><thead><tr>
+        <th>Pokémon</th><th>Coach / Team</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th>
+      </tr></thead><tbody>
+        ${stats.map(s=>`<tr class="search-match">
+          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
+          <td>${escapeHtml(Array.from(s.coaches).sort().join(', ') || 'Unknown')}</td>
+          <td class="num dealt">${s.dealt.toFixed(1)}</td>
+          <td class="num taken">${s.taken.toFixed(1)}</td>
+          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
+          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
+          <td class="num">${s.games}</td>
+          <td class="num">${(s.games ? s.dealt/s.games : 0).toFixed(1)}</td>
+        </tr>`).join('')}
+      </tbody></table>`;
+    }
+
+    input.addEventListener('input', draw);
+    weekSel.addEventListener('change', draw);
+    setTimeout(()=>input.focus(), 0);
+    draw();
   }
 
   function renderGoldenFist(){
@@ -1527,6 +1589,13 @@
   }
 
   // ---------- init ----------
+  document.addEventListener('keydown', (e)=>{
+    if(e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = document.activeElement?.tagName;
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    e.preventDefault();
+    goToTab('pokemonsearch');
+  });
   document.addEventListener('click', (e)=>{
     const cell = e.target.closest('[data-audit]');
     if(!cell) return;
