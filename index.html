@@ -138,6 +138,8 @@
     image-rendering:pixelated; background:var(--panel-alt); border-radius:10px; margin-right:12px;
   }
   .pname-cell{display:flex; align-items:center;}
+  .pname-with-types{display:grid;grid-template-columns:minmax(0,1fr) minmax(92px,auto);align-items:center;gap:14px;width:100%;}
+  .pname-with-types .type-badges{justify-content:center;margin:0;}
 
   /* wide layout (Leaderboards / Golden Fist / Franchise Stats) */
   #app.wide{width:min(1600px,calc(100% - 32px));}
@@ -623,9 +625,13 @@
   function spriteUrl(species){
     return `https://play.pokemonshowdown.com/sprites/gen5/${toShowdownId(species)}.png`;
   }
+  function spriteFallbackUrl(species){
+    const d = POKEDEX_TYPES[dexKey(species)];
+    return d?.num ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${d.num}.png` : 'https://play.pokemonshowdown.com/sprites/gen5/0.png';
+  }
   function spriteImg(species, cls){
     const safe = escapeHtml(species);
-    return `<img class="${cls}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
+    return `<img class="${cls}" data-species="${safe}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src=spriteFallbackUrl(this.dataset.species);}else{this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';}">`;
   }
   // Pokémon typing is loaded from Showdown's public Pokédex and cached locally.
   // This keeps the dashboard data-driven while avoiding a huge hard-coded type table.
@@ -1566,7 +1572,7 @@
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
         ${stats.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
+          <td class="pname"><div class="pname-with-types"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl',false)}</div>${typeBadges(s.species)}</div></td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
@@ -1617,7 +1623,7 @@
         <th>Pokémon</th><th>Coach / Team</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th>
       </tr></thead><tbody>
         ${stats.map(s=>`<tr class="search-match" data-pokemon="${escapeHtml(s.species)}" tabindex="0" role="button" title="Open ${escapeHtml(s.species)} profile" style="cursor:pointer;">
-          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
+          <td class="pname"><div class="pname-with-types"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl',false)}</div>${typeBadges(s.species)}</div></td>
           <td>${escapeHtml(Array.from(s.coaches).sort().join(', ') || 'Unknown')}</td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
@@ -2111,7 +2117,7 @@
       const dex = await res.json();
       const out = {};
       for(const [key,val] of Object.entries(dex)){
-        if(Array.isArray(val.types)) out[key.toLowerCase().replace(/[^a-z0-9]/g,'')] = {types:val.types};
+        if(Array.isArray(val.types)) out[key.toLowerCase().replace(/[^a-z0-9]/g,'')] = {types:val.types, num:val.num};
       }
       POKEDEX_TYPES = out;
       localStorage.setItem('sbl_pokedex_types_v1',JSON.stringify(out));
