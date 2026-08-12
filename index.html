@@ -6,9 +6,6 @@
 <title>SBL Stats Hub</title>
 <style>
   :root{
-    /* Dynamic fluid base font-size scaling based on viewport width */
-    font-size: clamp(12px, 0.75vw + 8px, 18px);
-    
     --bg:#0e1218;
     --panel:#161c26;
     --panel-alt:#1c2432;
@@ -26,81 +23,83 @@
     margin:0; background:var(--bg); color:var(--text);
     font-family:var(--sans); -webkit-font-smoothing:antialiased;
   }
-  #app{max-width:90vw; margin:0 auto; padding:1.5rem 1.25rem 3.75rem; transition: all 0.2s ease;}
+  #app{max-width:1080px; margin:0 auto; padding:24px 20px 60px;}
 
   /* header + ticker */
-  header{margin-bottom:1.25rem;}
-  h1{font-size:1.4rem; margin:0 0 0.15rem; letter-spacing:.2px;}
-  .sub{color:var(--text-dim); font-size:0.85rem; margin-bottom:1rem;}
+  header{margin-bottom:20px;}
+  h1{font-size:22px; margin:0 0 2px; letter-spacing:.2px;}
+  .sub{color:var(--text-dim); font-size:13px; margin-bottom:16px;}
   .ticker{
     display:flex; gap:0; overflow-x:auto; border:1px solid var(--border);
-    border-radius:0.6rem; background:linear-gradient(180deg,var(--panel-alt),var(--panel));
+    border-radius:10px; background:linear-gradient(180deg,var(--panel-alt),var(--panel));
   }
   .tick{
-    flex:1 0 8.75rem; padding:0.75rem 1rem; border-right:1px solid var(--border);
-    min-width:8.75rem;
+    flex:1 0 220px; padding:14px 18px; border-right:1px solid var(--border);
+    min-width:220px;
   }
   .tick:last-child{border-right:none;}
-  .tick .lbl{font-size:0.65rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim);}
-  .tick .name{font-size:0.85rem; margin:0.15rem 0 0.25rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .tick .val{font-family:var(--mono); font-size:1.2rem; color:var(--amber);}
-  .tick.empty .val{color:var(--text-dim); font-size:0.85rem;}
+  .tick .lbl{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim);}
+  .tick .name{font-size:13px; margin:2px 0 4px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .tick .val{font-family:var(--mono); font-size:19px; color:var(--amber);}
+  .tick.empty .val{color:var(--text-dim); font-size:13px;}
 
   /* tabs */
-  nav.tabs{display:flex; gap:0.25rem; margin:1.25rem 0 1rem; border-bottom:1px solid var(--border); flex-wrap:wrap;}
+  nav.tabs{display:flex; gap:4px; margin:20px 0 16px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
   nav.tabs button{
-    background:none; border:none; color:var(--text-dim); padding:0.65rem 0.9rem;
-    font-size:0.85rem; font-weight:600; cursor:pointer; border-bottom:2px solid transparent;
+    background:none; border:none; color:var(--text-dim); padding:10px 14px;
+    font-size:13px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent;
     font-family:var(--sans);
   }
   nav.tabs button.active{color:var(--text); border-bottom-color:var(--amber);}
   nav.tabs button:hover{color:var(--text);}
 
   .panel{
-    background:var(--panel); border:1px solid var(--border); border-radius:0.6rem; padding:1.15rem;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px;
     min-width:0;
   }
-  .panel + .panel{margin-top:0.9rem;}
-  .panel h2{font-size:0.9rem; margin:0 0 0.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim);}
+  .panel + .panel{margin-top:14px;}
+  .panel h2{font-size:14px; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim);}
 
-  label{display:block; font-size:0.75rem; color:var(--text-dim); margin-bottom:0.4rem;}
+  label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px;}
   textarea, input[type=text]{
-    width:100%; background:var(--panel-alt); border:1px solid var(--border); border-radius:0.5rem;
-    color:var(--text); padding:0.65rem 0.75rem; font-family:var(--mono); font-size:0.85rem;
+    width:100%; background:var(--panel-alt); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); padding:10px 12px; font-family:var(--mono); font-size:13px;
   }
-  textarea{min-height:5.5rem; resize:vertical;}
-  .row{display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.75rem;}
-  .row > div{flex:1; min-width:10rem;}
+  textarea{min-height:90px; resize:vertical;}
+  .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+  .row > div{flex:1; min-width:160px;}
 
   button.primary{
-    background:var(--amber); color:#1a1206; border:none; border-radius:0.5rem;
-    padding:0.65rem 1.15rem; font-weight:700; font-size:0.85rem; cursor:pointer; font-family:var(--sans);
+    background:var(--amber); color:#1a1206; border:none; border-radius:8px;
+    padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans);
   }
   button.primary:disabled{opacity:.5; cursor:default;}
   button.ghost{
-    background:none; border:1px solid var(--border); color:var(--text); border-radius:0.5rem;
-    padding:0.55rem 0.9rem; font-size:0.75rem; cursor:pointer; font-family:var(--sans);
+    background:none; border:1px solid var(--border); color:var(--text); border-radius:8px;
+    padding:9px 14px; font-size:12px; cursor:pointer; font-family:var(--sans);
   }
   button.ghost:hover{border-color:var(--amber);}
-  button.small{padding:0.3rem 0.65rem; font-size:0.7rem;}
+  button.small{padding:5px 10px; font-size:11px;}
   .danger-btn{border-color:var(--red); color:var(--red);}
 
-  .log{font-family:var(--mono); font-size:0.75rem; white-space:pre-wrap; color:var(--text-dim); margin-top:0.65rem; line-height:1.6;}
+  .log{font-family:var(--mono); font-size:12px; white-space:pre-wrap; color:var(--text-dim); margin-top:10px; line-height:1.6;}
   .log .ok{color:var(--teal);}
   .log .err{color:var(--red);}
 
-  table{width:100%; border-collapse:collapse; font-size:0.85rem;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  /* Tables stay fluid on wide screens and scroll horizontally only when their
+     natural content is wider than the available viewport. */
   .panel{overflow-x:auto; overflow-y:visible;}
   .panel table{width:100%; min-width:max-content; white-space:nowrap;}
   .panel table thead,.panel table tbody{width:auto;}
   th{
-    text-align:left; font-size:0.65rem; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--text-dim); padding:0.5rem 0.65rem; border-bottom:1px solid var(--border);
+    text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--text-dim); padding:8px 10px; border-bottom:1px solid var(--border);
   }
-  td{padding:0.5rem 0.65rem; border-bottom:1px solid var(--border);}
+  td{padding:8px 10px; border-bottom:1px solid var(--border);}
   tr:last-child td{border-bottom:none;}
   td.num, th.num{text-align:right; font-family:var(--mono);}
-  .rank{color:var(--text-dim); font-family:var(--mono); width:1.6rem;}
+  .rank{color:var(--text-dim); font-family:var(--mono); width:26px;}
   .pname{font-weight:600;}
   .dealt{color:var(--amber);}
   .taken{color:var(--red);}
@@ -108,26 +107,26 @@
 
   select{
     background:var(--panel-alt); border:1px solid var(--border); color:var(--text);
-    padding:0.55rem 0.65rem; border-radius:0.5rem; font-family:var(--sans); font-size:0.85rem;
+    padding:8px 10px; border-radius:8px; font-family:var(--sans); font-size:13px;
   }
-  .empty-state{color:var(--text-dim); font-size:0.85rem; padding:1.25rem 0; text-align:center;}
-  .foot-actions{display:flex; gap:0.65rem; margin-top:0.9rem; flex-wrap:wrap;}
-  .note{font-size:0.75rem; color:var(--text-dim); margin-top:0.65rem; line-height:1.5;}
-  .map-row{display:flex; gap:0.65rem; align-items:center; margin-bottom:0.5rem;}
+  .empty-state{color:var(--text-dim); font-size:13px; padding:20px 0; text-align:center;}
+  .foot-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+  .note{font-size:12px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
+  .map-row{display:flex; gap:10px; align-items:center; margin-bottom:8px;}
   .map-row input{flex:1;}
   .badge{
-    display:inline-block; font-size:0.65rem; padding:0.15rem 0.45rem; border-radius:1.25rem;
-    background:var(--panel-alt); border:1px solid var(--border); color:var(--text-dim); margin-left:0.4rem;
+    display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px;
+    background:var(--panel-alt); border:1px solid var(--border); color:var(--text-dim); margin-left:6px;
   }
 
   /* sprites */
   .sprite{
-    width:3rem; height:3rem; object-fit:contain; vertical-align:middle;
-    image-rendering:pixelated; background:var(--panel-alt); border-radius:0.5rem; margin-right:0.65rem;
+    width:48px; height:48px; object-fit:contain; vertical-align:middle;
+    image-rendering:pixelated; background:var(--panel-alt); border-radius:8px; margin-right:10px;
   }
   .pokemon-click{
-    display:inline-flex; align-items:center; gap:0.5rem; color:inherit; text-decoration:none;
-    cursor:pointer; border-radius:0.5rem; padding:0.15rem 0.25rem; margin:-0.15rem -0.25rem; transition:background .12s, transform .12s;
+    display:inline-flex; align-items:center; gap:8px; color:inherit; text-decoration:none;
+    cursor:pointer; border-radius:8px; padding:2px 4px; margin:-2px -4px; transition:background .12s, transform .12s;
   }
   .pokemon-click:hover{background:var(--panel-alt); color:var(--amber); transform:translateY(-1px);}
   .pokemon-click:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
@@ -135,41 +134,41 @@
   .pokemon-text-link{color:inherit; text-decoration:none; cursor:pointer;}
   .pokemon-text-link:hover{color:var(--amber); text-decoration:underline;}
   .sprite-xl{
-    width:4rem; height:4rem; object-fit:contain; vertical-align:middle;
-    image-rendering:pixelated; background:var(--panel-alt); border-radius:0.65rem; margin-right:0.75rem;
+    width:64px; height:64px; object-fit:contain; vertical-align:middle;
+    image-rendering:pixelated; background:var(--panel-alt); border-radius:10px; margin-right:12px;
   }
   .pname-cell{display:flex; align-items:center;}
 
-  /* wide layout */
-  #app.wide{max-width:96vw;}
-  .wide .panel{padding:1.6rem;}
-  .wide table{font-size:0.95rem;}
-  .wide th{font-size:0.7rem; padding:0.65rem 0.75rem;}
-  .wide td{padding:0.75rem;}
+  /* wide layout (Leaderboards / Golden Fist / Franchise Stats) */
+  #app.wide{max-width:1440px;}
+  .wide .panel{padding:26px;}
+  .wide table{font-size:15px;}
+  .wide th{font-size:11px; padding:10px 12px;}
+  .wide td{padding:12px;}
 
   .nav-link{
-    display:inline-block; color:var(--teal); text-decoration:none; font-size:0.85rem;
-    font-weight:600; cursor:pointer; margin-top:0.25rem;
+    display:inline-block; color:var(--teal); text-decoration:none; font-size:13px;
+    font-weight:600; cursor:pointer; margin-top:4px;
   }
   .nav-link:hover{text-decoration:underline;}
-  .section-divider{height:1px; background:var(--border); margin:1.15rem 0;}
+  .section-divider{height:1px; background:var(--border); margin:18px 0;}
 
   #globalTable{overflow-x:auto;}
-  #globalTable table{min-width:38rem;}
+  #globalTable table{min-width:620px;}
 
   /* pokemon search */
-  .pokemon-search-box{display:flex; gap:0.65rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:0.9rem;}
-  .pokemon-search-box .search-input-wrap{flex:1; min-width:15rem;}
-  .pokemon-search-box input[type=text]{font-family:var(--sans); font-size:0.9rem;}
-  .pokemon-search-hint{font-size:0.75rem; color:var(--text-dim); margin-top:0.5rem;}
+  .pokemon-search-box{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px;}
+  .pokemon-search-box .search-input-wrap{flex:1; min-width:240px;}
+  .pokemon-search-box input[type=text]{font-family:var(--sans); font-size:14px;}
+  .pokemon-search-hint{font-size:12px; color:var(--text-dim); margin-top:8px;}
   #pokemonSearchTable{overflow-x:auto;}
-  #pokemonSearchTable table{min-width:44rem;}
-  .search-match{background:var(--panel-alt); border-radius:0.5rem;}
+  #pokemonSearchTable table{min-width:700px;}
+  .search-match{background:var(--panel-alt); border-radius:8px;}
 
   /* golden fist */
-  .gf-list{display:flex; flex-direction:column; gap:0.5rem;}
+  .gf-list{display:flex; flex-direction:column; gap:8px;}
   .gf-row{
-    display:flex; align-items:center; gap:0.9rem; padding:0.65rem 0.9rem; border-radius:0.65rem;
+    display:flex; align-items:center; gap:14px; padding:10px 14px; border-radius:10px;
     background:var(--panel-alt); border:1px solid var(--border);
   }
   .gf-row.top1{border-color:#ffd166; box-shadow:0 0 0 1px #ffd16655 inset;}
@@ -177,72 +176,127 @@
   .gf-row.top3{border-color:#cd7f32;}
   .gf-row.auditable-row{cursor:pointer;}
   .gf-row.auditable-row:hover{border-color:var(--amber);}
-  .gf-rank{font-family:var(--mono); font-size:1rem; width:1.75rem; color:var(--text-dim); text-align:center;}
+  .gf-rank{font-family:var(--mono); font-size:16px; width:28px; color:var(--text-dim); text-align:center;}
   .gf-row.top1 .gf-rank{color:#ffd166;}
   .gf-row.top2 .gf-rank{color:#c9c9c9;}
   .gf-row.top3 .gf-rank{color:#cd7f32;}
-  .gf-sprite{width:4rem; height:4rem; object-fit:contain; image-rendering:pixelated; background:var(--panel); border-radius:0.65rem;}
+  .gf-sprite{width:64px; height:64px; object-fit:contain; image-rendering:pixelated; background:var(--panel); border-radius:10px;}
   .gf-info{flex:1;}
-  .gf-name{font-weight:700; font-size:0.9rem;}
-  .gf-coach{font-size:0.7rem; color:var(--teal); margin-top:0.1rem;}
-  .gf-sub{font-size:0.7rem; color:var(--text-dim); margin-top:0.15rem;}
-  .gf-diff{font-family:var(--mono); font-size:1.25rem; color:var(--teal); min-width:3.75rem; text-align:right;}
+  .gf-name{font-weight:700; font-size:14px;}
+  .gf-coach{font-size:11px; color:var(--teal); margin-top:1px;}
+  .gf-sub{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .gf-diff{font-family:var(--mono); font-size:20px; color:var(--teal); min-width:60px; text-align:right;}
   .gf-diff.neg{color:var(--red);}
 
-  .profile-grid{display:grid;grid-template-columns:repeat(4,minmax(7.5rem,1fr));gap:0.65rem;}
-  .profile-grid>div{background:var(--panel-alt);border:1px solid var(--border);border-radius:0.5rem;padding:0.7rem 0.75rem;}
-  .profile-grid span{display:block;font-size:0.65rem;text-transform:uppercase;color:var(--text-dim);letter-spacing:.05em;margin-bottom:0.25rem;}
-  .profile-grid strong{font-family:var(--mono);font-size:1.05rem;}
-  .profile-two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.15rem;}
-  .mini-heading{font-size:0.75rem;text-transform:uppercase;color:var(--text-dim);letter-spacing:.06em;margin:0 0 0.5rem;}
+
+  .profile-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;}
+  .profile-grid>div{background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:11px 12px;}
+  .profile-grid span{display:block;font-size:10px;text-transform:uppercase;color:var(--text-dim);letter-spacing:.05em;margin-bottom:4px;}
+  .profile-grid strong{font-family:var(--mono);font-size:17px;}
+  .profile-two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .mini-heading{font-size:12px;text-transform:uppercase;color:var(--text-dim);letter-spacing:.06em;margin:0 0 8px;}
   .selected-row{outline:1px solid var(--amber);outline-offset:-1px;background:var(--panel-alt);}
-  .record-grid{display:grid;grid-template-columns:repeat(4,minmax(11rem,1fr));gap:0.75rem;}
-  .record-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:0.65rem;padding:0.9rem;min-height:5.75rem;}
-  .record-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
-  .record-value{font-family:var(--mono);font-size:1.2rem;margin-top:0.5rem;line-height:1.25;}
-  .record-sub{font-size:0.7rem;margin-top:0.45rem;}
+  .record-grid{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;}
+  .record-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:15px;min-height:92px;}
+  .record-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
+  .record-value{font-family:var(--mono);font-size:19px;margin-top:8px;line-height:1.25;}
+  .record-sub{font-size:11px;margin-top:7px;}
+  @media(max-width:850px){
+    #app{padding:16px 12px 44px;}
+    .profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .profile-two-col{grid-template-columns:1fr}
+    .record-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .wide .panel{padding:16px;}
+    nav.tabs{gap:2px;}
+    nav.tabs button{padding:9px 10px;font-size:12px;}
+    .ticker{margin-right:-2px;}
+    .tick{flex-basis:132px;min-width:132px;padding:10px 12px;}
+  }
+  @media(max-width:520px){
+    h1{font-size:19px;}
+    .sub{font-size:12px;}
+    .panel{padding:14px;}
+    .profile-grid{grid-template-columns:1fr 1fr;gap:7px;}
+    .profile-grid>div{padding:9px;}
+    .profile-grid strong{font-size:15px;}
+    .record-grid{grid-template-columns:1fr;}
+    .gf-row{gap:9px;padding:9px;}
+    .gf-sprite{width:52px;height:52px;}
+    .gf-diff{font-size:17px;min-width:44px;}
+    .summary-header h3{font-size:18px;}
+    .summary-side{padding:10px;}
+  }
+
+
+  .banner-controls{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 10px;}
+  .banner-controls>div{min-width:180px;}
+  .banner-controls select{width:100%;}
+  .team-logo{width:58px;height:58px;object-fit:contain;border-radius:12px;background:var(--panel-alt);border:1px solid var(--border);padding:5px;}
+  .team-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
+  .team-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s;}
+  .team-card:hover{transform:translateY(-2px);border-color:var(--amber);box-shadow:0 10px 30px rgba(0,0,0,.18);}
+  .team-card-head{display:flex;align-items:center;gap:12px;}
+  .team-card-name{font-weight:700;font-size:15px;}
+  .team-card-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .team-card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;}
+  .team-card-stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px;}
+  .team-card-stat span{display:block;font-size:9px;text-transform:uppercase;color:var(--text-dim);}
+  .team-card-stat strong{font-family:var(--mono);font-size:15px;}
+  .banner-team-card{flex:1 0 230px;min-width:230px;padding:14px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+  .banner-team-card:last-child{border-right:none;}
+  .banner-team-card .team-logo{width:46px;height:46px;flex:none;}
+  .banner-team-card .banner-stat{font-family:var(--mono);font-size:18px;color:var(--amber);}
+  .overview-modal{max-width:520px;}
+  .banner-pokemon{flex:1 0 210px;min-width:210px;padding:12px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .banner-pokemon:last-child{border-right:none;}
 
   /* Pokémon profile modal */
   .pokemon-overlay{
     position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
-    padding:1.5rem; overflow:auto; background:rgba(4,7,12,.62);
+    padding:24px; overflow:auto; background:rgba(4,7,12,.62);
     backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
     animation:pokemonOverlayIn .16s ease-out;
   }
   .pokemon-modal{
-    width:min(68rem,100%); max-height:calc(100vh - 3rem); overflow:auto;
-    background:var(--panel); border:1px solid var(--border); border-radius:1rem;
-    box-shadow:0 1.5rem 5rem rgba(0,0,0,.55); transform-origin:center;
+    width:min(1100px,100%); max-height:calc(100vh - 48px); overflow:auto;
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    box-shadow:0 24px 80px rgba(0,0,0,.55); transform-origin:center;
     animation:pokemonModalIn .18s cubic-bezier(.2,.8,.2,1);
   }
   .pokemon-modal-head{
     position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; align-items:center;
-    gap:0.75rem; padding:0.75rem 1rem; background:rgba(22,28,38,.94); border-bottom:1px solid var(--border);
+    gap:12px; padding:12px 16px; background:rgba(22,28,38,.94); border-bottom:1px solid var(--border);
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   }
-  .pokemon-modal-head strong{font-size:0.85rem;}
-  .pokemon-modal-body{padding:1rem;}
+  .pokemon-modal-head strong{font-size:13px;}
+  .pokemon-modal-body{padding:16px;}
   .pokemon-modal-body>.pokemon-profile{margin:0; border:none; padding:0; background:transparent;}
   @keyframes pokemonOverlayIn{from{opacity:0}to{opacity:1}}
-  @keyframes pokemonModalIn{from{opacity:0;transform:translateY(1.35rem) scale(.97)}to{opacity:1;transform:none}}
+  @keyframes pokemonModalIn{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
+  @media(max-width:700px){
+    .pokemon-overlay{padding:8px;}
+    .pokemon-modal{max-height:calc(100vh - 16px);border-radius:12px;}
+    .pokemon-modal-body{padding:12px;}
+    .pokemon-modal-head{padding:10px 12px;}
+  }
 
   /* audit modal */
   td.auditable{cursor:pointer; text-decoration:underline dotted var(--text-dim); text-underline-offset:3px;}
   td.auditable:hover{color:var(--amber);}
   .audit-overlay{
     position:fixed; inset:0; background:rgba(6,9,14,.7); display:flex; align-items:flex-start;
-    justify-content:center; padding:2.5rem 1rem; z-index:50; overflow-y:auto;
+    justify-content:center; padding:40px 16px; z-index:50; overflow-y:auto;
   }
   .audit-box{
-    background:var(--panel); border:1px solid var(--border); border-radius:0.65rem; padding:1.15rem;
-    max-width:35rem; width:100%;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px;
+    max-width:560px; width:100%;
   }
-  .audit-box h3{margin:0 0 0.15rem; font-size:0.95rem;}
-  .audit-box .audit-sub{font-size:0.75rem; color:var(--text-dim); margin-bottom:0.75rem;}
+  .audit-box h3{margin:0 0 2px; font-size:15px;}
+  .audit-box .audit-sub{font-size:12px; color:var(--text-dim); margin-bottom:12px;}
   .audit-list{list-style:none; margin:0; padding:0; max-height:50vh; overflow-y:auto;}
   .audit-list li{
-    padding:0.5rem 0; border-bottom:1px solid var(--border); font-size:0.75rem; display:flex;
-    justify-content:space-between; gap:0.65rem;
+    padding:8px 0; border-bottom:1px solid var(--border); font-size:12px; display:flex;
+    justify-content:space-between; gap:10px;
   }
   .audit-list li:last-child{border-bottom:none;}
   .audit-list a{color:var(--teal); text-decoration:none;}
@@ -251,46 +305,49 @@
 
   /* replays by player */
   .player-group{
-    border:1px solid var(--border); border-radius:0.5rem; margin-bottom:0.65rem; overflow:hidden;
+    border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden;
   }
   .player-group summary{
-    cursor:pointer; padding:0.65rem 0.9rem; background:var(--panel-alt);
-    display:flex; align-items:center; gap:0.5rem; list-style:none; font-size:0.85rem;
+    cursor:pointer; padding:10px 14px; background:var(--panel-alt);
+    display:flex; align-items:center; gap:8px; list-style:none; font-size:13px;
   }
   .player-group summary::-webkit-details-marker{display:none;}
-  .player-group summary::before{content:'▸'; color:var(--text-dim); font-size:0.7rem; transition:transform .1s;}
+  .player-group summary::before{content:'▸'; color:var(--text-dim); font-size:11px; transition:transform .1s;}
   .player-group[open] summary::before{transform:rotate(90deg);}
   .player-group summary .pg-name{font-weight:700;}
-  .player-group summary .pg-team{color:var(--text-dim); font-weight:400; font-size:0.75rem;}
-  .player-group .player-table-wrap{padding:0.25rem 0.9rem 0.75rem;}
-  .player-group table{margin-top:0.4rem;}
+  .player-group summary .pg-team{color:var(--text-dim); font-weight:400; font-size:12px;}
+  .player-group .player-table-wrap{padding:4px 14px 12px;}
+  .player-group table{margin-top:6px;}
+  .player-filter{max-width:320px; margin-bottom:14px;}
 
-  #adminAuth{max-width:26rem;margin:5.5rem auto;padding:1.5rem 1.25rem;}
-  .auth-box{background:var(--panel);border:1px solid var(--border);border-radius:0.75rem;padding:1.5rem;}
-  .auth-box h1{margin-bottom:0.25rem;}
-  .auth-box input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:0.5rem;color:var(--text);padding:0.65rem 0.75rem;font-size:0.85rem;}
-  .auth-error{display:none;color:var(--red);font-size:0.75rem;margin-top:0.75rem;line-height:1.4;}
+  #adminAuth{max-width:420px;margin:90px auto;padding:24px 20px;}
+  .auth-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;}
+  .auth-box h1{margin-bottom:4px;}
+  .auth-box input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:13px;}
+  .auth-error{display:none;color:var(--red);font-size:12px;margin-top:12px;line-height:1.4;}
 
-  .replay-summary-box{max-width:56rem;}
-  .summary-header{display:flex;justify-content:space-between;gap:1.25rem;align-items:flex-start;margin-bottom:0.9rem;}
-  .summary-kicker{color:var(--text-dim);font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;}
-  .summary-header h3{font-size:1.3rem;margin:0.3rem 0 0.2rem;}
+  .replay-summary-box{max-width:900px;}
+  .summary-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:14px;}
+  .summary-kicker{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.08em;}
+  .summary-header h3{font-size:21px;margin:5px 0 3px;}
   .summary-vs{color:var(--text-dim);font-weight:400;}
-  .summary-result{font-weight:700;color:var(--teal);font-size:0.85rem;}
-  .summary-meta{display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;color:var(--text-dim);font-size:0.7rem;text-align:right;}
-  .summary-cause{padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:0.5rem;background:var(--panel-alt);font-size:0.75rem;margin-bottom:0.9rem;}
-  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
-  .summary-side{border:1px solid var(--border);border-radius:0.65rem;background:var(--panel-alt);padding:0.75rem;}
-  .summary-side-head{display:flex;justify-content:space-between;align-items:flex-start;gap:0.65rem;}
-  .summary-team{font-size:0.7rem;color:var(--text-dim);margin-top:0.15rem;}
-  .summary-score{font-size:0.7rem;color:var(--text-dim);}
-  .summary-line{display:flex;flex-wrap:wrap;gap:0.5rem;margin:0.65rem 0;font-size:0.7rem;color:var(--text-dim);}
-  .summary-mons{display:grid;gap:0.4rem;}
-  .summary-mon{display:flex;align-items:center;gap:0.5rem;border-top:1px solid var(--border);padding-top:0.45rem;}
+  .summary-result{font-weight:700;color:var(--teal);font-size:13px;}
+  .summary-meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;color:var(--text-dim);font-size:11px;text-align:right;}
+  .summary-cause{padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel-alt);font-size:12px;margin-bottom:14px;}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .summary-side{border:1px solid var(--border);border-radius:10px;background:var(--panel-alt);padding:12px;}
+  .summary-side-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .summary-team{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .summary-score{font-size:11px;color:var(--text-dim);}
+  .summary-line{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;font-size:11px;color:var(--text-dim);}
+  .summary-mons{display:grid;gap:6px;}
+  .summary-mon{display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:7px;}
   .summary-mon-main{min-width:0;flex:1;}
-  .summary-mon-stats{font-size:0.65rem;color:var(--text-dim);margin-top:0.15rem;}
-  .summary-actions{display:flex;justify-content:flex-end;gap:0.5rem;margin-top:0.9rem;}
+  .summary-mon-stats{font-size:10px;color:var(--text-dim);margin-top:2px;}
+  .summary-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
   .danger-badge{color:var(--red);}
+  @media(max-width:700px){.summary-grid{grid-template-columns:1fr}.summary-header{flex-direction:column}.summary-meta{align-items:flex-start;text-align:left}}
+
 </style>
 </head>
 <body data-admin="false">
@@ -298,19 +355,18 @@
   <header>
     <h1>League Damage Dashboard</h1>
     <div class="sub">Paste replay links → auto-parsed stats → running season totals + weekly CSVs</div>
-    <div class="ticker" id="ticker"></div>
+    <div id="bannerMount"></div>
   </header>
 
   <nav class="tabs" id="tabs">
-    <button data-tab="process" class="active">Process Replays</button>
-    <button data-tab="global">Leaderboards</button>
+    <button data-tab="overview" class="active">League Overview</button>
     <button data-tab="pokemonsearch">Pokémon Search</button>
+    <button data-tab="global">Damage Board</button>
     <button data-tab="goldenfist">Golden Fist</button>
     <button data-tab="causes">Death Causes</button>
+    <button data-tab="teamcompare">Standings</button>
     <button data-tab="teams">Franchise Stats</button>
-    <button data-tab="teamcompare">Team Comparison</button>
     <button data-tab="replays">Replay Browser</button>
-    <button data-tab="settings">Settings</button>
   </nav>
 
   <div id="content"></div>
@@ -320,15 +376,18 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-  const SHARED = true;
-  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true } };
+  const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
+  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'' } };
   let loaded = false;
 
+  // ---------- shared Supabase storage ----------
+  // Public dashboard: read-only. Admin page: authenticated writes.
   const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
   const SUPABASE_STATE_ID = '__dashboard_state__';
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const IS_ADMIN_PAGE = document.body.dataset.admin === 'true';
+  const POLL_MS = 10000;
   let adminUser = null;
   let loadingFromRemote = false;
 
@@ -349,14 +408,16 @@
       }
       STATE.replays = replays;
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true}, (sharedState && sharedState.settings) || {});
+      STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:''}, (sharedState && sharedState.settings) || {});
+      STATE.settings.teamLogos = STATE.settings.teamLogos || {};
+      const bp=JSON.parse(localStorage.getItem('sbl-banner-preferences')||'null'); if(bp){ STATE.settings.bannerMode=bp.bannerMode||STATE.settings.bannerMode; STATE.settings.bannerTeam=bp.bannerTeam||STATE.settings.bannerTeam; }
       loaded = true;
     }catch(e){
       console.error('Supabase load failed:', e);
       if(!loaded){
         STATE.replays = {};
         STATE.teamMap = {};
-        STATE.settings = {caseInsensitiveNames:true};
+        STATE.settings = {caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:''};
         loaded = true;
       }
       if(IS_ADMIN_PAGE) showAdminError('Could not load shared data: ' + e.message);
@@ -412,9 +473,21 @@
     if(!rawR && !rawM && !rawS) throw new Error('No old local dashboard data was found in this browser.');
     if(rawR) STATE.replays = JSON.parse(rawR);
     if(rawM) STATE.teamMap = JSON.parse(rawM);
-    if(rawS) STATE.settings = Object.assign({caseInsensitiveNames:true}, JSON.parse(rawS));
+    if(rawS) STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:''}, JSON.parse(rawS));
+    STATE.settings.teamLogos = STATE.settings.teamLogos || {};
     await saveReplays();
     await saveSharedState();
+  }
+
+  async function refreshSharedState(){
+    if(loadingFromRemote) return;
+    const before = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
+    await loadState();
+    const after = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
+    if(before !== after){
+      renderTicker();
+      render();
+    }
   }
 
   function showAdminError(msg){
@@ -435,8 +508,8 @@
         <h1>SBL Dashboard Admin</h1>
         <div class="sub">Sign in to add replays and change shared league data.</div>
         <label>Email</label><input id="adminEmail" type="email" autocomplete="username" placeholder="you@example.com">
-        <label style="margin-top:0.75rem;">Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password">
-        <button class="primary" id="adminLoginBtn" style="margin-top:0.9rem;width:100%;">Log in</button>
+        <label style="margin-top:12px;">Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password">
+        <button class="primary" id="adminLoginBtn" style="margin-top:14px;width:100%;">Log in</button>
         <div id="adminError" class="auth-error"></div>
       </div>`;
     document.body.prepend(wrap);
@@ -475,6 +548,13 @@
   // ---------- helpers ----------
   function normName(n){ return n.trim().toLowerCase().replace(/-/g,' ').replace(/_/g,' '); }
   function toShowdownId(species){
+    // Showdown's sprite filenames keep the hyphen as a forme separator
+    // (landorus-therian.png, ho-oh.png, porygon-z.png, necrozma-dusk-mane.png)
+    // but collapse everything else — so each hyphen-delimited segment gets
+    // lowercased and stripped of spaces/punctuation, then rejoined with '-'.
+    // Stripping hyphens outright (the old behavior) turned every forme name
+    // into a 404 (e.g. "landorustherian"), which just showed the mon's actual
+    // name faded out behind a broken-image icon.
     return species.split('-').map(part => part.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-');
   }
   function spriteUrl(species){
@@ -495,6 +575,10 @@
     const key = (username||'').trim().toLowerCase();
     return STATE.teamMap[key] || (username||'').trim() || 'Unknown';
   }
+  // groups values that only differ by case/whitespace under one canonical label
+  // (the first-seen casing) when "case-insensitive names" is on in Settings —
+  // this is what keeps e.g. "Team Fire" and "team fire" from splitting into
+  // two separate teams just because they were typed differently at different times.
   function groupKey(value){
     return STATE.settings.caseInsensitiveNames ? value.trim().toLowerCase() : value.trim();
   }
@@ -504,12 +588,13 @@
     url = url.replace(/\.json$/,'').replace(/\/$/,'');
     const m = url.match(/replay\.pokemonshowdown\.com\/([a-z0-9-]+)/i);
     if(m) return m[1];
+    // allow bare id paste
     if(/^[a-z0-9-]+$/i.test(url)) return url;
     return null;
   }
   function parseHP(token){
     if(!token) return 0;
-    token = token.split(' ')[0];
+    token = token.split(' ')[0]; // strip status tags like "tox", "fnt"
     if(token.includes('/')){
       const [a,b] = token.split('/').map(Number);
       if(!b) return 0;
@@ -518,46 +603,50 @@
     const v = parseFloat(token);
     return isNaN(v) ? 0 : v;
   }
-  function sideOf(slot){ return slot.slice(0,2); }
-
-  // Calendar logic: Converts timestamp/date into Monday-Sunday calendar week string
-  function getCalendarWeekLabel(uploadTimestamp){
-    const date = uploadTimestamp ? new Date(uploadTimestamp * 1000) : new Date();
-    const day = date.getDay();
-    // Calculate difference to get preceding Monday (Day 1)
-    const diffToMonday = (day === 0 ? -6 : 1 - day); 
-    
-    const monday = new Date(date);
-    monday.setDate(date.getDate() + diffToMonday);
-    
-    const month = monday.toLocaleString('en-US', { month: 'short' });
-    const dayNum = monday.getDate();
-    const year = monday.getFullYear();
-    
-    return `Week of ${month} ${dayNum}, ${year}`;
-  }
+  function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
 
   // ---------- replay parsing ----------
+  function classifyIndirectCause(tags){
+    const t=(tags||'').toLowerCase();
+    if(t.includes('stealth rock') || t.includes('spikes') || t.includes('toxic spikes') || t.includes('sticky web')) return 'Hazard';
+    if(t.includes('recoil')) return 'Recoil';
+    if(t.includes('psn') || t.includes('tox') || t.includes('brn') || t.includes('poison') || t.includes('burn')) return 'Status';
+    return 'Other';
+  }
   function parseLog(json, replayId){
     const lines = json.log.split('\n');
     const players = {p1:'', p2:''};
-    const slots = {};
-    const mons = {};
+    const slots = {}; // slotId -> {species, hp, side}
+    const mons = {}; // "p1|species" -> stats
     const appearedThisReplay = new Set();
-    let lastMove = null;
+    let lastMove = null; // {source, target, move}
     let currentTurn = 0;
     let winner = null;
-    let lastAttacker = {};
-    let statusSourceByMon = {};
-    let hazardSetter = {};
+    // NOTE: these three all store direct references to a mon's *stats object*
+    // (captured at the moment of the event via ensureMon), never a slot label.
+    // A slot label like "p1a" gets reused by a different mon later in the game,
+    // so resolving it lazily at credit-time would silently attribute damage/
+    // kills to whoever happens to be standing there now instead of whoever
+    // actually did it.
+    let lastAttacker = {}; // targetSlot -> attacker's stats object (for kill credit)
+    // Poison/burn (unlike confusion) persist through a switch — the same individual
+    // keeps ticking for the same status after it returns to the field. So this is
+    // keyed by the *individual mon* (monKey: side+species), not by slot, and is
+    // deliberately NOT cleared on switch — only when the status actually ends.
+    let statusSourceByMon = {}; // monKey -> stats object that inflicted brn/psn/tox on them
+    let hazardSetter = {}; // side -> {hazardName: setter's stats object}
+    // side (the side that GOT toxic-spiked) -> setter's stats object.
+    // Toxic Spikes are a side-wide condition, so this survives switches/faints
+    // and lets residual poison damage inherit kill credit from the setter.
     let toxicSpikesSetter = {};
-    let delayedSetter = {};
-    let pendingDelayedHit = {};
+    let delayedSetter = {}; // side -> {moveName: setter's stats object}, for Future Sight / Doom Desire
+    let pendingDelayedHit = {}; // targetSlot -> {stats, cause}; Showdown emits the delayed hit as -end, then an untagged -damage
     const HAZARD_MOVES = ['Stealth Rock','Spikes'];
     const DELAYED_MOVES = ['Future Sight','Doom Desire'];
     const STATUS_TAGS = ['psn','tox','brn'];
 
     function ofSlotFromTag(tag){
+      // tag like "[of] p2a: Ferrothorn" -> "p2a"
       const m = tag.match(/p[1-4][a-f]/);
       return m ? m[0] : null;
     }
@@ -587,7 +676,11 @@
       const parts = raw.split('|');
       const cmd = parts[1];
 
-      if(cmd === 'player' && parts[3]){
+      if(cmd === 'poke' && parts[3]){
+        const side = parts[2];
+        const species = parts[3].split(',')[0].trim();
+        if((side==='p1'||side==='p2') && species && !teamRoster[side].some(x=>normName(x)===normName(species))) teamRoster[side].push(species);
+      } else if(cmd === 'player' && parts[3]){
         const side = parts[2];
         if(side === 'p1' || side === 'p2') players[side] = parts[3];
       } else if(cmd === 'turn'){
@@ -596,12 +689,19 @@
       } else if(cmd === 'win'){
         winner = (parts[2] || '').trim() || null;
       } else if(cmd === 'switch' || cmd === 'drag'){
-        const slotFull = parts[2];
+        const slotFull = parts[2]; // "p1a: Nickname"
         const slot = slotFull.split(':')[0].trim();
         const side = sideOf(slot);
         const species = parts[3].split(',')[0].trim();
         const hp = parseHP(parts[4] || '100/100');
         slots[slot] = {species, hp, side};
+        // A new mon now occupies this slot — any prior *direct-hit* attacker
+        // credit for this slot belonged to the mon that just left, so that must
+        // not carry over. Status-source credit (poison/burn) is intentionally
+        // NOT cleared here — it lives in statusSourceByMon, keyed to the
+        // individual mon rather than the slot, because poison/burn persist
+        // through a switch and must keep crediting the original inflictor
+        // when the same mon returns and the status keeps ticking.
         delete lastAttacker[slot];
         delete pendingDelayedHit[slot];
         ensureMon(slot);
@@ -627,11 +727,21 @@
           }
         }
         if(source && moveName === 'Toxic Spikes'){
+          // Toxic Spikes are a side-wide condition. Keep the Pokémon that most
+          // recently established the Toxic Spikes on that side so a later
+          // switch-in, poison tick, and eventual faint can all inherit the
+          // setter's kill credit even if the setter has switched out or fainted.
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
           const setterStats = ensureMon(source);
           if(setterStats) toxicSpikesSetter[oppSide] = setterStats;
         }
       } else if(cmd === '-end'){
+        // Future Sight / Doom Desire are represented by Showdown as:
+        //   |-end|target|move: Future Sight
+        //   |-damage|target|...
+        // The -damage line is deliberately untagged, so looking for
+        // 'Future Sight' in its tags will never work. Resolve the setter
+        // at the -end event and carry it into the following damage event.
         const slotFull = parts[2];
         const effect = parts.slice(3).join('|');
         if(slotFull && (effect.includes('move: Future Sight') || effect.includes('move: Doom Desire'))){
@@ -653,6 +763,11 @@
         const statusTags = parts.slice(3).join('|');
         let inflictorStats = null;
         if(statusTags.includes('Toxic Spikes') && toxicSpikesSetter[sideOf(slot)]){
+          // Poisoned on switch-in by Toxic Spikes. There is no attacker's move
+          // line for the later residual damage, so permanently associate this
+          // individual Pokémon with the Toxic Spikes setter until its status
+          // is cured. This is keyed by mon identity rather than slot because
+          // the poisoned Pokémon can switch out and back in.
           inflictorStats = toxicSpikesSetter[sideOf(slot)];
         } else if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
           inflictorStats = ensureMon(lastMove.source);
@@ -663,6 +778,8 @@
         if(!slotFull) continue;
         const slot = slotFull.split(':')[0].trim();
         const mk = monKey(slot);
+        // status is gone — clear credit so it can't be reused if this individual
+        // is somehow attributed residual status damage again later
         if(mk) delete statusSourceByMon[mk];
       } else if(cmd === '-damage'){
         const slotFull = parts[2];
@@ -681,6 +798,8 @@
         let attackerStats = null;
         let cause = null;
 
+        // 1) explicit [of] source (Leech Seed, Rocky Helmet, Rough Skin, Iron Barbs, etc.)
+        //    resolved immediately off the current battle state, so it's always accurate
         if(tags.includes('[of]')){
           const ofSlot = ofSlotFromTag(tags);
           if(ofSlot && slots[ofSlot]){
@@ -689,6 +808,7 @@
             cause = effectM ? effectM[1].trim() : 'contact/held-item effect';
           }
         }
+        // 2) entry hazard chip (Stealth Rock / Spikes) -> credit whoever set it
         if(!attackerStats){
           const hazardHit = HAZARD_MOVES.find(h => tags.includes(h));
           if(hazardHit && hazardSetter[sideOf(slot)] && hazardSetter[sideOf(slot)][hazardHit]){
@@ -696,6 +816,12 @@
             cause = hazardHit;
           }
         }
+        // 3) residual status damage (burn/poison/toxic) -> credit whoever inflicted the status.
+        // Looked up by the mon's own identity (monKey), not the slot, since poison/burn
+        // persist through a switch and must keep crediting the original inflictor even
+        // after this individual left and came back to the same or a different slot.
+        // This is also what gives a Toxic Spikes setter the kill when poison damage
+        // is the final damage instance before fainting.
         if(!attackerStats){
           const statusHit = STATUS_TAGS.find(s => tags.includes('[from] ' + s));
           const mk = monKey(slot);
@@ -705,14 +831,25 @@
               toxicSpikesSetter[sideOf(slot)] &&
               toxicSpikesSetter[sideOf(slot)] === attackerStats
             );
-            cause = sourceWasToxicSpikes ? 'Toxic Spikes' : 'residual ' + statusHit;
+            cause = sourceWasToxicSpikes
+              ? 'Toxic Spikes'
+              : 'residual ' + statusHit;
           }
         }
+        // 3b) delayed hits (Future Sight / Doom Desire).
+        // Showdown puts the move name on a preceding -end event, NOT on the
+        // subsequent -damage line, so use the pending source captured there.
         if(!attackerStats && pendingDelayedHit[slot]){
           attackerStats = pendingDelayedHit[slot].stats;
           cause = pendingDelayedHit[slot].cause;
           delete pendingDelayedHit[slot];
         }
+        // 4) fallback: direct hit from the most recent move, if it targeted this slot.
+        //    Showdown only omits [from]/[of] entirely on a -damage line for a genuine
+        //    direct move hit — weather chip, confusion self-hits, recoil, etc. always
+        //    carry a tag (just not one of the specific ones matched above). So this
+        //    fallback must only fire on a completely untagged line, or it ends up
+        //    crediting stale "last real attacker" info to indirect damage it never dealt.
         if(!attackerStats && tags === '' && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
           attackerStats = ensureMon(lastMove.source);
           cause = lastMove.move || 'direct hit';
@@ -722,7 +859,12 @@
           attackerStats.damageDealt += dmg;
           lastAttacker[slot] = {stats: attackerStats, cause, turn: currentTurn};
         } else {
-          lastAttacker[slot] = null;
+          // This damage instance landed but couldn't be attributed to an opposing
+          // mon (environmental chip we couldn't trace, self-inflicted damage, etc.).
+          // Clear any earlier attacker on file for this slot — otherwise a mon that
+          // survives a real hit and later dies to something untraceable still has
+          // the kill wrongly credited to whoever landed that earlier real hit.
+          lastAttacker[slot] = {stats:null, cause:classifyIndirectCause(tags), turn:currentTurn};
         }
       } else if(cmd === '-heal' || cmd === '-sethp'){
         const slotFull = parts[2];
@@ -744,7 +886,7 @@
           deadStats.deathLog.push({
             replayId, turn: currentTurn,
             killer: credited ? killerStats.species : null,
-            cause: credited ? killerInfo.cause : 'unattributed'
+            cause: credited ? killerInfo.cause : (killerInfo?.cause || 'Other')
           });
         }
         if(credited){
@@ -761,15 +903,49 @@
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner };
+      players, mons, winner, results, teamRoster };
   }
 
-  // ---------- processing with Calendar Chronological Week Assignment ----------
-  async function processUrls(urlsRaw, customWeek, logEl){
+  // ---------- automatic Monday-Sunday season weeks ----------
+  function replayTimestampMs(replay){
+    const n=Number(replay?.uploadtime||0);
+    if(!n) return 0;
+    return n < 1e12 ? n*1000 : n;
+  }
+  function mondayStartMs(ms){
+    const d=new Date(ms);
+    const day=d.getDay();
+    const diff=(day===0?-6:1-day);
+    d.setHours(0,0,0,0); d.setDate(d.getDate()+diff);
+    return d.getTime();
+  }
+  function ensureSeasonStart(){
+    if(STATE.settings.seasonStartMonday) return Number(STATE.settings.seasonStartMonday);
+    const times=Object.values(STATE.replays).map(replayTimestampMs).filter(Boolean);
+    if(!times.length) return null;
+    const start=mondayStartMs(Math.min(...times));
+    STATE.settings.seasonStartMonday=start;
+    return start;
+  }
+  function autoWeekForReplay(replay){
+    const ts=replayTimestampMs(replay);
+    if(!ts) return 'Unassigned';
+    let start=ensureSeasonStart();
+    if(!start || mondayStartMs(ts)<start){ start=mondayStartMs(ts); STATE.settings.seasonStartMonday=start; }
+    const n=Math.floor((mondayStartMs(ts)-start)/604800000)+1;
+    return `Week ${n}`;
+  }
+  function recalculateAllWeeks(){
+    const times=Object.values(STATE.replays).map(replayTimestampMs).filter(Boolean);
+    if(!times.length) return;
+    STATE.settings.seasonStartMonday=mondayStartMs(Math.min(...times));
+    for(const r of Object.values(STATE.replays)) r.week=autoWeekForReplay(r);
+  }
+
+  async function processUrls(urlsRaw, week, logEl){
     const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
     let added = 0, skipped = 0, failed = 0;
-
     for(const url of urls){
       const id = extractReplayId(url);
       if(!id){ appendLog(logEl, `Could not read a replay id from: ${url}`, true); failed++; continue; }
@@ -779,29 +955,21 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-
-        // Assign Week: Custom override if given, else derive Monday–Sunday week from uploadtime
-        if(customWeek && customWeek.trim() !== ""){
-          parsed.week = customWeek.trim();
-        } else {
-          parsed.week = getCalendarWeekLabel(parsed.uploadtime);
-        }
-
+        parsed.week = autoWeekForReplay(parsed);
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
-        appendLog(logEl, `✓ ${id} (${parsed.week}) — (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
+        appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
         added++;
       }catch(e){
         appendLog(logEl, `✗ ${id} — ${e.message}`, true);
         failed++;
       }
     }
-    if(added > 0) await saveReplays();
+    if(added > 0){ recalculateAllWeeks(); await saveReplays(); }
     appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${failed} failed.`, false);
     renderTicker();
-    render();
+    render(); // refresh whatever tab is open
   }
-
   function appendLog(el, text, isErr, isOk){
     const line = document.createElement('div');
     line.className = isErr ? 'err' : (isOk ? 'ok' : '');
@@ -816,10 +984,10 @@
   }
   function weeksList(){
     const set = new Set(Object.values(STATE.replays).map(r=>r.week || 'Unassigned'));
-    return Array.from(set).sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
+    return Array.from(set).sort();
   }
   function globalPokemonStats(weekFilter){
-    const out = {};
+    const out = {}; // normSpecies -> {species, dealt, taken, kills, deaths, games, coaches}
     for(const r of allReplays(weekFilter)){
       for(const k in r.mons){
         const m = r.mons[k];
@@ -838,7 +1006,7 @@
     return Object.values(out).sort((a,b)=>b.dealt-a.dealt);
   }
   function teamPokemonStats(weekFilter){
-    const groups = {};
+    const groups = {}; // groupKey -> { label, species: {normSpecies -> stats} }
     for(const r of allReplays(weekFilter)){
       for(const side of ['p1','p2']){
         const team = teamFor(r.players[side]);
@@ -864,7 +1032,11 @@
     for(const gk in groups) out[groups[gk].label] = groups[gk].species;
     return out;
   }
-
+  // ---------- duplicate detection (Settings) ----------
+  // Normalizes a username so that things like "dossa37"/"dossa_37" (punctuation
+  // difference) and "podraa"/"podrrraaa" (repeated-letter typo) collapse to the
+  // same key: strip anything that isn't a letter/digit, then collapse any run of
+  // the same character down to one (so "rrr"/"aaa" runs match a single r/a).
   function fuzzyKey(u){
     return (u||'').toLowerCase().replace(/[^a-z0-9]/g,'').replace(/(.)\1+/g,'$1');
   }
@@ -880,8 +1052,9 @@
     }
     return counts;
   }
+  // returns groups of raw usernames that look like the same person typed differently
   function findDuplicatePlayerGroups(){
-    const seen = {};
+    const seen = {}; // lowercase username -> raw display username (first seen casing)
     for(const r of Object.values(STATE.replays)){
       for(const side of ['p1','p2']){
         const u = (r.players[side]||'').trim();
@@ -902,6 +1075,7 @@
     for(const fk in byFuzzy){
       const usernames = byFuzzy[fk];
       if(usernames.length < 2) continue;
+      // skip groups that are already fully merged (all mapped to the same team)
       const teams = new Set(usernames.map(u=>teamFor(u)));
       if(teams.size <= 1) continue;
       const sorted = usernames.slice().sort((a,b)=> (counts[b.toLowerCase()]||0) - (counts[a.toLowerCase()]||0) || a.localeCompare(b));
@@ -914,11 +1088,14 @@
       STATE.teamMap[u.trim().toLowerCase()] = canonicalLabel;
     }
   }
+  // returns pairs of current team labels whose Pokémon rosters overlap heavily —
+  // in a draft league each team's roster is fixed, so two "different" team tags
+  // sharing most of the same mons are almost certainly the same team typed two ways
   function findDuplicateTeamPairs(){
     const teams = teamPokemonStats('ALL');
     const labels = Object.keys(teams);
-    const rosterOf = {};
-    const gamesOf = {};
+    const rosterOf = {}; // label -> Set(normSpecies)
+    const gamesOf = {}; // label -> total appearances (for picking the canonical tag)
     for(const label of labels){
       rosterOf[label] = new Set(Object.keys(teams[label]));
       gamesOf[label] = Object.values(teams[label]).reduce((sum,s)=>sum+s.games,0);
@@ -940,6 +1117,8 @@
     }
     return pairs.sort((x,y)=> y.ratio - x.ratio);
   }
+  // maps every raw username currently resolving to `label` back to that username,
+  // so a team-roster merge can point all of them at the canonical label too
   function usernamesForTeamLabel(label){
     const out = new Set();
     for(const r of Object.values(STATE.replays)){
@@ -980,15 +1159,10 @@
       download(`${team} - ${label}.csv`, toCSV(rows));
     }
   }
-
   // ---------- rendering ----------
   const contentEl = document.getElementById('content');
   const tabsEl = document.getElementById('tabs');
-  if(!IS_ADMIN_PAGE){
-    tabsEl.querySelector('[data-tab="process"]')?.remove();
-    tabsEl.querySelector('[data-tab="settings"]')?.remove();
-  }
-  let activeTab = IS_ADMIN_PAGE ? 'process' : 'global';
+  let activeTab = IS_ADMIN_PAGE ? 'process' : 'overview';
 
   tabsEl.addEventListener('click', (e)=>{
     if(e.target.tagName !== 'BUTTON') return;
@@ -997,11 +1171,14 @@
     render();
   });
 
+  // Bind Pokémon profile clicks directly as well as through the document delegate.
+  // This makes dynamically-rendered rows/cards clickable even after a section redraw.
   function bindPokemonClicks(root=document){
     root.querySelectorAll?.('.pokemon-click, .search-match[data-pokemon]').forEach(el=>{
       if(el.dataset.pokemonBound === '1') return;
       el.dataset.pokemonBound = '1';
       el.addEventListener('click', (e)=>{
+        // Audit cells own their click behavior.
         if(e.target.closest('[data-audit]')) return;
         e.preventDefault();
         e.stopPropagation();
@@ -1018,23 +1195,19 @@
   }
 
   function renderTicker(){
-    const ticker = document.getElementById('ticker');
-    const top = globalPokemonStats('ALL').slice(0,6);
-    if(top.length === 0){
-      ticker.innerHTML = `<div class="tick empty"><div class="lbl">Season</div><div class="val">No games processed yet</div></div>`;
-      return;
-    }
-    ticker.innerHTML = top.map(s => `
-      <div class="tick">
-        <div class="lbl">Dmg Dealt</div>
-        ${pokemonLink(s.species, `${spriteImg(s.species,'sprite')}<div>
-          <div class="name">${escapeHtml(s.species)}</div>
-          <div class="val">${s.dealt.toFixed(0)}%</div>
-        </div>`)}
-      </div>`).join('');
+    const mount=document.getElementById('bannerMount'); if(!mount) return;
+    mount.innerHTML=renderBanner();
+    const mode=document.getElementById('bannerMode'); const team=document.getElementById('bannerTeam');
+    mode?.addEventListener('change',async e=>{STATE.settings.bannerMode=e.target.value; await saveSettingsIfPossible(); renderTicker();});
+    team?.addEventListener('change',async e=>{STATE.settings.bannerTeam=e.target.value; await saveSettingsIfPossible(); renderTicker();});
+  }
+  async function saveSettingsIfPossible(){
+    if(IS_ADMIN_PAGE && adminUser){ try{ await saveSharedState(); }catch(e){ console.warn(e); } }
+    localStorage.setItem('sbl-banner-preferences', JSON.stringify({bannerMode:STATE.settings.bannerMode,bannerTeam:STATE.settings.bannerTeam}));
   }
 
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 
   function closePokemonProfile(){
     const el=document.getElementById('pokemonProfileModal');
@@ -1070,8 +1243,8 @@
     const winner = (r.winner || '').trim();
     const resultText = winner ? `${winner} won` : 'Result unavailable';
     const mons = Object.values(r.mons || {});
-    const sideMons = side => mons.filter(m=>m.side===side).sort((a,b)=>
-      (b.kills-a.kills) || (a.deaths-b.deaths) || (b.damageDealt-a.damageDealt));
+    const sideMons = side => { const seen={}; (r.teamRoster?.[side]||[]).forEach(sp=>seen[normName(sp)]={side,species:sp,kills:0,deaths:0,damageDealt:0,damageTaken:0,appearances:0}); mons.filter(m=>m.side===side).forEach(m=>seen[normName(m.species)]=m); return Object.values(seen).sort((a,b)=>
+      (b.kills-a.kills) || (a.deaths-b.deaths) || (b.damageDealt-a.damageDealt)); };
     const sideCard = (side, player) => {
       const list = sideMons(side);
       const team = teamFor(player);
@@ -1084,7 +1257,7 @@
         <div class="summary-line"><span>${kills} kills</span><span>${dealt.toFixed(1)}% damage dealt</span><span>${taken.toFixed(1)}% taken</span></div>
         <div class="summary-mons">${list.map(m=>`<div class="summary-mon">
           ${pokemonLink(m.species, `${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><div class="pname-cell"><strong>${escapeHtml(m.species)}</strong></div><div class="summary-mon-stats">${m.kills} K · ${m.deaths} D · ${m.damageDealt.toFixed(1)}% dmg</div></div>`)}
-          ${m.deaths ? '<span class="badge danger-badge">Fainted</span>' : '<span class="badge">Survived</span>'}
+          ${m.appearances ? (m.deaths ? '<span class="badge danger-badge">Fainted</span>' : '<span class="badge">Survived</span>') : '<span class="badge">Not sent</span>'}
         </div>`).join('') || '<div class="empty-state">No Pokémon recorded.</div>'}</div>
       </div>`;
     };
@@ -1103,10 +1276,16 @@
     document.getElementById('replaySummaryOverlay').addEventListener('click', e=>{ if(e.target.id==='replaySummaryOverlay') closeAudit(); });
   }
 
+  // ---------- kill/death audit trail ----------
+  // Encodes a mon's kill or death log onto a table cell so it can be clicked open
+  // to see exactly which replay/turn/cause each credited kill or death came from —
+  // lets you trace a count against a hand-kept tally without me having to guess.
   function auditAttr(species, type, list, showLink){
     const payload = JSON.stringify({species, type, list: list || [], showLink: showLink !== false});
     return `class="num ${type==='kills'?'kills ':''}auditable" data-audit="${escapeHtml(payload)}"`;
   }
+  // same payload as auditAttr but without the class="" — for elements (like the
+  // Golden Fist row) that already carry their own class list
   function auditDataAttr(species, type, list, showLink){
     const payload = JSON.stringify({species, type, list: list || [], showLink: showLink !== false});
     return `data-audit="${escapeHtml(payload)}"`;
@@ -1138,8 +1317,9 @@
   }
 
   function render(){
-    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'players' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'replays');
+    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'replays' || activeTab === 'overview');
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
+    if(activeTab === 'overview') return renderLeagueOverview();
     if(activeTab === 'process') return renderProcess();
     if(activeTab === 'global') return renderLeaderboards();
     if(activeTab === 'pokemonsearch') return renderPokemonSearch();
@@ -1150,13 +1330,48 @@
     if(activeTab === 'replays') return renderReplayBrowser();
     if(activeTab === 'settings') return renderSettings();
   }
-
+  // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
   function goToTab(tab){
     activeTab = tab;
     [...tabsEl.children].forEach(b=>b.classList.toggle('active', b.dataset.tab===activeTab));
     render();
   }
 
+  function teamStandings(weekFilter='ALL'){ return teamComparisonData(weekFilter); }
+  function teamLogo(team){ return STATE.settings.teamLogos?.[groupKey(team)] || STATE.settings.teamLogos?.[team] || ''; }
+  function renderBanner(){
+    const mode=STATE.settings.bannerMode||'top';
+    const teams=teamStandings('ALL');
+    const teamOptions=teams.map(t=>`<option value="${escapeHtml(t.team)}" ${STATE.settings.bannerTeam===t.team?'selected':''}>${escapeHtml(t.team)}</option>`).join('');
+    const controls=`<div class="banner-controls"><div><label>Banner</label><select id="bannerMode"><option value="top" ${mode==='top'?'selected':''}>Top Pokémon</option><option value="myteam" ${mode==='myteam'?'selected':''}>My Team Stats</option><option value="team" ${mode==='team'?'selected':''}>Team Stats</option><option value="golden" ${mode==='golden'?'selected':''}>Golden Fist</option></select></div><div id="bannerTeamWrap" style="display:${mode==='top'||mode==='golden'?'none':'block'}"><label>Team</label><select id="bannerTeam">${teamOptions}</select></div></div>`;
+    let cards='';
+    if(mode==='golden'){
+      cards=globalPokemonStats('ALL').map(s=>({...s,diff:s.kills-s.deaths})).sort((a,b)=>b.diff-a.diff||b.kills-a.kills).slice(0,5).map((s,i)=>`<div class="banner-pokemon"><div style="font-family:var(--mono);color:var(--text-dim);width:24px">${i+1}</div>${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.diff>0?'+':''}${s.diff}</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
+    } else if(mode==='top'){
+      cards=globalPokemonStats('ALL').slice(0,5).map(s=>`<div class="banner-pokemon">${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.dealt.toFixed(0)}% dmg</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
+    } else {
+      const selected=teams.find(t=>t.team===STATE.settings.bannerTeam)||teams[0];
+      if(selected){
+        const list=Object.values(teamPokemonStats('ALL')[selected.team]||{}).sort((a,b)=>b.games-a.games||b.dealt-a.dealt).slice(0,5);
+        cards=`<div class="banner-team-card"><img class="team-logo" src="${escapeHtml(teamLogo(selected.team))}" onerror="this.style.display='none'" alt=""><div><div class="name">${escapeHtml(selected.team)}</div><div class="banner-stat">${selected.wins}-${selected.losses}</div><div class="note" style="margin:2px 0 0">${selected.games?((100*selected.wins/selected.games).toFixed(1)+'% win rate'): 'No games'}</div></div></div>`+list.map(s=>`<div class="banner-pokemon">${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.games} games</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
+      }
+    }
+    return controls+`<div class="ticker" id="ticker">${cards||'<div class="tick empty"><div class="val">No banner data yet</div></div>'}</div>`;
+  }
+  function renderLeagueOverview(){
+    const data=teamStandings('ALL');
+    contentEl.innerHTML=`<div class="panel"><h2>League Overview</h2><div class="note">Click a franchise for a quick league summary.</div><div id="overviewTeams" style="margin-top:14px"></div></div>`;
+    const el=document.getElementById('overviewTeams');
+    if(!data.length){el.innerHTML='<div class="empty-state">No team data yet.</div>';return;}
+    el.innerHTML=`<div class="team-card-grid">${data.map((t,i)=>{const mons=Object.values(teamPokemonStats('ALL')[t.team]||{}).sort((a,b)=>b.games-a.games||b.dealt-a.dealt).slice(0,3); const logo=teamLogo(t.team); return `<div class="team-card" data-team-card="${escapeHtml(t.team)}"><div class="team-card-head">${logo?`<img class="team-logo" src="${escapeHtml(logo)}" alt="">`:''}<div><div class="team-card-name">${escapeHtml(t.team)}</div><div class="team-card-sub">${i+1}${i===0?'st':i===1?'nd':i===2?'rd':'th'} in league</div></div></div><div class="team-card-stats"><div class="team-card-stat"><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div class="team-card-stat"><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(0)+'%':'—'}</strong></div><div class="team-card-stat"><span>Diff</span><strong>${t.kills-t.deaths>0?'+':''}${t.kills-t.deaths}</strong></div></div><div class="note">Top used: ${mons.map(m=>escapeHtml(m.species)).join(', ')||'—'}</div></div>`}).join('')}</div>`;
+    el.querySelectorAll('[data-team-card]').forEach(card=>card.addEventListener('click',()=>openTeamOverview(card.dataset.teamCard)));
+  }
+  function openTeamOverview(team){
+    const data=teamStandings('ALL'); const t=data.find(x=>x.team===team); if(!t)return;
+    const i=data.indexOf(t); const mons=Object.values(teamPokemonStats('ALL')[team]||{}).sort((a,b)=>b.games-a.games||b.dealt-a.dealt).slice(0,5);
+    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">League Position</div><h3>${i+1}${i===0?'st':i===1?'nd':i===2?'rd':'th'} — ${escapeHtml(team)}</h3></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${t.kills-t.deaths>0?'+':''}${t.kills-t.deaths}</strong></div></div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.games} games · ${m.kills} K · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
+    document.getElementById('teamOverviewClose').addEventListener('click',closeAudit); document.getElementById('teamOverviewOverlay').addEventListener('click',e=>{if(e.target.id==='teamOverviewOverlay')closeAudit();});
+  }
   function renderProcess(){
     const count = Object.keys(STATE.replays).length;
     contentEl.innerHTML = `
@@ -1164,19 +1379,13 @@
         <h2>Add replays</h2>
         <label>Showdown replay links (one per line)</label>
         <textarea id="urlsInput" placeholder="https://replay.pokemonshowdown.com/gen9natdexdraft-xxxxxxxx"></textarea>
-        <div class="row" style="margin-top:0.65rem;">
-          <div>
-            <label>Week label (optional — automatically calculates Monday-Sunday week from replay date if blank)</label>
-            <input type="text" id="weekInput" placeholder="Auto-calendar week from replay date" value="${escapeHtml(lastWeek||'')}">
-          </div>
-        </div>
         <button class="primary" id="processBtn">Process replays</button>
         <div class="log" id="processLog"></div>
       </div>
       <div class="panel">
         <h2>Processed this season <span class="badge">${count} replays</span></h2>
         ${count===0 ? `<div class="empty-state">Nothing processed yet — paste some replay links above.</div>` : `
-          <div class="foot-actions" style="margin-top:0; margin-bottom:0.75rem;">
+          <div class="foot-actions" style="margin-top:0; margin-bottom:12px;">
             <button class="ghost" id="reprocessAll">Reprocess all replays (re-fetches &amp; re-parses everything)</button>
           </div>
           ${renderReplayTable()}`}
@@ -1185,11 +1394,10 @@
     document.getElementById('processBtn').addEventListener('click', async ()=>{
       const btn = document.getElementById('processBtn');
       const urls = document.getElementById('urlsInput').value;
-      lastWeek = document.getElementById('weekInput').value.trim();
       const logEl = document.getElementById('processLog');
       logEl.innerHTML = '';
       btn.disabled = true;
-      await processUrls(urls, lastWeek, logEl);
+      await processUrls(urls, '', logEl);
       btn.disabled = false;
     });
     const reBtn = document.getElementById('reprocessAll');
@@ -1200,19 +1408,18 @@
       reBtn.disabled = false;
     });
   }
-  let lastWeek = '';
 
   async function reprocessAll(logEl){
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
     for(const id of ids){
-      const oldWeek = STATE.replays[id].week;
+      
       try{
         const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
         if(!resp.ok) throw new Error('not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        parsed.week = oldWeek || getCalendarWeekLabel(parsed.uploadtime);
+        parsed.week = autoWeekForReplay(parsed);
         parsed.processedAt = STATE.replays[id].processedAt;
         STATE.replays[id] = parsed;
         appendLog(logEl, `✓ reprocessed ${id}`, false, true);
@@ -1222,6 +1429,7 @@
         failed++;
       }
     }
+    recalculateAllWeeks();
     await saveReplays();
     appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
     renderTicker();
@@ -1317,7 +1525,7 @@
 
     function draw(){
       const q = input.value.trim().toLowerCase();
-      const stats = globalPokemonStats(weekSel.value).filter(s => !q || s.species.toLowerCase().includes(q));
+      const stats = globalPokemonStats(weekSel.value).filter(s => !q || s.species.toLowerCase().includes(q)).sort((a,b)=>a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
       if(!stats.length){
         table.innerHTML = `<div class="empty-state">${q ? `No Pokémon matching <strong>${escapeHtml(input.value.trim())}</strong> in this scope.` : 'No Pokémon data for this scope yet.'}</div>`;
         return;
@@ -1345,6 +1553,8 @@
     draw();
   }
 
+
+  // ---------- Pokémon profile / death causes / team comparison ----------
   function pokemonProfileData(species, weekFilter){
     const target = normName(species);
     const rows = [];
@@ -1361,6 +1571,8 @@
     rows.forEach(({replay,mon})=>{
       agg.dealt += mon.damageDealt||0; agg.taken += mon.damageTaken||0;
       agg.kills += mon.kills||0; agg.deaths += mon.deaths||0; agg.games += mon.appearances||0;
+      // Keep the replay timestamp with each event so profile history can be
+      // ordered by when the battle was played/uploaded rather than by turn.
       const replayDate = Number(replay.uploadtime || replay.processedAt || 0);
       agg.killLog.push(...(mon.killLog||[]).map(x=>({...x, replayDate})));
       agg.deathLog.push(...(mon.deathLog||[]).map(x=>({...x, replayDate})));
@@ -1374,10 +1586,10 @@
     const kd = s.deaths ? (s.kills/s.deaths).toFixed(2) : (s.kills ? '∞' : '0');
     const avg = s.games ? (s.dealt/s.games).toFixed(1) : '0';
     return `<div class="panel pokemon-profile">
-      <div style="display:flex;align-items:center;gap:0.9rem;margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
         ${spriteImg(s.species,'sprite-xl')}
-        <div><h2 style="margin:0;color:var(--text);text-transform:none;letter-spacing:0;font-size:1.25rem;">${pokemonLink(s.species, escapeHtml(s.species))}</h2>
-        <div class="note" style="margin-top:0.2rem;">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div></div>
+        <div><h2 style="margin:0;color:var(--text);text-transform:none;letter-spacing:0;font-size:20px;">${pokemonLink(s.species, escapeHtml(s.species))}</h2>
+        <div class="note" style="margin-top:3px;">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div></div>
       </div>
       <div class="profile-grid">
         <div><span>Games</span><strong>${s.games}</strong></div><div><span>Kills</span><strong class="kills">${s.kills}</strong></div>
@@ -1401,7 +1613,7 @@
       for(const r of allReplays(sel.value)) for(const k in r.mons){
         const m=r.mons[k];
         for(const d of (m.deathLog||[])){
-          const c=d.cause||'Unattributed'; counts[c]=(counts[c]||0)+1;
+          const raw=(d.cause||'Other'); const c=/^(unattributed)$/i.test(raw)?'Other':(/stealth rock|spikes|toxic spikes|sticky web/i.test(raw)?'Hazard':(/recoil/i.test(raw)?'Recoil':(/psn|tox|brn|poison|burn/i.test(raw)?'Status':raw))); counts[c]=(counts[c]||0)+1;
           if(!pokemon[c]) pokemon[c]={}; const sp=m.species; pokemon[c][sp]=(pokemon[c][sp]||0)+1;
           if(!causeLogs[c]) causeLogs[c]=[]; causeLogs[c].push({pokemon:sp,...d});
         }
@@ -1434,7 +1646,7 @@
     const sel=document.getElementById('compareWeek');
     function draw(){
       const data=teamComparisonData(sel.value); const anyWins=data.some(x=>x.wins>0); document.getElementById('compareNote').textContent=anyWins?'Win/loss records are saved with each parsed replay. Reprocess older replays once to populate them.':'Win/loss data is not present in the stored replay parses yet; reprocess the season from the Admin page to populate it.';
-      document.getElementById('compareBody').innerHTML=!data.length?`<div class="empty-state">No team data.</div>`:`<table><thead><tr><th class="rank">#</th><th>Team / Coach</th><th class="num">Games</th><th class="num">Wins</th><th class="num">Losses</th><th class="num">Win %</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">K/D</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th></tr></thead><tbody>${data.map((x,i)=>{const kd=x.deaths?x.kills/x.deaths:(x.kills?'∞':0);return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(x.team)}</td><td class="num">${x.games}</td><td class="num kills">${x.wins}</td><td class="num taken">${x.losses}</td><td class="num">${x.games?(100*x.wins/x.games).toFixed(1)+'%':'—'}</td><td class="num kills">${x.kills}</td><td class="num taken">${x.deaths}</td><td class="num">${typeof kd==='number'?kd.toFixed(2):kd}</td><td class="num dealt">${x.dealt.toFixed(1)}</td><td class="num taken">${x.taken.toFixed(1)}</td></tr>`}).join('')}</tbody></table>`;
+      document.getElementById('compareBody').innerHTML=!data.length?`<div class="empty-state">No team data.</div>`:`<table><thead><tr><th class="rank">#</th><th>Team / Coach</th><th class="num">Games</th><th class="num">Wins</th><th class="num">Losses</th><th class="num">Win %</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Differential</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th></tr></thead><tbody>${data.map((x,i)=>{return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(x.team)}</td><td class="num">${x.games}</td><td class="num kills">${x.wins}</td><td class="num taken">${x.losses}</td><td class="num">${x.games?(100*x.wins/x.games).toFixed(1)+'%':'—'}</td><td class="num kills">${x.kills}</td><td class="num taken">${x.deaths}</td><td class="num ${x.kills-x.deaths>=0?'kills':'taken'}">${x.kills-x.deaths>0?'+':''}${x.kills-x.deaths}</td><td class="num dealt">${x.dealt.toFixed(1)}</td><td class="num taken">${x.taken.toFixed(1)}</td></tr>`}).join('')}</tbody></table>`;
     }
     sel.addEventListener('change',draw); draw();
   }
@@ -1447,7 +1659,7 @@
           <div><label>Scope</label>${weekSelectorHtml('gfWeek')}</div>
           <div style="flex:0;"><button class="ghost" id="exportGF">Export CSV</button></div>
         </div>
-        <div class="note" style="margin-bottom:0.75rem;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
+        <div class="note" style="margin-bottom:12px;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
         <div id="gfList"></div>
       </div>`;
 
@@ -1491,7 +1703,7 @@
           <div><label>Team</label><select id="teamSelect">${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
           <div style="flex:0;"><button class="ghost" id="exportTeams">Export all teams (CSV)</button></div>
         </div>
-        ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-0.4rem 0 0.9rem;"></div><div id="teamTable"></div>`}
+        ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-6px 0 14px;"></div><div id="teamTable"></div>`}
       </div>`;
     if(teams.length===0) return;
     const weekSel = document.getElementById('teamsWeek');
@@ -1520,6 +1732,7 @@
     draw();
   }
 
+  // ---------- replay browser ----------
   function replayBrowserData(){
     return Object.values(STATE.replays).map(r=>{
       const p1=(r.players?.p1||'?').trim()||'?';
@@ -1535,7 +1748,7 @@
       const pokemon=[...new Set(mons.map(m=>m.species).filter(Boolean))];
       const teams=[teamFor(p1),teamFor(p2)];
       return {r,p1,p2,winner,result,pokemon,teams,week:r.week||'Unassigned',format:r.format||'—'};
-    }).sort((a,b)=> (String(b.week).localeCompare(String(a.week),undefined,{numeric:true})) || ((b.r.uploadtime||b.r.processedAt||0)-(a.r.uploadtime||a.r.processedAt||0)));
+    }).sort((a,b)=> (String(b.week).localeCompare(String(a.week),undefined,{numeric:true})) || ((b.r.processedAt||0)-(a.r.processedAt||0)));
   }
 
   function renderReplayBrowser(){
@@ -1543,33 +1756,30 @@
     const weeks=[...new Set(data.map(x=>x.week))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
     const players=[...new Set(data.flatMap(x=>[x.p1,x.p2]).filter(x=>x&&x!=='?'))].sort((a,b)=>a.localeCompare(b));
     const teams=[...new Set(data.flatMap(x=>x.teams).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-    const pokemon=[...new Set(data.flatMap(x=>x.pokemon))].sort((a,b)=>a.localeCompare(b));
     contentEl.innerHTML=`
       <div class="panel">
         <h2>Replay Browser</h2>
         <div class="note">Search and filter every processed replay. Click <strong>View replay</strong> to open the original Pokémon Showdown battle.</div>
-        <div class="row" style="align-items:flex-end;margin-top:0.9rem;">
-          <div style="min-width:13rem;flex:1"><label>Search</label><input id="replaySearch" type="text" placeholder="Player, franchise, Pokémon, replay ID…"></div>
+        <div class="row" style="align-items:flex-end;margin-top:14px;">
+          <div style="min-width:210px;flex:1"><label>Search</label><input id="replaySearch" type="text" placeholder="Player, franchise, Pokémon, replay ID…"></div>
           <div><label>Week</label><select id="replayWeek"><option value="ALL">All weeks</option>${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}</select></div>
           <div><label>Player</label><select id="replayPlayer"><option value="ALL">All players</option>${players.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
           <div><label>Franchise</label><select id="replayTeam"><option value="ALL">All franchises</option>${teams.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
-          <div><label>Pokémon</label><select id="replayPokemon"><option value="ALL">All Pokémon</option>${pokemon.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
           <div><label>Result</label><select id="replayResult"><option value="ALL">All results</option><option value="KNOWN">Completed</option><option value="UNKNOWN">Unknown result</option></select></div>
         </div>
-        <div id="replayCount" class="note" style="margin-top:0.75rem;"></div>
-        <div id="replayBrowserBody" style="margin-top:0.65rem;"></div>
+        <div id="replayCount" class="note" style="margin-top:12px;"></div>
+        <div id="replayBrowserBody" style="margin-top:10px;"></div>
       </div>`;
 
     const search=document.getElementById('replaySearch');
-    const controls=['replayWeek','replayPlayer','replayTeam','replayPokemon','replayResult'].map(id=>document.getElementById(id));
+    const controls=['replayWeek','replayPlayer','replayTeam','replayResult'].map(id=>document.getElementById(id));
     function draw(){
       const q=search.value.trim().toLowerCase();
-      const [week,player,team,mon,result]=controls.map(x=>x.value);
+      const [week,player,team,result]=controls.map(x=>x.value);
       const filtered=data.filter(x=>{
         if(week!=='ALL' && x.week!==week) return false;
         if(player!=='ALL' && x.p1!==player && x.p2!==player) return false;
         if(team!=='ALL' && !x.teams.includes(team)) return false;
-        if(mon!=='ALL' && !x.pokemon.some(p=>p.toLowerCase()===mon.toLowerCase())) return false;
         if(result==='KNOWN' && !x.winner) return false;
         if(result==='UNKNOWN' && x.winner) return false;
         if(q){
@@ -1579,14 +1789,13 @@
         return true;
       });
       document.getElementById('replayCount').textContent=`Showing ${filtered.length} of ${data.length} replay${data.length===1?'':'s'}.`;
-      document.getElementById('replayBrowserBody').innerHTML=!filtered.length?`<div class="empty-state">No replays match those filters.</div>`:`<table><thead><tr><th class="rank">#</th><th>Week</th><th>Matchup</th><th>Franchises</th><th>Format</th><th>Result</th><th class="num">Pokémon</th><th></th><th></th></tr></thead><tbody>${filtered.map((x,i)=>`<tr>
+      document.getElementById('replayBrowserBody').innerHTML=!filtered.length?`<div class="empty-state">No replays match those filters.</div>`:`<table><thead><tr><th class="rank">#</th><th>Week</th><th>Matchup</th><th>Franchises</th><th>Format</th><th>Result</th><th></th><th></th></tr></thead><tbody>${filtered.map((x,i)=>`<tr>
         <td class="rank">${i+1}</td>
         <td>${escapeHtml(x.week)}</td>
         <td class="pname">${escapeHtml(x.p1)} <span style="color:var(--text-dim)">vs</span> ${escapeHtml(x.p2)}</td>
         <td><span class="badge">${escapeHtml(x.teams[0]||'?')}</span> <span style="color:var(--text-dim)">vs</span> <span class="badge">${escapeHtml(x.teams[1]||'?')}</span></td>
         <td style="color:var(--text-dim)">${escapeHtml(x.format)}</td>
         <td>${x.winner ? `<span class="kills">${escapeHtml(x.result)}</span>` : `<span class="badge">Unknown</span>`}</td>
-        <td class="num">${x.pokemon.length}</td>
         <td class="num"><button class="ghost small" data-replay-summary="${escapeHtml(x.r.id)}">Summary</button></td>
         <td class="num"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.r.id)}" target="_blank" rel="noopener">View replay</a></td>
       </tr>`).join('')}</tbody></table>`;
@@ -1597,17 +1806,19 @@
   }
 
   function renderSettings(){
+    const entries = Object.entries(STATE.teamMap);
+    contentEl.invisible;
     contentEl.innerHTML = `
       <div class="panel">
         <h2>Player → Team name mapping</h2>
         <div class="note">Map each Showdown username to your league's team/trainer name, so stats group correctly. Unmapped usernames just show as-is.</div>
-        <div class="row" style="margin-top:0.75rem; align-items:center;">
-          <label style="display:flex; align-items:center; gap:0.5rem; margin:0; cursor:pointer;">
+        <div class="row" style="margin-top:12px; align-items:center;">
+          <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
             <input type="checkbox" id="caseInsensitiveToggle" ${STATE.settings.caseInsensitiveNames ? 'checked' : ''}>
-            Ignore case when grouping team names
+            Ignore case when grouping team names (e.g. "Team Fire" and "team fire" count as the same team)
           </label>
         </div>
-        <div id="mapRows" style="margin-top:0.75rem;"></div>
+        <div id="mapRows" style="margin-top:12px;"></div>
         <div class="map-row">
           <input type="text" id="newUser" placeholder="showdown username">
           <input type="text" id="newTeam" placeholder="team name">
@@ -1616,14 +1827,17 @@
       </div>
       <div class="panel">
         <h2>Possible duplicate players</h2>
-        <div id="dupPlayers" style="margin-top:0.75rem;"></div>
+        <div class="note">Usernames that look like the same person typed differently (e.g. <code>dossa37</code> / <code>dossa_37</code>, or <code>podraa</code> / <code>podrrraaa</code>). Merging points every variant at whichever one has played the most games.</div>
+        <div id="dupPlayers" style="margin-top:12px;"></div>
       </div>
       <div class="panel">
         <h2>Possible duplicate teams (shared roster)</h2>
-        <div id="dupTeams" style="margin-top:0.75rem;"></div>
+        <div class="note">Since this is a draft league each team's roster is fixed — two team tags whose Pokémon overlap heavily are probably the same team under two different names. Merging groups everything under the tag with the most total appearances.</div>
+        <div id="dupTeams" style="margin-top:12px;"></div>
       </div>
       <div class="panel">
         <h2>Shared data</h2>
+        <div class="note">Shared database: <strong>Supabase</strong>. You are signed in as the league administrator.</div>
         <div class="foot-actions">
           <button class="ghost" id="migrateLocal">Migrate old browser data to shared database</button>
           <button class="ghost" id="refreshShared">Reload shared data</button>
@@ -1632,6 +1846,8 @@
       </div>
       <div class="panel">
         <h2>Data</h2>
+        <div class="note">Removing a replay updates every leaderboard immediately. Back up regularly.</div>
+        <div class="note">Removing a replay updates every leaderboard immediately. Back up regularly if you're on local storage.</div>
         <div class="foot-actions">
           <button class="ghost" id="exportBackup">Download backup (.json)</button>
           <button class="ghost" id="importBackupBtn">Restore from backup</button>
@@ -1696,7 +1912,7 @@
             <div style="flex:1;">
               ${escapeHtml(p.smaller)} <span style="color:var(--text-dim)">≈</span> ${escapeHtml(p.bigger)}
               <span class="badge">${p.overlap} shared mons</span>
-              <span class="badge">keep "${escapeHtml(p.bigger)}"</span>
+              <span class="badge">keep "${escapeHtml(p.bigger)}" (${p.biggerGames} appearances vs ${p.smallerGames})</span>
             </div>
             <button class="ghost small" data-merge-teams="${i}">Merge</button>
           </div>`).join('');
@@ -1732,9 +1948,9 @@
     });
     document.getElementById('migrateLocal').addEventListener('click', async ()=>{
       try{
-        if(!confirm('Upload local dashboard data to shared database?')) return;
+        if(!confirm('Upload this browser\'s old local dashboard data to the shared database? Existing shared data will be merged/replaced by the local state.')) return;
         await migrateLocalData();
-        alert('Migration complete.');
+        alert('Migration complete. The shared database now contains this browser\'s dashboard data.');
         renderTicker(); render();
       }catch(err){ alert('Migration failed: ' + err.message); }
     });
@@ -1747,7 +1963,7 @@
       showAdminLogin();
     });
     document.getElementById('resetAll').addEventListener('click', async ()=>{
-      if(!confirm('Clear all replay data?')) return;
+      if(!confirm('This clears every processed replay for the whole league. Continue?')) return;
       STATE.replays = {};
       await deleteAllRemote();
       await saveSharedState();
@@ -1771,7 +1987,7 @@
         const text = await file.text();
         const data = JSON.parse(text);
         if(!data.replays) throw new Error('not a valid backup file');
-        if(!confirm(`Replace current data with backup (${Object.keys(data.replays).length} replays)?`)) return;
+        if(!confirm(`This will replace your current data with the backup (${Object.keys(data.replays).length} replays). Continue?`)) return;
         STATE.replays = data.replays || {};
         STATE.teamMap = data.teamMap || {};
         STATE.settings = Object.assign({caseInsensitiveNames:true}, data.settings || {});
@@ -1780,7 +1996,7 @@
         renderTicker();
         render();
       }catch(err){
-        alert('Could not read backup file: ' + err.message);
+        alert('Could not read that backup file: ' + err.message);
       }
       e.target.value = '';
     });
@@ -1821,9 +2037,9 @@
     try{
       const {species, type, list, showLink} = JSON.parse(cell.dataset.audit);
       openAudit(species, type, list, showLink);
-    }catch(err){ }
+    }catch(err){ /* malformed payload, ignore */ }
   });
-
+  // Catch Pokémon links inserted by any tab renderer. This complements the delegated click handler.
   const pokemonObserver = new MutationObserver(mutations=>{
     for(const m of mutations){
       for(const node of m.addedNodes){
@@ -1839,6 +2055,11 @@
     await loadState();
     renderTicker();
     render();
+    // Public dashboard polls the shared database every 10 seconds. This keeps the
+    // viewer page read-only while still making new replay data appear automatically.
+    if(!IS_ADMIN_PAGE){
+      setInterval(async ()=>{ try{ await refreshSharedState(); }catch(e){ console.warn('Shared refresh failed', e); } }, POLL_MS);
+    }
   })();
 })();
 </script>

@@ -236,7 +236,7 @@
 <script>
 (function(){
   const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
-  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true } };
+  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', seasonStartMonday:null } };
   let loaded = false;
 
   // ---------- shared Supabase storage ----------
@@ -267,14 +267,15 @@
       }
       STATE.replays = replays;
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true}, (sharedState && sharedState.settings) || {});
+      STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', seasonStartMonday:null}, (sharedState && sharedState.settings) || {});
+      STATE.settings.teamLogos = STATE.settings.teamLogos || {};
       loaded = true;
     }catch(e){
       console.error('Supabase load failed:', e);
       if(!loaded){
         STATE.replays = {};
         STATE.teamMap = {};
-        STATE.settings = {caseInsensitiveNames:true};
+        STATE.settings = {caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', seasonStartMonday:null};
         loaded = true;
       }
       if(IS_ADMIN_PAGE) showAdminError('Could not load shared data: ' + e.message);
@@ -330,7 +331,8 @@
     if(!rawR && !rawM && !rawS) throw new Error('No old local dashboard data was found in this browser.');
     if(rawR) STATE.replays = JSON.parse(rawR);
     if(rawM) STATE.teamMap = JSON.parse(rawM);
-    if(rawS) STATE.settings = Object.assign({caseInsensitiveNames:true}, JSON.parse(rawS));
+    if(rawS) STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', seasonStartMonday:null}, JSON.parse(rawS));
+    STATE.settings.teamLogos = STATE.settings.teamLogos || {};
     await saveReplays();
     await saveSharedState();
   }
@@ -455,10 +457,18 @@
   function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
 
   // ---------- replay parsing ----------
+  function classifyIndirectCause(tags){
+    const t=(tags||'').toLowerCase();
+    if(t.includes('stealth rock') || t.includes('spikes') || t.includes('toxic spikes') || t.includes('sticky web')) return 'Hazard';
+    if(t.includes('recoil')) return 'Recoil';
+    if(t.includes('psn') || t.includes('tox') || t.includes('brn') || t.includes('poison') || t.includes('burn')) return 'Status';
+    return 'Other';
+  }
   function parseLog(json, replayId){
     const lines = json.log.split('\n');
     const players = {p1:'', p2:''};
     const results = {p1:null, p2:null};
+    const teamRoster = {p1:[], p2:[]};
     let winner = null;
     const slots = {}; // slotId -> {species, hp, side}
     const mons = {}; // "p1|species" -> stats
@@ -519,7 +529,10 @@
       const parts = raw.split('|');
       const cmd = parts[1];
 
-      if(cmd === 'player' && parts[3]){
+      if(cmd === 'poke' && parts[3]){
+        const side=parts[2]; const species=parts[3].split(',')[0].trim();
+        if((side==='p1'||side==='p2') && species && !teamRoster[side].some(x=>normName(x)===normName(species))) teamRoster[side].push(species);
+      } else if(cmd === 'player' && parts[3]){
         const side = parts[2];
         if(side === 'p1' || side === 'p2') players[side] = parts[3];
       } else if(cmd === 'win' && parts[2]){
@@ -709,7 +722,7 @@
           // Clear any earlier attacker on file for this slot — otherwise a mon that
           // survives a real hit and later dies to something untraceable still has
           // the kill wrongly credited to whoever landed that earlier real hit.
-          lastAttacker[slot] = null;
+          lastAttacker[slot] = {stats:null, cause:classifyIndirectCause(tags), turn:currentTurn};
         }
       } else if(cmd === '-heal' || cmd === '-sethp'){
         const slotFull = parts[2];
@@ -731,7 +744,7 @@
           deadStats.deathLog.push({
             replayId, turn: currentTurn,
             killer: credited ? killerStats.species : null,
-            cause: credited ? killerInfo.cause : 'unattributed'
+            cause: credited ? killerInfo.cause : (killerInfo?.cause || 'Other')
           });
         }
         if(credited){
@@ -748,11 +761,33 @@
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner, results };
+      players, mons, winner, results, teamRoster };
+  }
+
+  // ---------- automatic Monday-Sunday season weeks ----------
+  function replayTimestampMs(replay){
+    const n=Number(replay?.uploadtime||0); if(!n) return 0; return n<1e12?n*1000:n;
+  }
+  function mondayStartMs(ms){ const d=new Date(ms); const day=d.getDay(); const diff=(day===0?-6:1-day); d.setHours(0,0,0,0); d.setDate(d.getDate()+diff); return d.getTime(); }
+  function ensureSeasonStart(){
+    if(STATE.settings.seasonStartMonday) return Number(STATE.settings.seasonStartMonday);
+    const times=Object.values(STATE.replays).map(replayTimestampMs).filter(Boolean); if(!times.length) return null;
+    const start=mondayStartMs(Math.min(...times)); STATE.settings.seasonStartMonday=start; return start;
+  }
+  function autoWeekForReplay(replay){
+    const ts=replayTimestampMs(replay); if(!ts) return 'Unassigned';
+    let start=ensureSeasonStart(); if(!start || mondayStartMs(ts)<start){ start=mondayStartMs(ts); STATE.settings.seasonStartMonday=start; }
+    return `Week ${Math.floor((mondayStartMs(ts)-start)/604800000)+1}`;
+  }
+  function recalculateAllWeeks(){
+    const times=Object.values(STATE.replays).map(replayTimestampMs).filter(Boolean);
+    if(!times.length) return;
+    STATE.settings.seasonStartMonday=mondayStartMs(Math.min(...times));
+    for(const r of Object.values(STATE.replays)) r.week=autoWeekForReplay(r);
   }
 
   // ---------- processing ----------
-  async function processUrls(urlsRaw, week, logEl){
+  async function processUrls(urlsRaw, logEl){
     const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
     let added = 0, skipped = 0, failed = 0;
@@ -765,7 +800,7 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        parsed.week = week || 'Unassigned';
+        parsed.week = autoWeekForReplay(parsed);
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
         appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})${parsed.winner ? ` — ${parsed.winner} won` : ' — result unavailable'}`, false, true);
@@ -775,7 +810,7 @@
         failed++;
       }
     }
-    if(added > 0) await saveReplays();
+    if(added > 0){ recalculateAllWeeks(); await saveReplays(); }
     appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${failed} failed.`, false);
     renderTicker();
     render(); // refresh whatever tab is open
@@ -1068,12 +1103,6 @@
         <h2>Add replays</h2>
         <label>Showdown replay links (one per line)</label>
         <textarea id="urlsInput" placeholder="https://replay.pokemonshowdown.com/gen9natdexdraft-xxxxxxxx"></textarea>
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label>Week label (for this batch's snapshot)</label>
-            <input type="text" id="weekInput" placeholder="Week 9" value="${escapeHtml(lastWeek||'')}">
-          </div>
-        </div>
         <button class="primary" id="processBtn">Process replays</button>
         <div class="log" id="processLog"></div>
       </div>
@@ -1089,11 +1118,10 @@
     document.getElementById('processBtn').addEventListener('click', async ()=>{
       const btn = document.getElementById('processBtn');
       const urls = document.getElementById('urlsInput').value;
-      lastWeek = document.getElementById('weekInput').value.trim();
       const logEl = document.getElementById('processLog');
       logEl.innerHTML = '';
       btn.disabled = true;
-      await processUrls(urls, lastWeek, logEl);
+      await processUrls(urls, logEl);
       btn.disabled = false;
     });
     const reBtn = document.getElementById('reprocessAll');
@@ -1104,7 +1132,6 @@
       reBtn.disabled = false;
     });
   }
-  let lastWeek = '';
 
   async function reprocessAll(logEl){
     const ids = Object.keys(STATE.replays);
@@ -1116,7 +1143,7 @@
         if(!resp.ok) throw new Error('not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        parsed.week = oldWeek;
+        parsed.week = autoWeekForReplay(parsed);
         parsed.processedAt = STATE.replays[id].processedAt;
         STATE.replays[id] = parsed;
         appendLog(logEl, `✓ reprocessed ${id}`, false, true);
@@ -1126,6 +1153,7 @@
         failed++;
       }
     }
+    recalculateAllWeeks();
     await saveReplays();
     appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
     renderTicker();
@@ -1360,6 +1388,11 @@
         </div>
       </div>
       <div class="panel">
+        <h2>Franchise logos</h2>
+        <div class="note">Paste a public image URL for each squad. These logos appear on the public League Overview and team banner.</div>
+        <div id="teamLogoRows" style="margin-top:12px;"></div>
+      </div>
+      <div class="panel">
         <h2>Possible duplicate players</h2>
         <div class="note">Usernames that look like the same person typed differently (e.g. <code>dossa37</code> / <code>dossa_37</code>, or <code>podraa</code> / <code>podrrraaa</code>). Merging points every variant at whichever one has played the most games.</div>
         <div id="dupPlayers" style="margin-top:12px;"></div>
@@ -1409,6 +1442,14 @@
       });
     }
     drawMap();
+
+    const teamLogoRows = document.getElementById('teamLogoRows');
+    function drawTeamLogos(){
+      const teams = Object.keys(teamPokemonStats('ALL')).sort();
+      teamLogoRows.innerHTML = teams.length ? teams.map(t=>`<div class="map-row"><input value="${escapeHtml(t)}" disabled><input type="text" data-logo-team="${escapeHtml(t)}" placeholder="https://.../logo.png" value="${escapeHtml(STATE.settings.teamLogos?.[groupKey(t)]||'')}"><button class="ghost small" data-save-logo="${escapeHtml(t)}">Save</button></div>`).join('') : '<div class="empty-state">No franchises found yet.</div>';
+      teamLogoRows.querySelectorAll('[data-save-logo]').forEach(btn=>btn.addEventListener('click',async()=>{ const t=btn.dataset.saveLogo; const input=teamLogoRows.querySelector(`[data-logo-team="${CSS.escape(t)}"]`); STATE.settings.teamLogos[groupKey(t)]=(input.value||'').trim(); await saveSettings(); drawTeamLogos(); }));
+    }
+    drawTeamLogos();
 
     const dupPlayersEl = document.getElementById('dupPlayers');
     function drawDupPlayers(){
