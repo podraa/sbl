@@ -340,8 +340,6 @@
     const mons = {}; // "p1|species" -> stats
     const appearedThisReplay = new Set();
     let lastMove = null; // {source, target, move}
-    const moveStats = {};
-    const monMoveStats = {};
     let currentTurn = 0;
     // NOTE: these three all store direct references to a mon's *stats object*
     // (captured at the moment of the event via ensureMon), never a slot label.
@@ -379,27 +377,13 @@
       const k = monKey(slot);
       if(!mons[k]) mons[k] = {
         side:s.side, species:s.species, damageDealt:0, damageTaken:0,
-        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[],
-        crits:0, misses:0
+        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[]
       };
       if(!appearedThisReplay.has(k)){
         appearedThisReplay.add(k);
         mons[k].appearances += 1;
       }
       return mons[k];
-    }
-    function ensureMove(move){
-      const key=normName(move||'');
-      if(!key) return null;
-      if(!moveStats[key]) moveStats[key]={move:move||'',uses:0,misses:0,outcomes:0,hits:0,crits:0,damage:0,maxDamage:0,kos:0};
-      return moveStats[key];
-    }
-    function ensureMonMove(mon,move){
-      if(!mon||!move) return null;
-      const mk=mon.side+'|'+normName(mon.species), key=normName(move);
-      if(!monMoveStats[mk]) monMoveStats[mk]={};
-      if(!monMoveStats[mk][key]) monMoveStats[mk][key]={move,uses:0,misses:0,outcomes:0,hits:0,crits:0,damage:0,maxDamage:0,kos:0};
-      return monMoveStats[mk][key];
     }
 
     for(const raw of lines){
@@ -433,11 +417,6 @@
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
         const target = parts[4] ? parts[4].split(':')[0].trim() : null;
         const moveName = parts[3] ? parts[3].trim() : '';
-        if(source && moveName){
-          const ms=ensureMove(moveName), mon=ensureMon(source), mms=ensureMonMove(mon,moveName);
-          if(ms) ms.uses++;
-          if(mms) mms.uses++;
-        }
         if(source) lastMove = {source, target, move: moveName};
         if(source && HAZARD_MOVES.includes(moveName)){
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
@@ -462,24 +441,6 @@
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
           const setterStats = ensureMon(source);
           if(setterStats) toxicSpikesSetter[oppSide] = setterStats;
-        }
-      } else if(cmd === '-crit'){
-        if(lastMove && lastMove.move){
-          const ms=ensureMove(lastMove.move);
-          const mon=ensureMon(lastMove.source);
-          const mms=ensureMonMove(mon,lastMove.move);
-          if(ms) ms.crits++;
-          if(mms) mms.crits++;
-          if(mon) mon.crits=(mon.crits||0)+1;
-        }
-      } else if(cmd === '-miss'){
-        if(lastMove && lastMove.move){
-          const ms=ensureMove(lastMove.move);
-          const mon=ensureMon(lastMove.source);
-          const mms=ensureMonMove(mon,lastMove.move);
-          if(ms){ms.misses++;ms.outcomes++;}
-          if(mms){mms.misses++;mms.outcomes++;}
-          if(mon) mon.misses=(mon.misses||0)+1;
         }
       } else if(cmd === '-status'){
         const slotFull = parts[2];
@@ -521,13 +482,6 @@
         if(dmg <= 0) continue;
 
         const tags = parts.slice(4).join('|');
-        if(lastMove && lastMove.target === slot && lastMove.move && sideOf(lastMove.source)!==sideOf(slot)){
-          const ms=ensureMove(lastMove.move);
-          const mon=ensureMon(lastMove.source);
-          const mms=ensureMonMove(mon,lastMove.move);
-          if(ms){ms.outcomes++;ms.hits++;ms.damage+=dmg;ms.maxDamage=Math.max(ms.maxDamage||0,dmg);}
-          if(mms){mms.outcomes++;mms.hits++;mms.damage+=dmg;mms.maxDamage=Math.max(mms.maxDamage||0,dmg);}
-        }
         let attackerStats = null;
         let cause = null;
 
@@ -617,13 +571,6 @@
         }
         if(credited){
           killerStats.kills += 1;
-          const killMove=killerInfo?.cause;
-          if(killMove && !/^(Hazard|Recoil|Status|Other|Toxic Spikes|residual )/i.test(killMove)){
-            const ms=ensureMove(killMove);
-            const kmm=ensureMonMove(killerStats,killMove);
-            if(ms) ms.kos++;
-            if(kmm) kmm.kos++;
-          }
           killerStats.killLog.push({
             replayId, turn: currentTurn,
             victim: deadStats ? deadStats.species : slots[slot].species,
@@ -635,72 +582,11 @@
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, moveStats, monMoveStats };
+      players, mons };
   }
 
   // ---------- processing ----------
-  // Automatic season week assignment: weeks run Monday -> Sunday.
-  // Week 1 begins on the Monday of the earliest replay in the season.
-  // Manual overrides (weekOverride === true) are never touched by this logic.
-  function replayTimestamp(replay){
-    const raw = replay && replay.uploadtime;
-    if(raw == null || raw === '') return NaN;
-    const n = Number(raw);
-    if(!Number.isNaN(n)){
-      // Showdown uploadtime is normally Unix seconds; tolerate milliseconds too.
-      return n < 1e12 ? n * 1000 : n;
-    }
-    const t = Date.parse(raw);
-    return Number.isNaN(t) ? NaN : t;
-  }
-
-  function mondayStart(ts){
-    const d = new Date(ts);
-    if(Number.isNaN(d.getTime())) return null;
-    d.setHours(0,0,0,0);
-    const day = d.getDay(); // Sun=0, Mon=1
-    const daysSinceMonday = (day + 6) % 7;
-    d.setDate(d.getDate() - daysSinceMonday);
-    return d;
-  }
-
-  function ensureWeekStart(){
-    if(STATE.settings && STATE.settings.weekStartDate){
-      const d = new Date(STATE.settings.weekStartDate + 'T00:00:00');
-      if(!Number.isNaN(d.getTime())) return d;
-    }
-    const dates = Object.values(STATE.replays)
-      .map(replayTimestamp)
-      .filter(Number.isFinite);
-    if(!dates.length) return null;
-    const start = mondayStart(Math.min(...dates));
-    if(start){
-      STATE.settings.weekStartDate = start.toISOString().slice(0,10);
-    }
-    return start;
-  }
-
-  function automaticWeekForReplay(replay){
-    const ts = replayTimestamp(replay);
-    const start = ensureWeekStart();
-    if(!Number.isFinite(ts) || !start) return 'Unassigned';
-    const replayWeek = mondayStart(ts);
-    const diffDays = Math.floor((replayWeek.getTime() - start.getTime()) / 86400000);
-    const weekNum = Math.floor(diffDays / 7) + 1;
-    return `Week ${Math.max(1, weekNum)}`;
-  }
-
-  function assignAutomaticWeeks(){
-    const start = ensureWeekStart();
-    if(!start) return;
-    for(const replay of Object.values(STATE.replays)){
-      if(!replay.weekOverride){
-        replay.week = automaticWeekForReplay(replay);
-      }
-    }
-  }
-
-  async function processUrls(urlsRaw, logEl){
+  async function processUrls(urlsRaw, week, logEl){
     const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
     let added = 0, skipped = 0, failed = 0;
@@ -713,11 +599,9 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        parsed.weekOverride = false;
+        parsed.week = week || 'Unassigned';
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
-        // Recalculate automatic weeks chronologically after adding the replay.
-        assignAutomaticWeeks();
         appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
         added++;
       }catch(e){
@@ -725,11 +609,7 @@
         failed++;
       }
     }
-    if(added > 0){
-      assignAutomaticWeeks();
-      await saveSettings();
-      await saveReplays();
-    }
+    if(added > 0) await saveReplays();
     appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${failed} failed.`, false);
     renderTicker();
     render(); // refresh whatever tab is open
@@ -1018,7 +898,12 @@
         <h2>Add replays</h2>
         <label>Showdown replay links (one per line)</label>
         <textarea id="urlsInput" placeholder="https://replay.pokemonshowdown.com/gen9natdexdraft-xxxxxxxx"></textarea>
-        <div class="sub" style="margin-top:10px;">Weeks are assigned automatically from the replay date, Monday through Sunday. You can manually override an individual replay below.</div>
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Week label (for this batch's snapshot)</label>
+            <input type="text" id="weekInput" placeholder="Week 9" value="${escapeHtml(lastWeek||'')}">
+          </div>
+        </div>
         <button class="primary" id="processBtn">Process replays</button>
         <div class="log" id="processLog"></div>
       </div>
@@ -1034,10 +919,11 @@
     document.getElementById('processBtn').addEventListener('click', async ()=>{
       const btn = document.getElementById('processBtn');
       const urls = document.getElementById('urlsInput').value;
+      lastWeek = document.getElementById('weekInput').value.trim();
       const logEl = document.getElementById('processLog');
       logEl.innerHTML = '';
       btn.disabled = true;
-      await processUrls(urls, logEl);
+      await processUrls(urls, lastWeek, logEl);
       btn.disabled = false;
     });
     const reBtn = document.getElementById('reprocessAll');
@@ -1048,6 +934,8 @@
       reBtn.disabled = false;
     });
   }
+  let lastWeek = '';
+
   async function reprocessAll(logEl){
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
@@ -1059,12 +947,11 @@
         const json = await resp.json();
         const oldReplay = STATE.replays[id];
         const parsed = parseLog(json, id);
-        // Manual overrides are preserved exactly. Automatic weeks are rebuilt
-        // from the replay date so reprocessing can correct/refresh chronology.
+        // Preserve the existing week exactly when reprocessing. In particular,
+        // a manually overridden week must never be replaced by the parser's
+        // automatic week assignment.
+        parsed.week = oldReplay.week || 'Unassigned';
         parsed.weekOverride = !!oldReplay.weekOverride;
-        parsed.week = oldReplay.weekOverride
-          ? (oldReplay.week || 'Unassigned')
-          : automaticWeekForReplay(parsed);
         parsed.processedAt = oldReplay.processedAt;
         STATE.replays[id] = parsed;
         appendLog(logEl, `✓ reprocessed ${id}`, false, true);
@@ -1074,8 +961,6 @@
         failed++;
       }
     }
-    assignAutomaticWeeks();
-    await saveSettings();
     await saveReplays();
     appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
     renderTicker();
