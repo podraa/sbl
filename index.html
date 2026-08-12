@@ -166,6 +166,7 @@
   .search-match{background:var(--panel-alt); border-radius:8px;}
 
   /* golden fist */
+  .cause-subheading{font-size:14px;font-weight:600;color:var(--text);margin:4px 0 14px;}
   .gf-list{display:flex; flex-direction:column; gap:8px;}
   .gf-row{
     position:relative; display:grid; grid-template-columns:36px 72px minmax(0,1fr) 110px; align-items:center; gap:14px; padding:12px 16px; border-radius:12px;
@@ -1607,7 +1608,21 @@
         rows.push({replay:r, mon:m});
       }
     }
-    const agg = {species: rows[0]?.mon?.species || species, dealt:0,taken:0,kills:0,deaths:0,games:0,killLog:[],deathLog:[],coaches};
+    const weeksBrought = new Map();
+    const agg = {species: rows[0]?.mon?.species || species, dealt:0,taken:0,kills:0,deaths:0,games:0,killLog:[],deathLog:[],coaches,weeksBrought};
+    // Record every week in which the Pokémon was on the six-mon team preview,
+    // including games where it was never sent into battle.
+    for(const replay of allReplays(weekFilter)){
+      const week = replay.week;
+      for(const k in (replay.mons||{})){
+        const mon = replay.mons[k];
+        if(normName(mon.species) === target){
+          const key = String(week || '');
+          if(key) weeksBrought.set(key, (weeksBrought.get(key)||0) + 1);
+          break;
+        }
+      }
+    }
     rows.forEach(({replay,mon})=>{
       agg.dealt += mon.damageDealt||0; agg.taken += mon.damageTaken||0;
       agg.kills += mon.kills||0; agg.deaths += mon.deaths||0; agg.games += mon.appearances||0;
@@ -1637,6 +1652,10 @@
         <div><span>Damage dealt</span><strong class="dealt">${s.dealt.toFixed(1)}</strong></div><div><span>Damage taken</span><strong class="taken">${s.taken.toFixed(1)}</strong></div>
         <div><span>Avg dmg/game</span><strong>${avg}</strong></div><div><span>Kill rate/game</span><strong>${s.games?(s.kills/s.games).toFixed(2):'0'}</strong></div>
       </div>
+      <div class="profile-weeks" style="margin-top:14px;padding:12px 14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;">
+        <div class="mini-heading" style="margin-bottom:8px;">Weeks Brought</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px;">${Array.from(s.weeksBrought.keys()).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(w=>`<span class="badge">${escapeHtml(w)}</span>`).join('') || '<span class="note">No roster data recorded.</span>'}</div>
+      </div>
       <div class="section-divider"></div>
       <div class="profile-two-col">
         <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim)) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
@@ -1646,8 +1665,8 @@
   }
 
   function renderDeathCauses(){
-    contentEl.innerHTML=`<div class="panel"><h2>Death Causes</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('causeWeek')}</div></div><div id="causeBody"></div></div>`;
-    const sel=document.getElementById('causeWeek');
+    contentEl.innerHTML=`<div class="panel"><h2>Death Causes</h2><div class="cause-subheading">Top victims</div><div id="causeBody"></div></div>`;
+    const sel={value:'ALL'};
     function draw(){
       const counts={}; const pokemon={}; const causeLogs={};
       for(const r of allReplays(sel.value)) for(const k in r.mons){
@@ -1661,7 +1680,7 @@
       const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
       document.getElementById('causeBody').innerHTML=!rows.length?`<div class="empty-state">No deaths recorded.</div>`:`<div class="death-cause-list">${rows.map(([c,n],i)=>{const top=Object.entries(pokemon[c]).sort((a,b)=>b[1]-a[1]).slice(0,6);return `<div class="death-cause-entry"><div class="death-cause-rank">${i+1}</div><div class="death-cause-main"><div class="death-cause-title">${escapeHtml(c)} <span class="badge">${n}</span></div><div class="death-cause-mons">${top.map(([sp,v])=>`<span class="death-cause-mon">${spriteImg(sp,'death-cause-sprite')}${pokemonLink(sp, escapeHtml(sp))}<span class="badge">${v}</span></span>`).join('')}</div></div></div>`}).join('')}</div>`;
     }
-    sel.addEventListener('change',draw); draw();
+    draw();
   }
 
   function teamComparisonData(weekFilter){
