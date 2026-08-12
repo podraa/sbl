@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SBL Dashboard</title>
+<title>SBL Stats Hub</title>
 <style>
   :root{
 --bg: #160308;
@@ -418,9 +418,8 @@
 <body data-admin="false">
 <div id="app">
   <header>
-    <br>
-    <h1>SBL Season 15: National Dex Draft</h1>
-    <br>
+    <h1>League Damage Dashboard</h1>
+    <div class="sub">Paste replay links → auto-parsed stats → running season totals + weekly CSVs</div>
     <div id="bannerMount"></div>
   </header>
 
@@ -429,7 +428,7 @@
     <button data-tab="pokemonsearch">Pokémon Search</button>
     <button data-tab="global">Damage Board</button>
     <button data-tab="goldenfist">Golden Fist</button>
-    <button data-tab="causes">Death Stats</button>
+    <button data-tab="causes">Death Causes</button>
     <button data-tab="teamcompare">Standings</button>
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="replays">Replay Browser</button>
@@ -1804,22 +1803,20 @@
       <div class="panel">
         <h2>Franchise Stats</h2>
         <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('teamsWeek')}</div>
           <div><label>Team</label><select id="teamSelect">${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
           <div style="flex:0;"><button class="ghost" id="exportTeams">Export all teams (CSV)</button></div>
         </div>
         ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-6px 0 14px;"></div><div id="teamTable"></div>`}
       </div>`;
     if(teams.length===0) return;
-    const weekSel = document.getElementById('teamsWeek');
     const teamSel = document.getElementById('teamSelect');
     function draw(){
       const coaches = usernamesForTeamLabel(teamSel.value);
       document.getElementById('coachLine').innerHTML = coaches.length===0 ? '' :
         `Coached by <strong>${coaches.map(escapeHtml).join(', ')}</strong>`;
-      const data = teamPokemonStats(weekSel.value);
+      const data = teamPokemonStats('ALL');
       const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>b.dealt-a.dealt);
-      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team/scope.</div>` :
+      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team.</div>` :
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
         ${list.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
@@ -1832,7 +1829,7 @@
         </tr>`).join('')}</tbody></table>`;
     }
     teamSel.addEventListener('change', draw);
-    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs(weekSel.value, weekSel.value==='ALL'?'Season':weekSel.value));
+    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs('ALL','Season'));
     draw();
   }
 
@@ -1863,7 +1860,9 @@
     contentEl.innerHTML=`
       <div class="panel">
         <h2>Replay Browser</h2>
+        <br>
         <div class="note">Search and filter every processed replay. Click <strong>View replay</strong> to open the original Pokémon Showdown battle.</div>
+        <br>
         <div class="row" style="align-items:flex-end;margin-top:14px;">
           <div style="min-width:210px;flex:1"><label>Search</label><input id="replaySearch" type="text" placeholder="Player, franchise, Pokémon, replay ID…"></div>
           <div><label>Week</label><select id="replayWeek"><option value="ALL">All weeks</option>${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}</select></div>
