@@ -205,7 +205,7 @@
   .player-filter{max-width:320px; margin-bottom:14px;}
 </style>
 </head>
-<body>
+<body data-admin="true">
 <div id="app">
   <header>
     <h1>League Damage Dashboard</h1>
@@ -226,57 +226,174 @@
 </div>
 <div id="auditModal"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
   let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true } };
   let loaded = false;
 
-  // ---------- storage (uses Claude artifact cloud storage when available, else browser localStorage) ----------
-  const hasCloudStorage = (typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function');
-  let cloudBroken = false;
+  // ---------- shared Supabase storage ----------
+  // Admin and public dashboard use the same shared Supabase database.
+  const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
+  const SUPABASE_STATE_ID = '__dashboard_state__';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const IS_ADMIN_PAGE = true;
+  let adminUser = null;
+  let loadingFromRemote = false;
 
-  async function storageGet(key, shared){
-    if(hasCloudStorage && !cloudBroken){
-      try{ return await window.storage.get(key, shared); }
-      catch(e){ /* key may just not exist yet, or cloud storage unavailable here */ }
-    }
-    const raw = localStorage.getItem('league-dash:' + key);
-    return raw ? {key, value: raw, shared} : null;
-  }
-  async function storageSet(key, value, shared){
-    if(hasCloudStorage && !cloudBroken){
-      try{ const r = await window.storage.set(key, value, shared); if(r) return r; }
-      catch(e){ cloudBroken = true; }
-    }
-    localStorage.setItem('league-dash:' + key, value);
-    return {key, value, shared};
+  function requireAdmin(){
+    if(!adminUser) throw new Error('Admin login required to change shared data.');
   }
 
-  // ---------- state persistence ----------
   async function loadState(){
+    loadingFromRemote = true;
     try{
-      const r = await storageGet('replays-data', SHARED);
-      STATE.replays = r ? JSON.parse(r.value) : {};
-    }catch(e){ STATE.replays = {}; }
-    try{
-      const m = await storageGet('player-team-map', SHARED);
-      STATE.teamMap = m ? JSON.parse(m.value) : {};
-    }catch(e){ STATE.teamMap = {}; }
-    try{
-      const s = await storageGet('settings', SHARED);
-      STATE.settings = s ? Object.assign({caseInsensitiveNames:true}, JSON.parse(s.value)) : {caseInsensitiveNames:true};
-    }catch(e){ STATE.settings = {caseInsensitiveNames:true}; }
-    loaded = true;
+      const {data, error} = await supabase.from('replays').select('replay_id,replay_data');
+      if(error) throw error;
+      const replays = {};
+      let sharedState = null;
+      for(const row of (data || [])){
+        if(row.replay_id === SUPABASE_STATE_ID) sharedState = row.replay_data || {};
+        else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
+      }
+      STATE.replays = replays;
+      STATE.teamMap = (sharedState && sharedState.teamMap) || {};
+      STATE.settings = Object.assign({caseInsensitiveNames:true}, (sharedState && sharedState.settings) || {});
+      loaded = true;
+    }catch(e){
+      console.error('Supabase load failed:', e);
+      STATE.replays = {};
+      STATE.teamMap = {};
+      STATE.settings = {caseInsensitiveNames:true};
+      loaded = true;
+      throw e;
+    }finally{
+      loadingFromRemote = false;
+    }
   }
+
   async function saveReplays(){
-    await storageSet('replays-data', JSON.stringify(STATE.replays), SHARED);
+    requireAdmin();
+    const rows = Object.values(STATE.replays).map(r => ({
+      replay_id: r.id,
+      replay_data: r,
+      updated_at: new Date().toISOString()
+    }));
+    if(rows.length){
+      const {error} = await supabase.from('replays').upsert(rows, {onConflict:'replay_id'});
+      if(error) throw error;
+    }
+    await saveSharedState();
   }
-  async function saveTeamMap(){
-    await storageSet('player-team-map', JSON.stringify(STATE.teamMap), SHARED);
+
+  async function deleteReplayRemote(id){
+    requireAdmin();
+    const {error} = await supabase.from('replays').delete().eq('replay_id', id);
+    if(error) throw error;
   }
-  async function saveSettings(){
-    await storageSet('settings', JSON.stringify(STATE.settings), SHARED);
+
+  async function saveSharedState(){
+    requireAdmin();
+    const {error} = await supabase.from('replays').upsert([{
+      replay_id: SUPABASE_STATE_ID,
+      replay_data: {teamMap: STATE.teamMap, settings: STATE.settings},
+      updated_at: new Date().toISOString()
+    }], {onConflict:'replay_id'});
+    if(error) throw error;
+  }
+  async function saveTeamMap(){ await saveSharedState(); }
+  async function saveSettings(){ await saveSharedState(); }
+
+  async function deleteAllRemote(){
+    requireAdmin();
+    const {error} = await supabase.from('replays').delete().neq('replay_id', SUPABASE_STATE_ID);
+    if(error) throw error;
+  }
+
+  async function deleteRemoteRowsNotInState(){
+    requireAdmin();
+    const {data, error} = await supabase.from('replays').select('replay_id');
+    if(error) throw error;
+    const stale = (data || []).map(r=>r.replay_id).filter(id => id !== SUPABASE_STATE_ID && !STATE.replays[id]);
+    if(stale.length){
+      const {error: delErr} = await supabase.from('replays').delete().in('replay_id', stale);
+      if(delErr) throw delErr;
+    }
+  }
+
+  async function migrateLocalData(){
+    throw new Error('Legacy local-storage migration is no longer used. The admin now uses the shared Supabase database directly.');
+  }
+
+  function showAdminError(msg){
+    let el = document.getElementById('adminError');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'adminError';
+      el.style.cssText = 'position:fixed;top:12px;right:12px;z-index:1000;max-width:420px;padding:10px 14px;border:1px solid var(--red);border-radius:8px;background:var(--panel);color:var(--red);font-size:12px;';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function showAdminLogin(){
+    const app = document.getElementById('app');
+    app.style.display = 'none';
+    document.getElementById('adminAuth')?.remove();
+    const wrap = document.createElement('div');
+    wrap.id = 'adminAuth';
+    wrap.style.cssText = 'max-width:420px;margin:80px auto;padding:24px;background:var(--panel);border:1px solid var(--border);border-radius:10px;';
+    wrap.innerHTML = `
+      <h1 style="margin:0 0 6px;font-size:22px;">SBL Dashboard Admin</h1>
+      <div class="sub">Sign in to add replays and change shared league data.</div>
+      <label>Email</label><input id="adminEmail" type="email" autocomplete="username" placeholder="you@example.com" style="width:100%;margin-bottom:12px;">
+      <label>Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password" style="width:100%;margin-bottom:14px;">
+      <button class="primary" id="adminLoginBtn" style="width:100%;">Log in</button>
+      <div id="adminError" class="auth-error" style="margin-top:10px;color:var(--red);"></div>`;
+    document.body.appendChild(wrap);
+    document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
+    document.getElementById('adminPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') adminLogin(); });
+  }
+
+  async function adminLogin(){
+    const email = document.getElementById('adminEmail').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    if(!email || !password){ showAdminError('Enter your email and password.'); return; }
+    const btn = document.getElementById('adminLoginBtn');
+    btn.disabled = true; btn.textContent = 'Logging in…';
+    const {data, error} = await supabase.auth.signInWithPassword({email, password});
+    btn.disabled = false; btn.textContent = 'Log in';
+    if(error){ showAdminError(error.message); return; }
+    adminUser = data.user;
+    document.getElementById('adminAuth')?.remove();
+    document.getElementById('app').style.display = '';
+    try{
+      await loadState();
+      renderTicker(); render();
+    }catch(e){ showAdminError('Could not load shared data: ' + e.message); }
+  }
+
+  async function initAdminAuth(){
+    const {data, error} = await supabase.auth.getSession();
+    if(error) throw error;
+    if(data.session){
+      adminUser = data.session.user;
+      document.getElementById('app').style.display = '';
+      return true;
+    }
+    showAdminLogin();
+    return false;
+  }
+
+  async function refreshSharedState(){
+    if(loadingFromRemote || !adminUser) return;
+    const before = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
+    await loadState();
+    const after = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
+    if(before !== after){ renderTicker(); render(); }
   }
 
   // ---------- helpers ----------
@@ -1046,17 +1163,15 @@
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
     for(const id of ids){
-      const oldWeek = STATE.replays[id].week;
+      const oldReplay = STATE.replays[id];
       try{
         const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
         if(!resp.ok) throw new Error('not found (' + resp.status + ')');
         const json = await resp.json();
-        const oldReplay = STATE.replays[id];
-        const wasManualWeek = oldReplay.weekOverride === true;
         const parsed = parseLog(json, id);
         parsed.uploadtime = json.uploadtime;
-        // Manual overrides are preserved exactly. Automatic weeks are rebuilt
-        // from the replay date so reprocessing can correct/refresh chronology.
+        // Preserve a manual week exactly. Failed fetch/parse leaves oldReplay
+        // untouched, so reprocessing can never destroy an existing replay.
         parsed.weekOverride = !!oldReplay.weekOverride;
         parsed.week = oldReplay.weekOverride
           ? (oldReplay.week || 'Unassigned')
@@ -1066,13 +1181,15 @@
         appendLog(logEl, `✓ reprocessed ${id}`, false, true);
         ok++;
       }catch(e){
-        appendLog(logEl, `✗ ${id} — ${e.message}`, true);
+        appendLog(logEl, `✗ ${id} — ${e.message} (existing replay preserved)`, true);
         failed++;
       }
     }
-    assignAutomaticWeeks();
-    await saveSettings();
-    await saveReplays();
+    if(ok > 0){
+      assignAutomaticWeeks();
+      await saveSettings();
+      await saveReplays();
+    }
     appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
     renderTicker();
     render();
@@ -1109,8 +1226,9 @@
       });
       document.querySelectorAll('[data-remove]').forEach(btn=>{
         btn.addEventListener('click', async ()=>{
-          delete STATE.replays[btn.dataset.remove];
-          await saveReplays();
+          const id = btn.dataset.remove;
+          delete STATE.replays[id];
+          await deleteReplayRemote(id);
           renderTicker();
           render();
         });
@@ -1337,9 +1455,9 @@
       <div class="panel">
         <h2>Data</h2>
         <div class="note">
-          Storage mode: <strong>${hasCloudStorage && !cloudBroken ? 'Claude cloud storage (shared with anyone who opens this artifact link)' : 'Browser local storage — data lives only in this browser, on this device. Clear browser data / a different browser or machine won\'t see it.'}</strong>
+          Storage mode: <strong>Shared Supabase database</strong>
         </div>
-        <div class="note">Removing a replay updates every leaderboard immediately. Back up regularly if you're on local storage.</div>
+        <div class="note">All replay, team, and settings data is stored in the shared Supabase database used by the public dashboard.</div>
         <div class="foot-actions">
           <button class="ghost" id="exportBackup">Download backup (.json)</button>
           <button class="ghost" id="importBackupBtn">Restore from backup</button>
@@ -1441,7 +1559,8 @@
     document.getElementById('resetAll').addEventListener('click', async ()=>{
       if(!confirm('This clears every processed replay for the whole league. Continue?')) return;
       STATE.replays = {};
-      await saveReplays();
+      await deleteAllRemote();
+      await saveSharedState();
       renderTicker();
       render();
     });
@@ -1466,6 +1585,7 @@
         STATE.replays = data.replays || {};
         STATE.teamMap = data.teamMap || {};
         STATE.settings = Object.assign({caseInsensitiveNames:true}, data.settings || {});
+        await deleteRemoteRowsNotInState();
         await saveReplays();
         await saveTeamMap();
         await saveSettings();
@@ -1488,9 +1608,16 @@
     }catch(err){ /* malformed payload, ignore */ }
   });
   (async function init(){
-    await loadState();
-    renderTicker();
-    render();
+    try{
+      const authenticated = await initAdminAuth();
+      if(!authenticated) return;
+      await loadState();
+      renderTicker();
+      render();
+    }catch(e){
+      console.error(e);
+      showAdminError('Admin initialization failed: ' + e.message);
+    }
   })();
 })();
 </script>
