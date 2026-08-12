@@ -813,7 +813,6 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        if(wasManualWeek){ parsed.week = oldReplay.week; parsed.weekOverride = true; }
         parsed.uploadtime = json.uploadtime;
         parsed.weekOverride = false;
         parsed.processedAt = Date.now();
