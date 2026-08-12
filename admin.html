@@ -340,19 +340,9 @@
     const mons = {}; // "p1|species" -> stats
     const appearedThisReplay = new Set();
     let lastMove = null; // {source, target, move}
-    const moveStats = {}; // normalized move -> aggregate usage/hits/misses/damage/kos
-    const monMoveStats = {}; // monKey -> move -> stats
+    const moveStats = {};
+    const monMoveStats = {};
     let currentTurn = 0;
-    let totalCrits = 0;
-    let lastKillerKey = null;
-    let currentKillStreak = 0;
-    const replayStats = {
-      turns: 0, crits: 0, switches: 0, hazardsSet: 0, hazardsRemoved: 0,
-      statusInflicted: 0, flinches: 0, protects: 0, substitutions: 0,
-      heals: 0, misses: 0, hazardDamage: 0, statusKOs: 0,
-      maxConsecutiveKOs: 0, lowHpSurvivals: 0
-    };
-    let winner = null;
     // NOTE: these three all store direct references to a mon's *stats object*
     // (captured at the moment of the event via ensureMon), never a slot label.
     // A slot label like "p1a" gets reused by a different mon later in the game,
@@ -366,12 +356,8 @@
     // deliberately NOT cleared on switch — only when the status actually ends.
     let statusSourceByMon = {}; // monKey -> stats object that inflicted brn/psn/tox on them
     let hazardSetter = {}; // side -> {hazardName: setter's stats object}
-    // side (the side that GOT toxic-spiked) -> setter's stats object.
-    // Toxic Spikes are a side-wide condition, so this survives switches/faints
-    // and lets residual poison damage inherit kill credit from the setter.
-    let toxicSpikesSetter = {};
+    let toxicSpikesSetter = {}; // side (the side that GOT toxic-spiked) -> setter's stats object
     let delayedSetter = {}; // side -> {moveName: setter's stats object}, for Future Sight / Doom Desire
-    let pendingDelayedHit = {}; // targetSlot -> {stats, cause}; Showdown emits the delayed hit as -end, then an untagged -damage
     const HAZARD_MOVES = ['Stealth Rock','Spikes'];
     const DELAYED_MOVES = ['Future Sight','Doom Desire'];
     const STATUS_TAGS = ['psn','tox','brn'];
@@ -394,8 +380,7 @@
       if(!mons[k]) mons[k] = {
         side:s.side, species:s.species, damageDealt:0, damageTaken:0,
         kills:0, deaths:0, appearances:0, killLog:[], deathLog:[],
-        crits:0, misses:0, lowHpSurvivals:0, hazardDamage:0, statusInflicted:0,
-        statusKOs:0, consecutiveKOs:0
+        crits:0, misses:0
       };
       if(!appearedThisReplay.has(k)){
         appearedThisReplay.add(k);
@@ -403,19 +388,17 @@
       }
       return mons[k];
     }
-
     function ensureMove(move){
-      const key = normName(move || '');
+      const key=normName(move||'');
       if(!key) return null;
-      if(!moveStats[key]) moveStats[key] = {move: move || '', uses:0, misses:0, outcomes:0, hits:0, crits:0, damage:0, maxDamage:0, kos:0};
+      if(!moveStats[key]) moveStats[key]={move:move||'',uses:0,misses:0,outcomes:0,hits:0,crits:0,damage:0,maxDamage:0,kos:0};
       return moveStats[key];
     }
-    function ensureMonMove(mon, move){
-      if(!mon || !move) return null;
-      const mk = mon.side + '|' + normName(mon.species);
-      if(!monMoveStats[mk]) monMoveStats[mk] = {};
-      const key = normName(move);
-      if(!monMoveStats[mk][key]) monMoveStats[mk][key] = {move, uses:0, misses:0, outcomes:0, hits:0, crits:0, damage:0, maxDamage:0, kos:0};
+    function ensureMonMove(mon,move){
+      if(!mon||!move) return null;
+      const mk=mon.side+'|'+normName(mon.species), key=normName(move);
+      if(!monMoveStats[mk]) monMoveStats[mk]={};
+      if(!monMoveStats[mk][key]) monMoveStats[mk][key]={move,uses:0,misses:0,outcomes:0,hits:0,crits:0,damage:0,maxDamage:0,kos:0};
       return monMoveStats[mk][key];
     }
 
@@ -424,20 +407,13 @@
       const parts = raw.split('|');
       const cmd = parts[1];
 
-      if(cmd === 'poke' && parts[3]){
-        const side = parts[2];
-        const species = parts[3].split(',')[0].trim();
-        if((side==='p1'||side==='p2') && species && !teamRoster[side].some(x=>normName(x)===normName(species))) teamRoster[side].push(species);
-      } else if(cmd === 'player' && parts[3]){
+      if(cmd === 'player' && parts[3]){
         const side = parts[2];
         if(side === 'p1' || side === 'p2') players[side] = parts[3];
       } else if(cmd === 'turn'){
         const t = parseInt(parts[2], 10);
-        if(!isNaN(t)) { currentTurn = t; replayStats.turns = Math.max(replayStats.turns, t); }
-      } else if(cmd === 'win'){
-        winner = (parts[2] || '').trim() || null;
+        if(!isNaN(t)) currentTurn = t;
       } else if(cmd === 'switch' || cmd === 'drag'){
-        replayStats.switches += 1;
         const slotFull = parts[2]; // "p1a: Nickname"
         const slot = slotFull.split(':')[0].trim();
         const side = sideOf(slot);
@@ -452,28 +428,15 @@
         // through a switch and must keep crediting the original inflictor
         // when the same mon returns and the status keeps ticking.
         delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
         ensureMon(slot);
       } else if(cmd === 'move'){
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
         const target = parts[4] ? parts[4].split(':')[0].trim() : null;
         const moveName = parts[3] ? parts[3].trim() : '';
         if(source && moveName){
-          moveStats[moveName] ||= {uses:0,hits:0,misses:0,crits:0,kos:0,damage:0,maxDamage:0};
-          moveStats[moveName].uses++;
-          monMoveStats[source] ||= {};
-          monMoveStats[source][moveName] ||= {uses:0,hits:0,misses:0,crits:0,kos:0,damage:0,maxDamage:0};
-          monMoveStats[source][moveName].uses++;
-        }
-        if(source && moveName){
-          const ms = ensureMove(moveName);
-          const mon = ensureMon(source);
-          const mms = ensureMonMove(mon, moveName);
-          if(ms){ ms.uses += 1; }
-          if(mms){ mms.uses += 1; }
-          if(moveName === 'Protect' || moveName === 'Detect' || moveName === 'Baneful Bunker' || moveName === "King's Shield" || moveName === 'Spiky Shield' || moveName === 'Silk Trap' || moveName === 'Obstruct' || moveName === 'Burning Bulwark' || moveName === 'Endure') replayStats.protects += 1;
-          if(moveName === 'Substitute') replayStats.substitutions += 1;
-          if(HAZARD_MOVES.includes(moveName) || moveName === 'Toxic Spikes' || moveName === 'Sticky Web') replayStats.hazardsSet += 1;
+          const ms=ensureMove(moveName), mon=ensureMon(source), mms=ensureMonMove(mon,moveName);
+          if(ms) ms.uses++;
+          if(mms) mms.uses++;
         }
         if(source) lastMove = {source, target, move: moveName};
         if(source && HAZARD_MOVES.includes(moveName)){
@@ -493,56 +456,31 @@
           }
         }
         if(source && moveName === 'Toxic Spikes'){
-          // Toxic Spikes are a side-wide condition. Keep the Pokémon that most
-          // recently established the Toxic Spikes on that side so a later
-          // switch-in, poison tick, and eventual faint can all inherit the
-          // setter's kill credit even if the setter has switched out or fainted.
+          // side-wide condition: the mon that laid it can already be gone by the
+          // time it pokes each switch-in, so record the setter per opposing side
+          // rather than relying on a [of] tag that a later -status line won't have
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
           const setterStats = ensureMon(source);
           if(setterStats) toxicSpikesSetter[oppSide] = setterStats;
         }
-      } else if(cmd === '-end'){
-        // Future Sight / Doom Desire are represented by Showdown as:
-        //   |-end|target|move: Future Sight
-        //   |-damage|target|...
-        // The -damage line is deliberately untagged, so looking for
-        // 'Future Sight' in its tags will never work. Resolve the setter
-        // at the -end event and carry it into the following damage event.
-        const slotFull = parts[2];
-        const effect = parts.slice(3).join('|');
-        if(slotFull && (effect.includes('move: Future Sight') || effect.includes('move: Doom Desire'))){
-          const slot = slotFull.split(':')[0].trim();
-          const delayedHit = DELAYED_MOVES.find(m => effect.includes('move: ' + m));
-          if(delayedHit && delayedSetter[sideOf(slot)] && delayedSetter[sideOf(slot)][delayedHit]){
-            pendingDelayedHit[slot] = {
-              stats: delayedSetter[sideOf(slot)][delayedHit],
-              cause: delayedHit
-            };
-          }
-        }
       } else if(cmd === '-crit'){
-        totalCrits += 1;
-        replayStats.crits += 1;
         if(lastMove && lastMove.move){
-          const ms = ensureMove(lastMove.move);
-          if(ms) ms.crits += 1;
-          const mon = ensureMon(lastMove.source);
-          const mms = ensureMonMove(mon, lastMove.move);
-          if(mms) mms.crits += 1;
-          if(mon) mon.crits = (mon.crits || 0) + 1;
+          const ms=ensureMove(lastMove.move);
+          const mon=ensureMon(lastMove.source);
+          const mms=ensureMonMove(mon,lastMove.move);
+          if(ms) ms.crits++;
+          if(mms) mms.crits++;
+          if(mon) mon.crits=(mon.crits||0)+1;
         }
       } else if(cmd === '-miss'){
-        replayStats.misses += 1;
         if(lastMove && lastMove.move){
-          const ms = ensureMove(lastMove.move);
-          if(ms){ ms.misses += 1; ms.outcomes += 1; }
-          const mon = ensureMon(lastMove.source);
-          const mms = ensureMonMove(mon, lastMove.move);
-          if(mms){ mms.misses += 1; mms.outcomes += 1; }
-          if(mon) mon.misses = (mon.misses || 0) + 1;
+          const ms=ensureMove(lastMove.move);
+          const mon=ensureMon(lastMove.source);
+          const mms=ensureMonMove(mon,lastMove.move);
+          if(ms){ms.misses++;ms.outcomes++;}
+          if(mms){mms.misses++;mms.outcomes++;}
+          if(mon) mon.misses=(mon.misses||0)+1;
         }
-      } else if(cmd === '-flinch'){
-        replayStats.flinches += 1;
       } else if(cmd === '-status'){
         const slotFull = parts[2];
         if(!slotFull) continue;
@@ -552,20 +490,15 @@
         const statusTags = parts.slice(3).join('|');
         let inflictorStats = null;
         if(statusTags.includes('Toxic Spikes') && toxicSpikesSetter[sideOf(slot)]){
-          // Poisoned on switch-in by Toxic Spikes. There is no attacker's move
-          // line for the later residual damage, so permanently associate this
-          // individual Pokémon with the Toxic Spikes setter until its status
-          // is cured. This is keyed by mon identity rather than slot because
-          // the poisoned Pokémon can switch out and back in.
+          // poisoned on switch-in by a hazard laid earlier, with no move line of its
+          // own — check this explicit tag before the lastMove guess below, since
+          // lastMove can be stale (left over from a previous mon in this slot) right
+          // after a switch-in with no move in between
           inflictorStats = toxicSpikesSetter[sideOf(slot)];
         } else if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
           inflictorStats = ensureMon(lastMove.source);
         }
-        if(inflictorStats) {
-          statusSourceByMon[mk] = inflictorStats;
-          replayStats.statusInflicted += 1;
-          inflictorStats.statusInflicted = (inflictorStats.statusInflicted || 0) + 1;
-        }
+        if(inflictorStats) statusSourceByMon[mk] = inflictorStats;
       } else if(cmd === '-curestatus'){
         const slotFull = parts[2];
         if(!slotFull) continue;
@@ -588,22 +521,12 @@
         if(dmg <= 0) continue;
 
         const tags = parts.slice(4).join('|');
-        const hazardHitForStats = HAZARD_MOVES.find(h => tags.includes(h));
-        if(hazardHitForStats){
-          replayStats.hazardDamage += dmg;
-          const hs = hazardSetter[sideOf(slot)]?.[hazardHitForStats];
-          if(hs) hs.hazardDamage = (hs.hazardDamage || 0) + dmg;
-        }
-        if(newHp > 0 && newHp <= 10){
-          targetStats.lowHpSurvivals = (targetStats.lowHpSurvivals || 0) + 1;
-          replayStats.lowHpSurvivals += 1;
-        }
-        if(lastMove && lastMove.target === slot && lastMove.move && sideOf(lastMove.source) !== sideOf(slot)){
-          const ms = ensureMove(lastMove.move);
-          const mon = ensureMon(lastMove.source);
-          const mms = ensureMonMove(mon, lastMove.move);
-          if(ms){ ms.outcomes += 1; ms.hits += 1; ms.damage += dmg; ms.maxDamage = Math.max(ms.maxDamage||0,dmg); }
-          if(mms){ mms.outcomes += 1; mms.hits += 1; mms.damage += dmg; mms.maxDamage = Math.max(mms.maxDamage||0,dmg); }
+        if(lastMove && lastMove.target === slot && lastMove.move && sideOf(lastMove.source)!==sideOf(slot)){
+          const ms=ensureMove(lastMove.move);
+          const mon=ensureMon(lastMove.source);
+          const mms=ensureMonMove(mon,lastMove.move);
+          if(ms){ms.outcomes++;ms.hits++;ms.damage+=dmg;ms.maxDamage=Math.max(ms.maxDamage||0,dmg);}
+          if(mms){mms.outcomes++;mms.hits++;mms.damage+=dmg;mms.maxDamage=Math.max(mms.maxDamage||0,dmg);}
         }
         let attackerStats = null;
         let cause = null;
@@ -630,29 +553,22 @@
         // Looked up by the mon's own identity (monKey), not the slot, since poison/burn
         // persist through a switch and must keep crediting the original inflictor even
         // after this individual left and came back to the same or a different slot.
-        // This is also what gives a Toxic Spikes setter the kill when poison damage
-        // is the final damage instance before fainting.
         if(!attackerStats){
-          const statusHit = STATUS_TAGS.find(s => tags.includes('[from] ' + s));
+          const statusHit = STATUS_TAGS.find(s => tags.includes('[from] ' + s) || tags === '' && false);
           const mk = monKey(slot);
           if(statusHit && mk && statusSourceByMon[mk]){
             attackerStats = statusSourceByMon[mk];
-            const sourceWasToxicSpikes = (
-              toxicSpikesSetter[sideOf(slot)] &&
-              toxicSpikesSetter[sideOf(slot)] === attackerStats
-            );
-            cause = sourceWasToxicSpikes
-              ? 'Toxic Spikes'
-              : 'residual ' + statusHit;
+            cause = 'residual ' + statusHit;
           }
         }
-        // 3b) delayed hits (Future Sight / Doom Desire).
-        // Showdown puts the move name on a preceding -end event, NOT on the
-        // subsequent -damage line, so use the pending source captured there.
-        if(!attackerStats && pendingDelayedHit[slot]){
-          attackerStats = pendingDelayedHit[slot].stats;
-          cause = pendingDelayedHit[slot].cause;
-          delete pendingDelayedHit[slot];
+        // 3b) delayed hits (Future Sight / Doom Desire) -> credit whoever set them up.
+        // These land with no [of] tag and often long after the setter has switched
+        // out or fainted, so the generic "last move" fallback below can't be trusted
+        // for them — it would just credit whoever last legitimately hit this slot.
+        const delayedHit = DELAYED_MOVES.find(m => tags.includes(m));
+        if(!attackerStats && delayedHit && delayedSetter[sideOf(slot)] && delayedSetter[sideOf(slot)][delayedHit]){
+          attackerStats = delayedSetter[sideOf(slot)][delayedHit];
+          cause = delayedHit;
         }
         // 4) fallback: direct hit from the most recent move, if it targeted this slot.
         //    Showdown only omits [from]/[of] entirely on a -damage line for a genuine
@@ -660,7 +576,7 @@
         //    carry a tag (just not one of the specific ones matched above). So this
         //    fallback must only fire on a completely untagged line, or it ends up
         //    crediting stale "last real attacker" info to indirect damage it never dealt.
-        if(!attackerStats && tags === '' && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
+        if(!attackerStats && !delayedHit && tags === '' && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
           attackerStats = ensureMon(lastMove.source);
           cause = lastMove.move || 'direct hit';
         }
@@ -674,7 +590,7 @@
           // Clear any earlier attacker on file for this slot — otherwise a mon that
           // survives a real hit and later dies to something untraceable still has
           // the kill wrongly credited to whoever landed that earlier real hit.
-          lastAttacker[slot] = {stats:null, cause:classifyIndirectCause(tags), turn:currentTurn};
+          lastAttacker[slot] = null;
         }
       } else if(cmd === '-heal' || cmd === '-sethp'){
         const slotFull = parts[2];
@@ -696,30 +612,17 @@
           deadStats.deathLog.push({
             replayId, turn: currentTurn,
             killer: credited ? killerStats.species : null,
-            cause: credited ? killerInfo.cause : (killerInfo?.cause || 'Other')
+            cause: credited ? killerInfo.cause : 'unattributed'
           });
         }
         if(credited){
           killerStats.kills += 1;
-          const causeText = String(killerInfo?.cause || '');
-          if(/^residual |^Toxic Spikes$/i.test(causeText)){
-            killerStats.statusKOs = (killerStats.statusKOs || 0) + 1;
-            replayStats.statusKOs += 1;
-          }
-          if(lastKillerKey === killerStats.species + '|' + killerStats.side){
-            currentKillStreak += 1;
-          } else {
-            currentKillStreak = 1;
-            lastKillerKey = killerStats.species + '|' + killerStats.side;
-          }
-          killerStats.consecutiveKOs = Math.max(killerStats.consecutiveKOs || 0, currentKillStreak);
-          replayStats.maxConsecutiveKOs = Math.max(replayStats.maxConsecutiveKOs, currentKillStreak);
-          const killMove = killerInfo?.cause;
+          const killMove=killerInfo?.cause;
           if(killMove && !/^(Hazard|Recoil|Status|Other|Toxic Spikes|residual )/i.test(killMove)){
-            const ms = ensureMove(killMove);
-            if(ms) ms.kos += 1;
-            const kmm = ensureMonMove(killerStats, killMove);
-            if(kmm) kmm.kos += 1;
+            const ms=ensureMove(killMove);
+            const kmm=ensureMonMove(killerStats,killMove);
+            if(ms) ms.kos++;
+            if(kmm) kmm.kos++;
           }
           killerStats.killLog.push({
             replayId, turn: currentTurn,
@@ -728,13 +631,11 @@
           });
         }
         delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
       }
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner, results, teamRoster,
-      moveStats, monMoveStats, replayStats, totalCrits };
+      players, mons, moveStats, monMoveStats };
   }
 
   // ---------- processing ----------
@@ -812,7 +713,6 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        parsed.uploadtime = json.uploadtime;
         parsed.weekOverride = false;
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
@@ -1159,7 +1059,6 @@
         const json = await resp.json();
         const oldReplay = STATE.replays[id];
         const parsed = parseLog(json, id);
-        parsed.uploadtime = json.uploadtime;
         // Manual overrides are preserved exactly. Automatic weeks are rebuilt
         // from the replay date so reprocessing can correct/refresh chronology.
         parsed.weekOverride = !!oldReplay.weekOverride;
