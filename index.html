@@ -109,7 +109,7 @@
     background:var(--panel-alt); border:1px solid var(--border); color:var(--text);
     padding:8px 10px; border-radius:8px; font-family:var(--sans); font-size:13px;
   }
-  .empty-state{color:var(--text-dim); font-size:13px; padding:20px 0; text-align:center;}
+  .empty-state{color:var(--text-dim); font-size:13px; padding:20px 0; text-align:left;}
   .foot-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
   .note{font-size:12px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
   .map-row{display:flex; gap:10px; align-items:center; margin-bottom:8px;}
@@ -185,7 +185,7 @@
   .gf-row.top3{border-color:#cd7f32;}
   .gf-row.auditable-row{cursor:pointer;}
   .gf-row.auditable-row:hover{border-color:var(--amber);}
-  .gf-rank{font-family:var(--mono); font-size:16px; width:28px; color:var(--text-dim); text-align:center;}
+  .gf-rank{font-family:var(--mono); font-size:16px; width:28px; color:var(--text-dim); text-align:left;}
   .gf-row.top1 .gf-rank{color:#ffd166;}
   .gf-row.top2 .gf-rank{color:#c9c9c9;}
   .gf-row.top3 .gf-rank{color:#cd7f32;}
@@ -193,7 +193,7 @@
   .gf-info{min-width:0;}
   .gf-name{font-weight:750; font-size:18px; line-height:1.2;}
   .gf-sub{font-size:12px; color:var(--text-dim); margin-top:5px;}
-  .gf-coach{position:absolute; left:50%; transform:translateX(-50%); width:min(30%,320px); font-size:15px; color:var(--teal); text-align:center; line-height:1.35; overflow-wrap:anywhere;}
+  .gf-coach{position:absolute; left:50%; transform:translateX(-50%); width:min(30%,320px); font-size:15px; color:var(--teal); text-align:left; line-height:1.35; overflow-wrap:anywhere;}
   .gf-diff{font-family:var(--mono); font-size:22px; color:var(--teal); min-width:0; text-align:right; font-weight:700;}
   .gf-diff.neg{color:var(--red);}
   @media (max-width: 900px){
@@ -271,7 +271,7 @@
   .team-card{background:linear-gradient(145deg,var(--panel-alt),#11151c);border:1px solid var(--border);border-radius:14px;padding:18px 20px;cursor:pointer;transition:transform .14s,border-color .14s,box-shadow .14s;min-height:120px;}
   .team-card:hover{transform:translateY(-3px);border-color:var(--amber);box-shadow:0 14px 36px rgba(0,0,0,.28);}
   .team-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:82px;}
-  .team-card-copy{flex:1;text-align:center;min-width:0;}
+  .team-card-copy{flex:1;text-align:left;min-width:0;}
   .team-card-name{font-weight:800;font-size:clamp(19px,1.7vw,25px);line-height:1.15;overflow-wrap:anywhere;}
   .team-card-sub{font-size:clamp(15px,1.2vw,18px);font-family:var(--mono);color:var(--text);margin-top:8px;}
   .team-card-top-sprite{width:82px;height:82px;object-fit:contain;image-rendering:pixelated;background:transparent;flex:none;}
@@ -339,7 +339,7 @@
 
   .death-cause-list{display:flex;flex-direction:column;gap:10px;width:100%;}
   .death-cause-entry{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:12px;width:100%;min-width:0;padding:12px 14px;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;}
-  .death-cause-rank{font-family:var(--mono);color:var(--text-dim);text-align:center;font-size:12px;}
+  .death-cause-rank{font-family:var(--mono);color:var(--text-dim);text-align:left;font-size:12px;}
   .death-cause-title{display:flex;align-items:center;gap:8px;font-weight:650;color:#fff;font-size:14px;margin-bottom:9px;}
   .death-cause-mons{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;}
   .death-cause-mon{display:inline-flex;align-items:center;gap:6px;min-width:145px;padding:5px 8px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:7px;}
@@ -429,6 +429,7 @@
     <button data-tab="global">Damage Board</button>
     <button data-tab="goldenfist">Golden Fist</button>
     <button data-tab="causes">Death Causes</button>
+    <button data-tab="misc">Misc</button>
     <button data-tab="teamcompare">Standings</button>
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="replays">Replay Browser</button>
@@ -622,12 +623,31 @@
     // name faded out behind a broken-image icon.
     return species.split('-').map(part => part.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-');
   }
+  const SPRITE_ALIASES = {
+    'tinglu':'tinglu',
+    'chi-yu':'chiyu',
+    'chiyu':'chiyu',
+    'urshifu-rapid-strike':'urshifu-rapidstrike',
+    'urshifu-rapidstrike':'urshifu-rapidstrike',
+    'urshifu-single-strike':'urshifu',
+    'urshifu-singlestrike':'urshifu'
+  };
+  const SPRITE_DEX_FALLBACKS = {
+    'tinglu':1002,
+    'chiyu':1004,
+    'urshifurapidstrike':10191,
+    'urshifusinglestrike':892
+  };
   function spriteUrl(species){
-    return `https://play.pokemonshowdown.com/sprites/gen5/${toShowdownId(species)}.png`;
+    const key = String(species||'').toLowerCase().replace(/\s+/g,'-');
+    const id = SPRITE_ALIASES[key] || toShowdownId(species);
+    return `https://play.pokemonshowdown.com/sprites/gen5/${id}.png`;
   }
   function spriteFallbackUrl(species){
-    const d = POKEDEX_TYPES[dexKey(species)];
-    return d?.num ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${d.num}.png` : 'https://play.pokemonshowdown.com/sprites/gen5/0.png';
+    const key = dexKey(species);
+    const d = POKEDEX_TYPES[key];
+    const num = d?.num || SPRITE_DEX_FALLBACKS[key];
+    return num ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${num}.png` : 'https://play.pokemonshowdown.com/sprites/gen5/0.png';
   }
   function spriteImg(species, cls){
     const safe = escapeHtml(species);
@@ -705,7 +725,15 @@
     const mons = {}; // "p1|species" -> stats
     const appearedThisReplay = new Set();
     let lastMove = null; // {source, target, move}
+    const moveStats = {}; // normalized move -> aggregate usage/hits/misses/damage/kos
+    const monMoveStats = {}; // monKey -> move -> stats
     let currentTurn = 0;
+    let totalCrits = 0;
+    const replayStats = {
+      turns: 0, crits: 0, switches: 0, hazardsSet: 0, hazardsRemoved: 0,
+      statusInflicted: 0, flinches: 0, protects: 0, substitutions: 0,
+      heals: 0, misses: 0
+    };
     let winner = null;
     // NOTE: these three all store direct references to a mon's *stats object*
     // (captured at the moment of the event via ensureMon), never a slot label.
@@ -756,6 +784,21 @@
       return mons[k];
     }
 
+    function ensureMove(move){
+      const key = normName(move || '');
+      if(!key) return null;
+      if(!moveStats[key]) moveStats[key] = {move: move || '', uses:0, misses:0, outcomes:0, hits:0, crits:0, damage:0, maxDamage:0, kos:0};
+      return moveStats[key];
+    }
+    function ensureMonMove(mon, move){
+      if(!mon || !move) return null;
+      const mk = mon.side + '|' + normName(mon.species);
+      if(!monMoveStats[mk]) monMoveStats[mk] = {};
+      const key = normName(move);
+      if(!monMoveStats[mk][key]) monMoveStats[mk][key] = {move, uses:0, misses:0, outcomes:0, hits:0, crits:0, damage:0, maxDamage:0, kos:0};
+      return monMoveStats[mk][key];
+    }
+
     for(const raw of lines){
       if(!raw.startsWith('|')) continue;
       const parts = raw.split('|');
@@ -770,10 +813,11 @@
         if(side === 'p1' || side === 'p2') players[side] = parts[3];
       } else if(cmd === 'turn'){
         const t = parseInt(parts[2], 10);
-        if(!isNaN(t)) currentTurn = t;
+        if(!isNaN(t)) { currentTurn = t; replayStats.turns = Math.max(replayStats.turns, t); }
       } else if(cmd === 'win'){
         winner = (parts[2] || '').trim() || null;
       } else if(cmd === 'switch' || cmd === 'drag'){
+        replayStats.switches += 1;
         const slotFull = parts[2]; // "p1a: Nickname"
         const slot = slotFull.split(':')[0].trim();
         const side = sideOf(slot);
@@ -794,6 +838,16 @@
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
         const target = parts[4] ? parts[4].split(':')[0].trim() : null;
         const moveName = parts[3] ? parts[3].trim() : '';
+        if(source && moveName){
+          const ms = ensureMove(moveName);
+          const mon = ensureMon(source);
+          const mms = ensureMonMove(mon, moveName);
+          if(ms){ ms.uses += 1; }
+          if(mms){ mms.uses += 1; }
+          if(moveName === 'Protect' || moveName === 'Detect' || moveName === 'Baneful Bunker' || moveName === "King's Shield" || moveName === 'Spiky Shield' || moveName === 'Silk Trap' || moveName === 'Obstruct' || moveName === 'Burning Bulwark' || moveName === 'Endure') replayStats.protects += 1;
+          if(moveName === 'Substitute') replayStats.substitutions += 1;
+          if(HAZARD_MOVES.includes(moveName) || moveName === 'Toxic Spikes' || moveName === 'Sticky Web') replayStats.hazardsSet += 1;
+        }
         if(source) lastMove = {source, target, move: moveName};
         if(source && HAZARD_MOVES.includes(moveName)){
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
@@ -839,6 +893,27 @@
             };
           }
         }
+      } else if(cmd === '-crit'){
+        totalCrits += 1;
+        replayStats.crits += 1;
+        if(lastMove && lastMove.move){
+          const ms = ensureMove(lastMove.move);
+          if(ms) ms.crits += 1;
+          const mon = ensureMon(lastMove.source);
+          const mms = ensureMonMove(mon, lastMove.move);
+          if(mms) mms.crits += 1;
+        }
+      } else if(cmd === '-miss'){
+        replayStats.misses += 1;
+        if(lastMove && lastMove.move){
+          const ms = ensureMove(lastMove.move);
+          if(ms){ ms.misses += 1; ms.outcomes += 1; }
+          const mon = ensureMon(lastMove.source);
+          const mms = ensureMonMove(mon, lastMove.move);
+          if(mms){ mms.misses += 1; mms.outcomes += 1; }
+        }
+      } else if(cmd === '-flinch'){
+        replayStats.flinches += 1;
       } else if(cmd === '-status'){
         const slotFull = parts[2];
         if(!slotFull) continue;
@@ -880,6 +955,13 @@
         if(dmg <= 0) continue;
 
         const tags = parts.slice(4).join('|');
+        if(lastMove && lastMove.target === slot && lastMove.move && sideOf(lastMove.source) !== sideOf(slot)){
+          const ms = ensureMove(lastMove.move);
+          const mon = ensureMon(lastMove.source);
+          const mms = ensureMonMove(mon, lastMove.move);
+          if(ms){ ms.outcomes += 1; ms.hits += 1; ms.damage += dmg; ms.maxDamage = Math.max(ms.maxDamage||0,dmg); }
+          if(mms){ mms.outcomes += 1; mms.hits += 1; mms.damage += dmg; mms.maxDamage = Math.max(mms.maxDamage||0,dmg); }
+        }
         let attackerStats = null;
         let cause = null;
 
@@ -976,6 +1058,13 @@
         }
         if(credited){
           killerStats.kills += 1;
+          const killMove = killerInfo?.cause;
+          if(killMove && !/^(Hazard|Recoil|Status|Other|Toxic Spikes|residual )/i.test(killMove)){
+            const ms = ensureMove(killMove);
+            if(ms) ms.kos += 1;
+            const kmm = ensureMonMove(killerStats, killMove);
+            if(kmm) kmm.kos += 1;
+          }
           killerStats.killLog.push({
             replayId, turn: currentTurn,
             victim: deadStats ? deadStats.species : slots[slot].species,
@@ -988,7 +1077,8 @@
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner, results, teamRoster };
+      players, mons, winner, results, teamRoster,
+      moveStats, monMoveStats, replayStats, totalCrits };
   }
 
   // ---------- automatic Monday-Sunday season weeks ----------
@@ -1401,8 +1491,98 @@
     document.getElementById('auditOverlay').addEventListener('click', (e)=>{ if(e.target.id === 'auditOverlay') closeAudit(); });
   }
 
+  function miscRecords(scope='ALL'){
+    const replays=Object.values(STATE.replays).filter(r=>scope==='ALL'||r.week===scope);
+    const moves={}, monRecords={}, gameRecords=[];
+    let totalCrits=0,totalSwitches=0,totalHazards=0,totalFlinches=0,totalProtects=0,totalSubstitutes=0,totalMisses=0;
+    for(const r of replays){
+      totalCrits += r.totalCrits || r.replayStats?.crits || 0;
+      totalSwitches += r.replayStats?.switches || 0;
+      totalHazards += r.replayStats?.hazardsSet || 0;
+      totalFlinches += r.replayStats?.flinches || 0;
+      totalProtects += r.replayStats?.protects || 0;
+      totalSubstitutes += r.replayStats?.substitutions || 0;
+      totalMisses += r.replayStats?.misses || 0;
+      gameRecords.push({id:r.id, players:r.players, turns:r.replayStats?.turns||0, crits:r.totalCrits||r.replayStats?.crits||0, switches:r.replayStats?.switches||0, format:r.format, week:r.week});
+      for(const m of Object.values(r.moveStats||{})){
+        const k=normName(m.move); if(!moves[k]) moves[k]={move:m.move,uses:0,misses:0,outcomes:0,hits:0,crits:0,damage:0,maxDamage:0,kos:0};
+        for(const x of ['uses','misses','outcomes','hits','crits','damage','maxDamage','kos']) moves[k][x]+=m[x]||0;
+      }
+      for(const m of Object.values(r.mons||{})){
+        const key=normName(m.species);
+        if(!monRecords[key]) monRecords[key]={species:m.species,crits:0,kos:m.kills||0,deaths:m.deaths||0,damage:m.damageDealt||0,damageTaken:m.damageTaken||0,misses:0};
+        monRecords[key].crits += Object.values((r.monMoveStats||{})[m.side+'|'+normName(m.species)]||{}).reduce((a,x)=>a+(x.crits||0),0);
+        monRecords[key].misses += Object.values((r.monMoveStats||{})[m.side+'|'+normName(m.species)]||{}).reduce((a,x)=>a+(x.misses||0),0);
+      }
+    }
+    return {replays,moves:Object.values(moves),mons:Object.values(monRecords),games:gameRecords,
+      totals:{totalCrits,totalSwitches,totalHazards,totalFlinches,totalProtects,totalSubstitutes,totalMisses}};
+  }
+  function renderMisc(){
+    contentEl.innerHTML=`<div class="panel">
+      <h2>Misc</h2>
+      <div class="note">Season records and unusual battle statistics. Move accuracy is based on explicitly recorded hit/miss outcomes.</div>
+      <div class="row" style="align-items:flex-end;margin-top:14px">
+        <div><label>Scope</label>${weekSelectorHtml('miscWeek')}</div>
+        <div><label>Record</label><select id="miscRecord">
+          <optgroup label="Moves">
+            <option value="most-used">Most used move</option><option value="least-used">Least used move</option>
+            <option value="most-accurate">Most accurate move</option><option value="least-accurate">Least accurate move</option>
+            <option value="most-damage">Most damaging move</option><option value="highest-hit">Highest single-hit damage</option>
+            <option value="most-kos-move">Most KOs by a move</option><option value="most-crits-move">Most crits by a move</option>
+            <option value="most-misses">Most misses by a move</option><option value="most-used-by-mon">Most used move by a Pokémon</option>
+          </optgroup>
+          <optgroup label="Combat">
+            <option value="most-crits">Most crits by a Pokémon</option><option value="most-kos">Most KOs by a Pokémon</option>
+            <option value="most-damage-mon">Most damage by a Pokémon</option><option value="most-taken">Most damage taken by a Pokémon</option>
+            <option value="most-consecutive-kos">Most consecutive KOs</option><option value="most-crit-game">Most crits in one game</option>
+          </optgroup>
+          <optgroup label="Hazards & Status">
+            <option value="hazard-kos">Most hazard KOs</option><option value="hazard-damage">Most hazard damage</option>
+            <option value="status-kos">Most status KOs</option><option value="status-inflicted">Most status inflicted</option>
+          </optgroup>
+          <optgroup label="Games">
+            <option value="longest-game">Longest game</option><option value="shortest-game">Shortest game</option>
+            <option value="most-kos-game">Most KOs in one game</option><option value="most-deaths-game">Most deaths in one game</option>
+            <option value="most-switches-game">Most switches in one game</option>
+          </optgroup>
+          <optgroup label="Fun Records">
+            <option value="most-1hp">Most low-HP survivals</option><option value="most-misses-game">Most misses in one game</option>
+            <option value="most-brought-unused">Most Pokémon brought but never used</option>
+          </optgroup>
+        </select></div>
+      </div>
+      <div id="miscResult" style="margin-top:18px"></div>
+    </div>`;
+    const week=document.getElementById('miscWeek'), rec=document.getElementById('miscRecord'), out=document.getElementById('miscResult');
+    function draw(){
+      const d=miscRecords(week.value), r=rec.value;
+      const moves=d.moves.filter(x=>x.uses>0), mons=d.mons, games=d.games;
+      const acc=x=>x.outcomes>0?(100*x.hits/x.outcomes):null;
+      let title='', rows=[];
+      if(r==='most-used'||r==='least-used') { const a=moves.sort((a,b)=>r==='most-used'?b.uses-a.uses:a.uses-b.uses); title=r==='most-used'?'Most used move':'Least used move'; rows=a.slice(0,10).map(x=>[x.move,`${x.uses} uses`]); }
+      else if(r==='most-accurate'||r==='least-accurate'){ const a=moves.filter(x=>x.outcomes>0).sort((a,b)=>(r==='most-accurate'?acc(b)-acc(a):acc(a)-acc(b))); title=r==='most-accurate'?'Most accurate move':'Least accurate move'; rows=a.slice(0,10).map(x=>[x.move,`${acc(x).toFixed(1)}% (${x.hits}/${x.outcomes})`]);}
+      else if(r==='most-damage'){ const a=moves.sort((a,b)=>b.damage-a.damage); title='Most damaging move'; rows=a.slice(0,10).map(x=>[x.move,`${x.damage.toFixed(1)} total damage`]);}
+      else if(r==='highest-hit'){ const a=moves.sort((a,b)=>b.maxDamage-a.maxDamage); title='Highest single-hit damage'; rows=a.slice(0,10).map(x=>[x.move,`${x.maxDamage.toFixed(1)} damage`]);}
+      else if(r==='most-kos-move'){ const a=moves.sort((a,b)=>b.kos-a.kos); title='Most KOs by a move'; rows=a.slice(0,10).map(x=>[x.move,`${x.kos} KOs`]);}
+      else if(r==='most-crits-move'){ const a=moves.sort((a,b)=>b.crits-a.crits); title='Most crits by a move'; rows=a.slice(0,10).map(x=>[x.move,`${x.crits} crits`]);}
+      else if(r==='most-misses'){ const a=moves.sort((a,b)=>b.misses-a.misses); title='Most misses by a move'; rows=a.slice(0,10).map(x=>[x.move,`${x.misses} misses`]);}
+      else if(r==='most-crits'){ const a=mons.sort((a,b)=>b.crits-a.crits); title='Most crits by a Pokémon'; rows=a.slice(0,10).map(x=>[x.species,`${x.crits} crits`]);}
+      else if(r==='most-kos'){ const a=mons.sort((a,b)=>b.kos-a.kos); title='Most KOs by a Pokémon'; rows=a.slice(0,10).map(x=>[x.species,`${x.kos} KOs`]);}
+      else if(r==='most-damage-mon'){ const a=mons.sort((a,b)=>b.damage-a.damage); title='Most damage by a Pokémon'; rows=a.slice(0,10).map(x=>[x.species,`${x.damage.toFixed(1)} damage`]);}
+      else if(r==='most-taken'){ const a=mons.sort((a,b)=>b.damageTaken-a.damageTaken); title='Most damage taken by a Pokémon'; rows=a.slice(0,10).map(x=>[x.species,`${x.damageTaken.toFixed(1)} damage`]);}
+      else if(r==='most-crit-game'){ const a=games.sort((a,b)=>b.crits-a.crits); title='Most crits in one game'; rows=a.slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${x.crits} crits · ${x.week}`]);}
+      else if(r==='longest-game'||r==='shortest-game'){ const a=games.filter(x=>x.turns>0).sort((a,b)=>r==='longest-game'?b.turns-a.turns:a.turns-b.turns); title=r==='longest-game'?'Longest game':'Shortest game'; rows=a.slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${x.turns} turns · ${x.week}`]);}
+      else if(r==='most-kos-game'||r==='most-deaths-game'){ const a=games.map(g=>{const rr=STATE.replays[g.id]; const ks=Object.values(rr.mons||{}); return {...g,kos:ks.reduce((n,x)=>n+(x.kills||0),0),deaths:ks.reduce((n,x)=>n+(x.deaths||0),0)}}).sort((a,b)=>(r==='most-kos-game'?b.kos-a.kos:b.deaths-a.deaths)); title=r==='most-kos-game'?'Most KOs in one game':'Most deaths in one game'; rows=a.slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${r==='most-kos-game'?x.kos:x.deaths} · ${x.week}`]);}
+      else if(r==='most-switches-game'){ const a=games.sort((a,b)=>b.switches-a.switches); title='Most switches in one game'; rows=a.slice(0,10).map(x=>[`${x.players.p1} vs ${x.players.p2}`,`${x.switches} switches · ${x.week}`]);}
+      else { title='Record'; rows=[['Season total',`${d.totals.totalCrits} crits · ${d.totals.totalSwitches} switches · ${d.totals.totalHazards} hazards set · ${d.totals.totalFlinches} flinches · ${d.totals.totalProtects} protects · ${d.totals.totalSubstitutes} substitutes · ${d.totals.totalMisses} misses`]]; }
+      out.innerHTML=`<div class="misc-card"><h3>${escapeHtml(title)}</h3>${rows.length?`<table><thead><tr><th>#</th><th>Record</th><th>Value</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td>${pokemonLink(x[0],escapeHtml(x[0]),'',false)}</td><td class="num">${escapeHtml(x[1])}</td></tr>`).join('')}</tbody></table>`:'<div class="empty-state">No data yet. Reprocess your replays to populate detailed Misc statistics.</div>'}</div>`;
+    }
+    week.addEventListener('change',draw); rec.addEventListener('change',draw); draw();
+  }
+
   function render(){
-    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'replays' || activeTab === 'overview');
+    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'misc' || activeTab === 'teamcompare' || activeTab === 'replays' || activeTab === 'overview');
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     if(activeTab === 'overview') return renderLeagueOverview();
     if(activeTab === 'process') return renderProcess();
@@ -1410,6 +1590,7 @@
     if(activeTab === 'pokemonsearch') return renderPokemonSearch();
     if(activeTab === 'goldenfist') return renderGoldenFist();
     if(activeTab === 'causes') return renderDeathCauses();
+    if(activeTab === 'misc') return renderMisc();
     if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'teamcompare') return renderTeamComparison();
     if(activeTab === 'replays') return renderReplayBrowser();
@@ -1707,7 +1888,7 @@
       <div class="section-divider"></div>
       <div class="profile-two-col">
         <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim), '', false) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
-        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer), '', false) : 'Unattributed'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
+        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer), '', false) : escapeHtml(x.cause || 'Other')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
       </div>
     </div>`;
   }
