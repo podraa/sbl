@@ -340,6 +340,8 @@
     const mons = {}; // "p1|species" -> stats
     const appearedThisReplay = new Set();
     let lastMove = null; // {source, target, move}
+    const moveStats = {};
+    const monMoveStats = {};
     let currentTurn = 0;
     // NOTE: these three all store direct references to a mon's *stats object*
     // (captured at the moment of the event via ensureMon), never a slot label.
@@ -377,13 +379,27 @@
       const k = monKey(slot);
       if(!mons[k]) mons[k] = {
         side:s.side, species:s.species, damageDealt:0, damageTaken:0,
-        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[]
+        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[],
+        crits:0, misses:0
       };
       if(!appearedThisReplay.has(k)){
         appearedThisReplay.add(k);
         mons[k].appearances += 1;
       }
       return mons[k];
+    }
+    function ensureMove(move){
+      const key=normName(move||'');
+      if(!key) return null;
+      if(!moveStats[key]) moveStats[key]={move:move||'',uses:0,misses:0,outcomes:0,hits:0,crits:0,damage:0,maxDamage:0,kos:0};
+      return moveStats[key];
+    }
+    function ensureMonMove(mon,move){
+      if(!mon||!move) return null;
+      const mk=mon.side+'|'+normName(mon.species), key=normName(move);
+      if(!monMoveStats[mk]) monMoveStats[mk]={};
+      if(!monMoveStats[mk][key]) monMoveStats[mk][key]={move,uses:0,misses:0,outcomes:0,hits:0,crits:0,damage:0,maxDamage:0,kos:0};
+      return monMoveStats[mk][key];
     }
 
     for(const raw of lines){
@@ -417,6 +433,11 @@
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
         const target = parts[4] ? parts[4].split(':')[0].trim() : null;
         const moveName = parts[3] ? parts[3].trim() : '';
+        if(source && moveName){
+          const ms=ensureMove(moveName), mon=ensureMon(source), mms=ensureMonMove(mon,moveName);
+          if(ms) ms.uses++;
+          if(mms) mms.uses++;
+        }
         if(source) lastMove = {source, target, move: moveName};
         if(source && HAZARD_MOVES.includes(moveName)){
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
@@ -441,6 +462,24 @@
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
           const setterStats = ensureMon(source);
           if(setterStats) toxicSpikesSetter[oppSide] = setterStats;
+        }
+      } else if(cmd === '-crit'){
+        if(lastMove && lastMove.move){
+          const ms=ensureMove(lastMove.move);
+          const mon=ensureMon(lastMove.source);
+          const mms=ensureMonMove(mon,lastMove.move);
+          if(ms) ms.crits++;
+          if(mms) mms.crits++;
+          if(mon) mon.crits=(mon.crits||0)+1;
+        }
+      } else if(cmd === '-miss'){
+        if(lastMove && lastMove.move){
+          const ms=ensureMove(lastMove.move);
+          const mon=ensureMon(lastMove.source);
+          const mms=ensureMonMove(mon,lastMove.move);
+          if(ms){ms.misses++;ms.outcomes++;}
+          if(mms){mms.misses++;mms.outcomes++;}
+          if(mon) mon.misses=(mon.misses||0)+1;
         }
       } else if(cmd === '-status'){
         const slotFull = parts[2];
@@ -482,6 +521,13 @@
         if(dmg <= 0) continue;
 
         const tags = parts.slice(4).join('|');
+        if(lastMove && lastMove.target === slot && lastMove.move && sideOf(lastMove.source)!==sideOf(slot)){
+          const ms=ensureMove(lastMove.move);
+          const mon=ensureMon(lastMove.source);
+          const mms=ensureMonMove(mon,lastMove.move);
+          if(ms){ms.outcomes++;ms.hits++;ms.damage+=dmg;ms.maxDamage=Math.max(ms.maxDamage||0,dmg);}
+          if(mms){mms.outcomes++;mms.hits++;mms.damage+=dmg;mms.maxDamage=Math.max(mms.maxDamage||0,dmg);}
+        }
         let attackerStats = null;
         let cause = null;
 
@@ -571,6 +617,13 @@
         }
         if(credited){
           killerStats.kills += 1;
+          const killMove=killerInfo?.cause;
+          if(killMove && !/^(Hazard|Recoil|Status|Other|Toxic Spikes|residual )/i.test(killMove)){
+            const ms=ensureMove(killMove);
+            const kmm=ensureMonMove(killerStats,killMove);
+            if(ms) ms.kos++;
+            if(kmm) kmm.kos++;
+          }
           killerStats.killLog.push({
             replayId, turn: currentTurn,
             victim: deadStats ? deadStats.species : slots[slot].species,
@@ -582,7 +635,7 @@
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons };
+      players, mons, moveStats, monMoveStats };
   }
 
   // ---------- processing ----------
@@ -590,7 +643,7 @@
   // Week 1 begins on the Monday of the earliest replay in the season.
   // Manual overrides (weekOverride === true) are never touched by this logic.
   function replayTimestamp(replay){
-    const raw = replay && (replay.uploadtime ?? replay.timestamp ?? replay.replayTimestamp);
+    const raw = replay && replay.uploadtime;
     if(raw == null || raw === '') return NaN;
     const n = Number(raw);
     if(!Number.isNaN(n)){
@@ -660,7 +713,6 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        parsed.uploadtime = json.uploadtime;
         parsed.weekOverride = false;
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
@@ -1007,7 +1059,6 @@
         const json = await resp.json();
         const oldReplay = STATE.replays[id];
         const parsed = parseLog(json, id);
-        parsed.uploadtime = json.uploadtime;
         // Manual overrides are preserved exactly. Automatic weeks are rebuilt
         // from the replay date so reprocessing can correct/refresh chronology.
         parsed.weekOverride = !!oldReplay.weekOverride;
@@ -1442,11 +1493,6 @@
   });
   (async function init(){
     await loadState();
-    // Automatically assign non-overridden replays to Monday-Sunday weeks.
-    // Manual overrides remain untouched.
-    assignAutomaticWeeks();
-    await saveReplays();
-    await saveSettings();
     renderTicker();
     render();
   })();
