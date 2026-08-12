@@ -67,7 +67,51 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 .compare-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.compare-team{display:flex;align-items:center;gap:10px}.compare-team .team-mark{width:42px;height:42px;object-fit:contain}.compare-team-name{font-weight:800;font-size:16px}.compare-vs{color:var(--text-dim);font-family:var(--mono);font-size:12px}
 .mon-inline{display:flex;align-items:center;gap:8px;min-width:150px}.mon-inline img{width:42px;height:42px;object-fit:contain;image-rendering:pixelated}.mon-inline .name{font-weight:750}.mon-inline .meta{font-size:11px;color:var(--text-dim);margin-top:3px}
 .matchup-select-wrap{display:grid;grid-template-columns:minmax(240px,360px) 1fr;gap:18px;align-items:end;margin-bottom:18px}.matchup-selected{display:flex;align-items:center;gap:12px;padding:12px;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px}.matchup-selected img{width:58px;height:58px;object-fit:contain}.matchup-selected strong{display:block;font-size:16px}.matchup-selected .small{margin-top:3px}
-.opponent-matchups{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.opponent-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px}.opponent-card .top{display:flex;align-items:center;justify-content:space-between;gap:8px}.opponent-card .sprite-small{width:52px;height:52px;object-fit:contain}.matchup-result{margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}.matchup-result .mult{font-family:var(--mono);font-size:18px;font-weight:850}.matchup-result .label{font-size:11px;color:var(--text-dim);text-align:right}.speed-badge{font-size:10px;padding:3px 7px;border-radius:999px;border:1px solid var(--border);background:var(--panel)}
+.opponent-matchups{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:stretch}
+.opponent-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.opponent-card .top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-height:58px}
+.opponent-card .sprite-small{width:52px;height:52px;object-fit:contain;flex:0 0 52px}
+.opponent-card .mon-inline{min-width:0}
+.opponent-card .mon-inline>div:last-child{min-width:0}
+.opponent-card .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.opponent-card .type-row{margin-top:5px;gap:5px;align-items:center}
+.opponent-card .type-pill{margin-right:0;flex:0 0 auto}
+.matchup-result{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:9px;border-top:1px solid var(--border)}
+.matchup-result .mult{font-size:12px;font-weight:850;letter-spacing:.02em}
+.matchup-result .label{font-size:10px;color:var(--text-dim);text-align:right}
+.matchup-pill{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.defensive-matrix-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--panel-alt)}
+.defensive-matrix{width:100%;min-width:760px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.defensive-matrix th,.defensive-matrix td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:9px 8px;vertical-align:middle}
+.defensive-matrix tr:last-child th,.defensive-matrix tr:last-child td{border-bottom:0}
+.defensive-matrix th:last-child,.defensive-matrix td:last-child{border-right:0}
+.defensive-matrix thead th{background:var(--panel);font-weight:700}
+.defensive-matrix .your-mon-head{width:180px;text-align:left;position:sticky;left:0;z-index:2;background:var(--panel)}
+.defensive-matrix .opp-head{min-width:116px;text-align:center}
+.defensive-matrix .matchup-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.defensive-matrix tbody th{background:var(--panel);text-align:left;position:sticky;left:0;z-index:1}
+.defensive-matrix .mon-inline{display:flex;align-items:center;gap:8px;min-width:0}
+.defensive-matrix .sprite-small{width:42px;height:42px;object-fit:contain;flex:0 0 42px}
+.defensive-matrix .type-row{gap:4px;justify-content:center}
+.defensive-matrix .type-pill{margin-right:0;flex:0 0 auto}
+.defensive-matrix .your-mon-cell .type-row{justify-content:flex-start;margin-top:3px}
+.defensive-matrix .matchup-cell{text-align:center}
+.defensive-matrix .matchup-pill{width:100%;min-height:28px;padding:5px 7px;border-radius:7px;font-size:10px;font-weight:800;line-height:1.15}
+.defensive-favourable{background:#fdeaea;color:#a32626;border:1px solid rgba(163,38,38,.2)}
+.defensive-neutral{background:#f1f3f5;color:#555;border:1px solid rgba(85,85,85,.18)}
+.defensive-unfavourable{background:#e7f6ec;color:#18733b;border:1px solid rgba(24,115,59,.25)}
+
+.offense-matchup-favourable{background:#e7f6ec;color:#18733b;border:1px solid rgba(24,115,59,.25)}
+.offense-matchup-neutral{background:#f1f3f5;color:#555;border:1px solid rgba(85,85,85,.18)}
+.offense-matchup-unfavourable{background:#fdeaea;color:#a32626;border:1px solid rgba(163,38,38,.2)}
+.matchup-selected{min-width:0}
+.matchup-selected .selected-offense-mon{display:flex;align-items:center;gap:12px;min-width:0}
+.matchup-selected .selected-offense-mon>div{min-width:0}
+.matchup-selected .selected-offense-mon img{width:58px;height:58px;object-fit:contain;flex:0 0 58px}
+.matchup-selected .type-row{margin-top:5px;gap:5px;align-items:center}
+.matchup-selected .type-pill{margin-right:0;flex:0 0 auto}
+.speed-badge{font-size:10px;padding:3px 7px;border-radius:999px;border:1px solid var(--border);background:var(--panel);white-space:nowrap}
+@media(max-width:700px){.opponent-matchups{grid-template-columns:1fr}.matchup-select-wrap{grid-template-columns:1fr}}
 .defensive-overview{display:grid;grid-template-columns:1fr 1fr;gap:16px}.defensive-team{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:14px}.defensive-team h3{margin:0 0 10px;font-size:14px}.type-count-table{width:100%;font-size:12px}.type-count-table th{font-size:9px;padding:7px 6px}.type-count-table td{padding:7px 6px}.type-count-table td.num{text-align:center}.count-good{color:#8ed4a4}.count-bad{color:#ef9aa9}.count-neutral{color:var(--text-dim)}
 .speed-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.speed-team{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:14px}.speed-team h3{margin:0 0 12px}.speed-row{display:grid;grid-template-columns:42px minmax(110px,1fr) 70px 70px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}.speed-row:last-child{border-bottom:0}.speed-row img{width:38px;height:38px;object-fit:contain}.speed-row .sname{font-weight:700}.speed-row .types{margin-top:2px}.speed-num{text-align:right;font-family:var(--mono);font-size:12px}.tier-head{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin:12px 0 6px}
 .threat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}.threat-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:12px}.threat-head{display:flex;align-items:center;gap:10px}.threat-head img{width:54px;height:54px;object-fit:contain}.threat-name{font-weight:800}.threat-score{font-family:var(--mono);font-size:11px;color:var(--text-dim)}.threat-targets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.threat-target{font-size:10px;padding:4px 7px;border-radius:999px;border:1px solid var(--border);background:var(--panel)}
@@ -583,13 +627,25 @@ async function renderComparison(team){
 
 
 
+  const offenseMatchup=(mult)=>{
+    if(mult===null)return ['Neutral matchup','offense-matchup-neutral'];
+    if(mult>=2)return ['Favourable matchup','offense-matchup-favourable'];
+    if(mult<1)return ['Unfavourable matchup','offense-matchup-unfavourable'];
+    return ['Neutral matchup','offense-matchup-neutral'];
+  };
   const renderOffenseResults=(species)=>{
     const y=your.find(m=>m.species===species)||your[0];if(!y)return '';
-    return opp.map(o=>{const mult=combinedMultiplier(yourTypes[y.species]||[],oppTypes[o.species]||[]);const [tl,tc]=matchupLabel(mult);const row=getSpeed(y,o);const [sl,sc]=speedText(row.ymax,row.omax);return `<article class="opponent-card"><div class="top"><div class="mon-inline">${sprite(o.species,'sprite-small')}<div><div class="name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</div></div><span class="speed-badge ${sc}">${sl}</span></div><div class="matchup-result"><div><div class="mult">${scoutingEffectiveness(mult)}</div><div class="small">best type interaction</div></div><div class="label">${tl}<br><span class="small">${row.ymax!=null&&row.omax!=null?`${row.ymax} vs ${row.omax} max Speed`:'Speed unavailable'}</span></div></div></article>`}).join('');
+    return opp.map(o=>{
+      const mult=combinedMultiplier(yourTypes[y.species]||[],oppTypes[o.species]||[]);
+      const [matchup,matchupClass]=offenseMatchup(mult);
+      const row=getSpeed(y,o);
+      const [sl,sc]=speedText(row.ymax,row.omax);
+      return `<article class="opponent-card"><div class="top"><div class="mon-inline">${sprite(o.species,'sprite-small')}<div><div class="name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</div></div><span class="speed-badge ${sc}">${sl}</span></div><div class="matchup-result"><span class="matchup-pill ${matchupClass}">${matchup}</span><div class="label">${row.ymax!=null&&row.omax!=null?`${row.ymax} vs ${row.omax} max Speed`:'Speed unavailable'}</div></div></article>`;
+    }).join('');
   };
   const defaultSelected=STATE.comparePokemon&&your.some(m=>m.species===STATE.comparePokemon)?STATE.comparePokemon:(your[0]?.species||'');
   const selectedMon=your.find(m=>m.species===defaultSelected)||your[0];
-  const offense=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Pick one of your Pokémon to see its matchup across the entire opposing roster. The result is type-only; it does not model move power, abilities, stats or STAB.</p><div class="matchup-select-wrap"><div><label>Your Pokémon</label><select id="offensePokemon">${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>`<option value="${esc(m.species)}" ${m.species===selectedMon?.species?'selected':''}>${esc(m.species)}</option>`).join('')}</select></div><div class="matchup-selected">${selectedMon?sprite(selectedMon.species)+`<div><strong>${esc(selectedMon.species)}</strong>${typePills(yourTypes[selectedMon.species]||[])}<div class="small">Select another Pokémon above to compare its attacks into the full opposing roster.</div></div>`:''}</div></div><div id="offenseResults" class="opponent-matchups">${renderOffenseResults(defaultSelected)}</div></section>`;
+  const offense=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Pick one of your Pokémon to see its matchup across the entire opposing roster. The result is type-only; it does not model move power, abilities, stats or STAB.</p><div class="matchup-select-wrap"><div><label>Your Pokémon</label><select id="offensePokemon">${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>`<option value="${esc(m.species)}" ${m.species===selectedMon?.species?'selected':''}>${esc(m.species)}</option>`).join('')}</select></div><div class="matchup-selected">${selectedMon?`<div class="selected-offense-mon">${sprite(selectedMon.species)}<div><strong>${esc(selectedMon.species)}</strong>${typePills(yourTypes[selectedMon.species]||[])}<div class="small">Compare this Pokémon against the full opposing roster.</div></div></div>`:''}</div></div><div id="offenseResults" class="opponent-matchups">${renderOffenseResults(defaultSelected)}</div></section>`;
 
   const yourWeak=weaknessSummary(yourTypes),oppWeak=weaknessSummary(oppTypes);
   
@@ -598,8 +654,14 @@ async function renderComparison(team){
   const speedSection=`<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">Both rosters side by side, sorted by Level 100 maximum Speed. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial nature; Scarf is 1.5× that benchmark.</p><div class="speed-columns">${speedCard(team,your,yourTypes,'your')}${speedCard(currentOpponent,opp,oppTypes,'opp')}</div></section>`;
 
   const threatData=opp.map(o=>threatScoreForOpponent(o,your,yourTypes,oppTypes,getSpeed));
-  const threats=`<section class="panel"><h2>Biggest Threats</h2><p class="panel-desc">For each opposing Pokémon, see exactly which of your Pokémon it is good against and which of your Pokémon match up well into it.</p><div class="threat-grid">${threatData.map(x=>`<article class="threat-card"><div class="threat-head">${sprite(x.o.species)}<div><div class="threat-name">${esc(x.o.species)}</div>${typePills(oppTypes[x.o.species]||[])}</div></div><div class="threat-section"><div class="section-label">Good against your team</div>${x.goodAgainst.length?x.goodAgainst.slice(0,6).map(t=>`<div class="threat-row"><span>${sprite(t.m.species,'sprite-tiny')}${esc(t.m.species)}</span><strong>${scoutingEffectiveness(t.pressure)}</strong></div>`).join(''):'<div class="small">No clear type advantage against your roster.</div>'}</div><div class="threat-section"><div class="section-label">Loses to your team</div>${x.losesTo.length?x.losesTo.slice(0,6).map(t=>`<div class="threat-row"><span>${sprite(t.m.species,'sprite-tiny')}${esc(t.m.species)}</span><strong>${scoutingEffectiveness(t.pressure)}</strong></div>`).join(''):'<div class="small">No clear type disadvantage against your roster.</div>'}</div></article>`).join('')||'<div class="empty">No threat data available.</div>'}</div></section>`;
-  const defensiveMatrix=`<section class="panel"><h2>Defensive Matchups</h2><p class="panel-desc">How strongly each opponent Pokémon's typing pressures each of your Pokémon.</p><div style="overflow:auto"><table class="matchup-table"><thead><tr><th>Your Pokémon</th>${opp.map(o=>`<th><div class="matchup-name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</th>`).join('')}</tr></thead><tbody>${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(y=>`<tr><th><div class="mon-inline">${sprite(y.species,'sprite-small')}<div><div class="name">${esc(y.species)}</div>${typePills(yourTypes[y.species]||[])}</div></div></th>${opp.map(o=>{const vals=(oppTypes[o.species]||[]).map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]));const max=vals.length?Math.max(...vals):null;const [l,c]=matchupLabel(max);return `<td class="matchup-cell"><span class="matchup-pill ${c}">${scoutingEffectiveness(max)} · ${l}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></div></section>`;
+
+  const defensiveMatchup=(mult)=>{
+    if(mult===null)return ['Neutral matchup','defensive-neutral'];
+    if(mult>=2)return ['Unfavourable matchup','defensive-favourable'];
+    if(mult<1)return ['Favourable matchup','defensive-unfavourable'];
+    return ['Neutral matchup','defensive-neutral'];
+  };
+  const defensiveMatrix=`<section class="panel"><h2>Defensive Matchups</h2><p class="panel-desc">How each opposing Pokémon matches into your team defensively. Favourable means your Pokémon resists the opponent's typing; unfavourable means it is weak to it.</p><div class="defensive-matrix-wrap"><table class="defensive-matrix"><thead><tr><th class="your-mon-head">Your Pokémon</th>${opp.map(o=>`<th class="opp-head"><div class="matchup-name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</th>`).join('')}</tr></thead><tbody>${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(y=>`<tr><th class="your-mon-cell"><div class="mon-inline">${sprite(y.species,'sprite-small')}<div><div class="name">${esc(y.species)}</div>${typePills(yourTypes[y.species]||[])}</div></div></th>${opp.map(o=>{const vals=(oppTypes[o.species]||[]).map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]));const max=vals.length?Math.max(...vals):null;const [label,c]=defensiveMatchup(max);return `<td class="matchup-cell"><span class="matchup-pill ${c}">${label}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></div></section>`;
 
   const setDefault=STATE.setPokemon&&opp.some(m=>m.species===STATE.setPokemon)?STATE.setPokemon:(opp[0]?.species||'');
   const setMon=opp.find(m=>m.species===setDefault)||opp[0];
