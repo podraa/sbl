@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SBL Stats Hub</title>
+<title>League Damage Dashboard</title>
 <style>
   :root{
     --bg:#0e1218;
@@ -12,9 +12,9 @@
     --border:#2a3444;
     --text:#e8edf5;
     --text-dim:#8996a8;
-    --amber:#fba2ca;
+    --amber:#ffb454;
     --teal:#5eead4;
-    --red:#fababa;
+    --red:#ff7a7a;
     --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   }
@@ -88,7 +88,7 @@
   table{width:100%; border-collapse:collapse; font-size:13px;}
   th{
     text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em;
-    color:#fff; padding:8px 10px; border-bottom:1px solid var(--border);
+    color:var(--text-dim); padding:8px 10px; border-bottom:1px solid var(--border);
   }
   td{padding:8px 10px; border-bottom:1px solid var(--border);}
   tr:last-child td{border-bottom:none;}
@@ -203,15 +203,9 @@
   .player-group .player-table-wrap{padding:4px 14px 12px;}
   .player-group table{margin-top:6px;}
   .player-filter{max-width:320px; margin-bottom:14px;}
-
-  #adminAuth{max-width:420px;margin:90px auto;padding:24px 20px;}
-  .auth-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;}
-  .auth-box h1{margin-bottom:4px;}
-  .auth-box input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:13px;}
-  .auth-error{display:none;color:var(--red);font-size:12px;margin-top:12px;line-height:1.4;}
 </style>
 </head>
-<body data-admin="true">
+<body>
 <div id="app">
   <header>
     <h1>League Damage Dashboard</h1>
@@ -232,175 +226,57 @@
 </div>
 <div id="auditModal"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
-  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', seasonStartMonday:null } };
+  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true } };
   let loaded = false;
 
-  // ---------- shared Supabase storage ----------
-  // Public dashboard: read-only. Admin page: authenticated writes.
-  const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
-  const SUPABASE_STATE_ID = '__dashboard_state__';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  const IS_ADMIN_PAGE = document.body.dataset.admin === 'true';
-  const POLL_MS = 10000;
-  let adminUser = null;
-  let loadingFromRemote = false;
+  // ---------- storage (uses Claude artifact cloud storage when available, else browser localStorage) ----------
+  const hasCloudStorage = (typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function');
+  let cloudBroken = false;
 
-  function requireAdmin(){
-    if(!IS_ADMIN_PAGE || !adminUser) throw new Error('Admin login required to change shared data.');
+  async function storageGet(key, shared){
+    if(hasCloudStorage && !cloudBroken){
+      try{ return await window.storage.get(key, shared); }
+      catch(e){ /* key may just not exist yet, or cloud storage unavailable here */ }
+    }
+    const raw = localStorage.getItem('league-dash:' + key);
+    return raw ? {key, value: raw, shared} : null;
+  }
+  async function storageSet(key, value, shared){
+    if(hasCloudStorage && !cloudBroken){
+      try{ const r = await window.storage.set(key, value, shared); if(r) return r; }
+      catch(e){ cloudBroken = true; }
+    }
+    localStorage.setItem('league-dash:' + key, value);
+    return {key, value, shared};
   }
 
+  // ---------- state persistence ----------
   async function loadState(){
-    loadingFromRemote = true;
     try{
-      const {data, error} = await supabase.from('replays').select('replay_id,replay_data');
-      if(error) throw error;
-      const replays = {};
-      let sharedState = null;
-      for(const row of (data || [])){
-        if(row.replay_id === SUPABASE_STATE_ID) sharedState = row.replay_data || {};
-        else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
-      }
-      STATE.replays = replays;
-      STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', seasonStartMonday:null}, (sharedState && sharedState.settings) || {});
-      STATE.settings.teamLogos = STATE.settings.teamLogos || {};
-      loaded = true;
-    }catch(e){
-      console.error('Supabase load failed:', e);
-      if(!loaded){
-        STATE.replays = {};
-        STATE.teamMap = {};
-        STATE.settings = {caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', seasonStartMonday:null};
-        loaded = true;
-      }
-      if(IS_ADMIN_PAGE) showAdminError('Could not load shared data: ' + e.message);
-    }finally{
-      loadingFromRemote = false;
-    }
+      const r = await storageGet('replays-data', SHARED);
+      STATE.replays = r ? JSON.parse(r.value) : {};
+    }catch(e){ STATE.replays = {}; }
+    try{
+      const m = await storageGet('player-team-map', SHARED);
+      STATE.teamMap = m ? JSON.parse(m.value) : {};
+    }catch(e){ STATE.teamMap = {}; }
+    try{
+      const s = await storageGet('settings', SHARED);
+      STATE.settings = s ? Object.assign({caseInsensitiveNames:true}, JSON.parse(s.value)) : {caseInsensitiveNames:true};
+    }catch(e){ STATE.settings = {caseInsensitiveNames:true}; }
+    loaded = true;
   }
-
   async function saveReplays(){
-    requireAdmin();
-    const rows = Object.values(STATE.replays).map(r => ({
-      replay_id: r.id,
-      replay_data: r,
-      updated_at: new Date().toISOString()
-    }));
-    const {data: existing, error: readErr} = await supabase.from('replays').select('replay_id');
-    if(readErr) throw readErr;
-    const stale = (existing || []).map(r=>r.replay_id).filter(id => id !== SUPABASE_STATE_ID && !STATE.replays[id]);
-    if(stale.length){
-      const {error} = await supabase.from('replays').delete().in('replay_id', stale);
-      if(error) throw error;
-    }
-    if(rows.length){
-      const {error} = await supabase.from('replays').upsert(rows, {onConflict:'replay_id'});
-      if(error) throw error;
-    }
-    await saveSharedState();
+    await storageSet('replays-data', JSON.stringify(STATE.replays), SHARED);
   }
-
-  async function saveSharedState(){
-    requireAdmin();
-    const {error} = await supabase.from('replays').upsert([{
-      replay_id: SUPABASE_STATE_ID,
-      replay_data: {teamMap: STATE.teamMap, settings: STATE.settings},
-      updated_at: new Date().toISOString()
-    }], {onConflict:'replay_id'});
-    if(error) throw error;
+  async function saveTeamMap(){
+    await storageSet('player-team-map', JSON.stringify(STATE.teamMap), SHARED);
   }
-  async function saveTeamMap(){ await saveSharedState(); }
-  async function saveSettings(){ await saveSharedState(); }
-
-  async function deleteAllRemote(){
-    requireAdmin();
-    const {error} = await supabase.from('replays').delete().neq('replay_id', SUPABASE_STATE_ID);
-    if(error) throw error;
-  }
-
-  async function migrateLocalData(){
-    requireAdmin();
-    const rawR = localStorage.getItem('league-dash:replays-data');
-    const rawM = localStorage.getItem('league-dash:player-team-map');
-    const rawS = localStorage.getItem('league-dash:settings');
-    if(!rawR && !rawM && !rawS) throw new Error('No old local dashboard data was found in this browser.');
-    if(rawR) STATE.replays = JSON.parse(rawR);
-    if(rawM) STATE.teamMap = JSON.parse(rawM);
-    if(rawS) STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', seasonStartMonday:null}, JSON.parse(rawS));
-    STATE.settings.teamLogos = STATE.settings.teamLogos || {};
-    await saveReplays();
-    await saveSharedState();
-  }
-
-  async function refreshSharedState(){
-    if(loadingFromRemote) return;
-    const before = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
-    await loadState();
-    const after = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
-    if(before !== after){
-      renderTicker();
-      render();
-    }
-  }
-
-  function showAdminError(msg){
-    const el = document.getElementById('adminError');
-    if(el){ el.textContent = msg; el.style.display = 'block'; }
-  }
-
-  function showAdminLogin(){
-    if(!IS_ADMIN_PAGE) return;
-    const app = document.getElementById('app');
-    app.style.display = 'none';
-    const existing = document.getElementById('adminAuth');
-    if(existing) existing.remove();
-    const wrap = document.createElement('div');
-    wrap.id = 'adminAuth';
-    wrap.innerHTML = `
-      <div class="auth-box">
-        <h1>SBL Dashboard Admin</h1>
-        <div class="sub">Sign in to add replays and change shared league data.</div>
-        <label>Email</label><input id="adminEmail" type="email" autocomplete="username" placeholder="you@example.com">
-        <label style="margin-top:12px;">Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password">
-        <button class="primary" id="adminLoginBtn" style="margin-top:14px;width:100%;">Log in</button>
-        <div id="adminError" class="auth-error"></div>
-      </div>`;
-    document.body.prepend(wrap);
-    document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
-    document.getElementById('adminPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') adminLogin(); });
-  }
-
-  async function adminLogin(){
-    const email = document.getElementById('adminEmail').value.trim();
-    const password = document.getElementById('adminPassword').value;
-    if(!email || !password){ showAdminError('Enter your email and password.'); return; }
-    const btn = document.getElementById('adminLoginBtn');
-    btn.disabled = true; btn.textContent = 'Logging in…';
-    const {data, error} = await supabase.auth.signInWithPassword({email, password});
-    btn.disabled = false; btn.textContent = 'Log in';
-    if(error){ showAdminError(error.message); return; }
-    adminUser = data.user;
-    document.getElementById('adminAuth')?.remove();
-    document.getElementById('app').style.display = '';
-    await loadState();
-    renderTicker(); render();
-  }
-
-  async function initAdminAuth(){
-    if(!IS_ADMIN_PAGE) return true;
-    const {data} = await supabase.auth.getSession();
-    if(data.session){
-      adminUser = data.session.user;
-      document.getElementById('app').style.display = '';
-      return true;
-    }
-    showAdminLogin();
-    return false;
+  async function saveSettings(){
+    await storageSet('settings', JSON.stringify(STATE.settings), SHARED);
   }
 
   // ---------- helpers ----------
@@ -457,19 +333,9 @@
   function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
 
   // ---------- replay parsing ----------
-  function classifyIndirectCause(tags){
-    const t=(tags||'').toLowerCase();
-    if(t.includes('stealth rock') || t.includes('spikes') || t.includes('toxic spikes') || t.includes('sticky web')) return 'Hazard';
-    if(t.includes('recoil')) return 'Recoil';
-    if(t.includes('psn') || t.includes('tox') || t.includes('brn') || t.includes('poison') || t.includes('burn')) return 'Status';
-    return 'Other';
-  }
   function parseLog(json, replayId){
     const lines = json.log.split('\n');
     const players = {p1:'', p2:''};
-    const results = {p1:null, p2:null};
-    const teamRoster = {p1:[], p2:[]};
-    let winner = null;
     const slots = {}; // slotId -> {species, hp, side}
     const mons = {}; // "p1|species" -> stats
     const appearedThisReplay = new Set();
@@ -488,12 +354,8 @@
     // deliberately NOT cleared on switch — only when the status actually ends.
     let statusSourceByMon = {}; // monKey -> stats object that inflicted brn/psn/tox on them
     let hazardSetter = {}; // side -> {hazardName: setter's stats object}
-    // side (the side that GOT toxic-spiked) -> setter's stats object.
-    // Toxic Spikes are a side-wide condition, so this survives switches/faints
-    // and lets residual poison damage inherit kill credit from the setter.
-    let toxicSpikesSetter = {};
+    let toxicSpikesSetter = {}; // side (the side that GOT toxic-spiked) -> setter's stats object
     let delayedSetter = {}; // side -> {moveName: setter's stats object}, for Future Sight / Doom Desire
-    let pendingDelayedHit = {}; // targetSlot -> {stats, cause}; Showdown emits the delayed hit as -end, then an untagged -damage
     const HAZARD_MOVES = ['Stealth Rock','Spikes'];
     const DELAYED_MOVES = ['Future Sight','Doom Desire'];
     const STATUS_TAGS = ['psn','tox','brn'];
@@ -529,20 +391,9 @@
       const parts = raw.split('|');
       const cmd = parts[1];
 
-      if(cmd === 'poke' && parts[3]){
-        const side=parts[2]; const species=parts[3].split(',')[0].trim();
-        if((side==='p1'||side==='p2') && species && !teamRoster[side].some(x=>normName(x)===normName(species))) teamRoster[side].push(species);
-      } else if(cmd === 'player' && parts[3]){
+      if(cmd === 'player' && parts[3]){
         const side = parts[2];
         if(side === 'p1' || side === 'p2') players[side] = parts[3];
-      } else if(cmd === 'win' && parts[2]){
-        winner = parts[2].trim();
-        for(const side of ['p1','p2']){
-          if((players[side]||'').toLowerCase() === winner.toLowerCase()){
-            results[side] = 'W';
-            results[side === 'p1' ? 'p2' : 'p1'] = 'L';
-          }
-        }
       } else if(cmd === 'turn'){
         const t = parseInt(parts[2], 10);
         if(!isNaN(t)) currentTurn = t;
@@ -561,7 +412,6 @@
         // through a switch and must keep crediting the original inflictor
         // when the same mon returns and the status keeps ticking.
         delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
         ensureMon(slot);
       } else if(cmd === 'move'){
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
@@ -585,32 +435,12 @@
           }
         }
         if(source && moveName === 'Toxic Spikes'){
-          // Toxic Spikes are a side-wide condition. Keep the Pokémon that most
-          // recently established the Toxic Spikes on that side so a later
-          // switch-in, poison tick, and eventual faint can all inherit the
-          // setter's kill credit even if the setter has switched out or fainted.
+          // side-wide condition: the mon that laid it can already be gone by the
+          // time it pokes each switch-in, so record the setter per opposing side
+          // rather than relying on a [of] tag that a later -status line won't have
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
           const setterStats = ensureMon(source);
           if(setterStats) toxicSpikesSetter[oppSide] = setterStats;
-        }
-      } else if(cmd === '-end'){
-        // Future Sight / Doom Desire are represented by Showdown as:
-        //   |-end|target|move: Future Sight
-        //   |-damage|target|...
-        // The -damage line is deliberately untagged, so looking for
-        // 'Future Sight' in its tags will never work. Resolve the setter
-        // at the -end event and carry it into the following damage event.
-        const slotFull = parts[2];
-        const effect = parts.slice(3).join('|');
-        if(slotFull && (effect.includes('move: Future Sight') || effect.includes('move: Doom Desire'))){
-          const slot = slotFull.split(':')[0].trim();
-          const delayedHit = DELAYED_MOVES.find(m => effect.includes('move: ' + m));
-          if(delayedHit && delayedSetter[sideOf(slot)] && delayedSetter[sideOf(slot)][delayedHit]){
-            pendingDelayedHit[slot] = {
-              stats: delayedSetter[sideOf(slot)][delayedHit],
-              cause: delayedHit
-            };
-          }
         }
       } else if(cmd === '-status'){
         const slotFull = parts[2];
@@ -621,11 +451,10 @@
         const statusTags = parts.slice(3).join('|');
         let inflictorStats = null;
         if(statusTags.includes('Toxic Spikes') && toxicSpikesSetter[sideOf(slot)]){
-          // Poisoned on switch-in by Toxic Spikes. There is no attacker's move
-          // line for the later residual damage, so permanently associate this
-          // individual Pokémon with the Toxic Spikes setter until its status
-          // is cured. This is keyed by mon identity rather than slot because
-          // the poisoned Pokémon can switch out and back in.
+          // poisoned on switch-in by a hazard laid earlier, with no move line of its
+          // own — check this explicit tag before the lastMove guess below, since
+          // lastMove can be stale (left over from a previous mon in this slot) right
+          // after a switch-in with no move in between
           inflictorStats = toxicSpikesSetter[sideOf(slot)];
         } else if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
           inflictorStats = ensureMon(lastMove.source);
@@ -678,29 +507,22 @@
         // Looked up by the mon's own identity (monKey), not the slot, since poison/burn
         // persist through a switch and must keep crediting the original inflictor even
         // after this individual left and came back to the same or a different slot.
-        // This is also what gives a Toxic Spikes setter the kill when poison damage
-        // is the final damage instance before fainting.
         if(!attackerStats){
-          const statusHit = STATUS_TAGS.find(s => tags.includes('[from] ' + s));
+          const statusHit = STATUS_TAGS.find(s => tags.includes('[from] ' + s) || tags === '' && false);
           const mk = monKey(slot);
           if(statusHit && mk && statusSourceByMon[mk]){
             attackerStats = statusSourceByMon[mk];
-            const sourceWasToxicSpikes = (
-              toxicSpikesSetter[sideOf(slot)] &&
-              toxicSpikesSetter[sideOf(slot)] === attackerStats
-            );
-            cause = sourceWasToxicSpikes
-              ? 'Toxic Spikes'
-              : 'residual ' + statusHit;
+            cause = 'residual ' + statusHit;
           }
         }
-        // 3b) delayed hits (Future Sight / Doom Desire).
-        // Showdown puts the move name on a preceding -end event, NOT on the
-        // subsequent -damage line, so use the pending source captured there.
-        if(!attackerStats && pendingDelayedHit[slot]){
-          attackerStats = pendingDelayedHit[slot].stats;
-          cause = pendingDelayedHit[slot].cause;
-          delete pendingDelayedHit[slot];
+        // 3b) delayed hits (Future Sight / Doom Desire) -> credit whoever set them up.
+        // These land with no [of] tag and often long after the setter has switched
+        // out or fainted, so the generic "last move" fallback below can't be trusted
+        // for them — it would just credit whoever last legitimately hit this slot.
+        const delayedHit = DELAYED_MOVES.find(m => tags.includes(m));
+        if(!attackerStats && delayedHit && delayedSetter[sideOf(slot)] && delayedSetter[sideOf(slot)][delayedHit]){
+          attackerStats = delayedSetter[sideOf(slot)][delayedHit];
+          cause = delayedHit;
         }
         // 4) fallback: direct hit from the most recent move, if it targeted this slot.
         //    Showdown only omits [from]/[of] entirely on a -damage line for a genuine
@@ -708,7 +530,7 @@
         //    carry a tag (just not one of the specific ones matched above). So this
         //    fallback must only fire on a completely untagged line, or it ends up
         //    crediting stale "last real attacker" info to indirect damage it never dealt.
-        if(!attackerStats && tags === '' && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
+        if(!attackerStats && !delayedHit && tags === '' && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
           attackerStats = ensureMon(lastMove.source);
           cause = lastMove.move || 'direct hit';
         }
@@ -722,7 +544,7 @@
           // Clear any earlier attacker on file for this slot — otherwise a mon that
           // survives a real hit and later dies to something untraceable still has
           // the kill wrongly credited to whoever landed that earlier real hit.
-          lastAttacker[slot] = {stats:null, cause:classifyIndirectCause(tags), turn:currentTurn};
+          lastAttacker[slot] = null;
         }
       } else if(cmd === '-heal' || cmd === '-sethp'){
         const slotFull = parts[2];
@@ -744,7 +566,7 @@
           deadStats.deathLog.push({
             replayId, turn: currentTurn,
             killer: credited ? killerStats.species : null,
-            cause: credited ? killerInfo.cause : (killerInfo?.cause || 'Other')
+            cause: credited ? killerInfo.cause : 'unattributed'
           });
         }
         if(credited){
@@ -756,93 +578,15 @@
           });
         }
         delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
       }
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner, results, teamRoster };
-  }
-
-  // ---------- automatic Monday-Sunday season weeks ----------
-  function replayTimestampMs(replay){
-    const n=Number(replay?.uploadtime||0); if(!n) return 0; return n<1e12?n*1000:n;
-  }
-  function mondayStartMs(ms){ const d=new Date(ms); const day=d.getDay(); const diff=(day===0?-6:1-day); d.setHours(0,0,0,0); d.setDate(d.getDate()+diff); return d.getTime(); }
-  function ensureSeasonStart(){
-    if(STATE.settings.seasonStartMonday) return Number(STATE.settings.seasonStartMonday);
-    const times=Object.values(STATE.replays).map(replayTimestampMs).filter(Boolean); if(!times.length) return null;
-    const start=mondayStartMs(Math.min(...times)); STATE.settings.seasonStartMonday=start; return start;
-  }
-  function autoWeekForReplay(replay){
-    if(replay?.weekOverride) return replay.weekOverride;
-    const ts=replayTimestampMs(replay); if(!ts) return 'Unassigned';
-    let start=ensureSeasonStart(); if(!start || mondayStartMs(ts)<start){ start=mondayStartMs(ts); STATE.settings.seasonStartMonday=start; }
-    return `Week ${Math.floor((mondayStartMs(ts)-start)/604800000)+1}`;
-  }
-  function recalculateAllWeeks(){
-    const times=Object.values(STATE.replays).map(replayTimestampMs).filter(Boolean);
-    if(!times.length) return;
-    STATE.settings.seasonStartMonday=mondayStartMs(Math.min(...times));
-    for(const r of Object.values(STATE.replays)) r.week=autoWeekForReplay(r);
-  }
-
-  // ---------- automatic player-name consolidation ----------
-  // In a draft league, repeated-letter variants are only merged when their
-  // replay rosters share at least one drafted Pokémon. Exact case variants
-  // (e.g. Lynxzz/lynxzz) are always merged. The most-used spelling wins.
-  function consolidatePlayerAliases(){
-    const users={};
-    for(const r of Object.values(STATE.replays)){
-      for(const side of ['p1','p2']){
-        const u=(r.players?.[side]||'').trim(); if(!u) continue;
-        const key=u.toLowerCase();
-        if(!users[key]) users[key]={display:u,games:0,mons:new Set()};
-        users[key].games++;
-        (r.teamRoster?.[side]||[]).forEach(sp=>users[key].mons.add(normName(sp)));
-      }
-    }
-    const byFuzzy={};
-    for(const u of Object.values(users)){
-      const fk=fuzzyKey(u.display);
-      if(!fk) continue;
-      (byFuzzy[fk] ||= []).push(u);
-    }
-    const rename={};
-    for(const group of Object.values(byFuzzy)){
-      if(group.length<2) continue;
-      group.sort((a,b)=>b.games-a.games || a.display.localeCompare(b.display));
-      const canonical=group[0];
-      for(const candidate of group.slice(1)){
-        const exactCaseInsensitive = candidate.display.toLowerCase()===canonical.display.toLowerCase();
-        let overlap=false;
-        for(const mon of candidate.mons){ if(canonical.mons.has(mon)){ overlap=true; break; } }
-        if(exactCaseInsensitive || overlap) rename[candidate.display.toLowerCase()]=canonical.display;
-      }
-    }
-    let changed=false;
-    for(const r of Object.values(STATE.replays)){
-      for(const side of ['p1','p2']){
-        const u=(r.players?.[side]||'').trim();
-        const canonical=rename[u.toLowerCase()];
-        if(canonical && canonical!==u){ r.players[side]=canonical; changed=true; }
-      }
-      if(r.winner){
-        const canonical=rename[String(r.winner).toLowerCase()];
-        if(canonical && canonical!==r.winner){ r.winner=canonical; changed=true; }
-      }
-    }
-    // Carry team mappings across aliases, preferring the canonical spelling.
-    for(const [alias,canonical] of Object.entries(rename)){
-      const oldTeam=STATE.teamMap[alias];
-      if(oldTeam && !STATE.teamMap[canonical.toLowerCase()]) STATE.teamMap[canonical.toLowerCase()]=oldTeam;
-      if(oldTeam) delete STATE.teamMap[alias];
-    }
-    return changed;
+      players, mons };
   }
 
   // ---------- processing ----------
-  async function processUrls(urlsRaw, logEl){
+  async function processUrls(urlsRaw, week, logEl){
     const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
     let added = 0, skipped = 0, failed = 0;
@@ -855,18 +599,17 @@
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
         const parsed = parseLog(json, id);
-        parsed.weekOverride = oldOverride;
-        parsed.week = autoWeekForReplay(parsed);
+        parsed.week = week || 'Unassigned';
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
-        appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})${parsed.winner ? ` — ${parsed.winner} won` : ' — result unavailable'}`, false, true);
+        appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
         added++;
       }catch(e){
         appendLog(logEl, `✗ ${id} — ${e.message}`, true);
         failed++;
       }
     }
-    if(added > 0){ consolidatePlayerAliases(); recalculateAllWeeks(); await saveReplays(); await saveTeamMap(); }
+    if(added > 0) await saveReplays();
     appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${failed} failed.`, false);
     renderTicker();
     render(); // refresh whatever tab is open
@@ -1063,11 +806,7 @@
   // ---------- rendering ----------
   const contentEl = document.getElementById('content');
   const tabsEl = document.getElementById('tabs');
-  if(!IS_ADMIN_PAGE){
-    tabsEl.querySelector('[data-tab="process"]')?.remove();
-    tabsEl.querySelector('[data-tab="settings"]')?.remove();
-  }
-  let activeTab = IS_ADMIN_PAGE ? 'process' : 'global';
+  let activeTab = 'process';
 
   tabsEl.addEventListener('click', (e)=>{
     if(e.target.tagName !== 'BUTTON') return;
@@ -1088,7 +827,7 @@
         <div class="lbl">Dmg Dealt</div>
         <div class="pname-cell">${spriteImg(s.species,'sprite')}<div>
           <div class="name">${escapeHtml(s.species)}</div>
-          <div class="val">${s.dealt.toFixed(0)} dmg</div>
+          <div class="val">${s.dealt.toFixed(0)}%</div>
         </div></div>
       </div>`).join('');
   }
@@ -1159,6 +898,12 @@
         <h2>Add replays</h2>
         <label>Showdown replay links (one per line)</label>
         <textarea id="urlsInput" placeholder="https://replay.pokemonshowdown.com/gen9natdexdraft-xxxxxxxx"></textarea>
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Week label (for this batch's snapshot)</label>
+            <input type="text" id="weekInput" placeholder="Week 9" value="${escapeHtml(lastWeek||'')}">
+          </div>
+        </div>
         <button class="primary" id="processBtn">Process replays</button>
         <div class="log" id="processLog"></div>
       </div>
@@ -1174,10 +919,11 @@
     document.getElementById('processBtn').addEventListener('click', async ()=>{
       const btn = document.getElementById('processBtn');
       const urls = document.getElementById('urlsInput').value;
+      lastWeek = document.getElementById('weekInput').value.trim();
       const logEl = document.getElementById('processLog');
       logEl.innerHTML = '';
       btn.disabled = true;
-      await processUrls(urls, logEl);
+      await processUrls(urls, lastWeek, logEl);
       btn.disabled = false;
     });
     const reBtn = document.getElementById('reprocessAll');
@@ -1188,19 +934,25 @@
       reBtn.disabled = false;
     });
   }
+  let lastWeek = '';
 
   async function reprocessAll(logEl){
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
     for(const id of ids){
-      const oldOverride = STATE.replays[id].weekOverride || null;
+      const oldWeek = STATE.replays[id].week;
       try{
         const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
         if(!resp.ok) throw new Error('not found (' + resp.status + ')');
         const json = await resp.json();
+        const oldReplay = STATE.replays[id];
         const parsed = parseLog(json, id);
-        parsed.week = autoWeekForReplay(parsed);
-        parsed.processedAt = STATE.replays[id].processedAt;
+        // Preserve the existing week exactly when reprocessing. In particular,
+        // a manually overridden week must never be replaced by the parser's
+        // automatic week assignment.
+        parsed.week = oldReplay.week || 'Unassigned';
+        parsed.weekOverride = !!oldReplay.weekOverride;
+        parsed.processedAt = oldReplay.processedAt;
         STATE.replays[id] = parsed;
         appendLog(logEl, `✓ reprocessed ${id}`, false, true);
         ok++;
@@ -1209,33 +961,41 @@
         failed++;
       }
     }
-    consolidatePlayerAliases();
-    recalculateAllWeeks();
     await saveReplays();
-    await saveTeamMap();
     appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
     renderTicker();
     render();
   }
 
   function renderReplayTable(){
-    const list = Object.values(STATE.replays).sort((a,b)=>replayTimestampMs(b)-replayTimestampMs(a));
-    const maxWeek = Math.max(1,...Object.values(STATE.replays).map(r=>parseInt(String(r.week||'').match(/\d+/)?.[0]||'0',10)));
-    const weekOptions = Array.from({length:maxWeek+2},(_,i)=>`<option value="Week ${i+1}">Week ${i+1}</option>`).join('');
+    const list = Object.values(STATE.replays).sort((a,b)=>b.processedAt-a.processedAt);
     const rows = list.map(r => `
       <tr>
-        <td>${escapeHtml(r.week||'Unassigned')}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;min-width:190px;">
+            <input type="text" class="week-override-input" data-week-id="${escapeHtml(r.id)}" value="${escapeHtml(r.week||'Unassigned')}" placeholder="Week 1">
+            ${r.weekOverride ? '<span class="badge" title="Manual week override — reprocessing will preserve this week">Manual</span>' : ''}
+          </div>
+        </td>
         <td>${escapeHtml(r.players.p1||'?')} <span style="color:var(--text-dim)">vs</span> ${escapeHtml(r.players.p2||'?')}</td>
         <td style="color:var(--text-dim)">${escapeHtml(r.format||'')}</td>
-        <td>
-          <select class="week-override" data-week-override="${escapeHtml(r.id)}" title="Override this replay's automatic week">
-            <option value="">Auto (${escapeHtml(r.week||'Unassigned')})</option>
-            ${weekOptions.replace(`value="${escapeHtml(r.week||'')}"`,`value="${escapeHtml(r.week||'')}" selected`)}
-          </select>
-        </td>
-        <td class="num"><button class="ghost small danger-btn" data-remove="${r.id}">Remove</button></td>
+        <td class="num" style="white-space:nowrap;"><button class="ghost small" data-save-week="${escapeHtml(r.id)}">Save week</button> <button class="ghost small danger-btn" data-remove="${escapeHtml(r.id)}">Remove</button></td>
       </tr>`).join('');
     setTimeout(()=>{
+      document.querySelectorAll('[data-save-week]').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          const id = btn.dataset.saveWeek;
+          const replay = STATE.replays[id];
+          const input = document.querySelector(`[data-week-id="${CSS.escape(id)}"]`);
+          if(!replay || !input) return;
+          const week = input.value.trim() || 'Unassigned';
+          replay.week = week;
+          replay.weekOverride = true;
+          await saveReplays();
+          renderTicker();
+          render();
+        });
+      });
       document.querySelectorAll('[data-remove]').forEach(btn=>{
         btn.addEventListener('click', async ()=>{
           delete STATE.replays[btn.dataset.remove];
@@ -1244,19 +1004,132 @@
           render();
         });
       });
-      document.querySelectorAll('[data-week-override]').forEach(sel=>{
-        sel.addEventListener('change', async ()=>{
-          const r=STATE.replays[sel.dataset.weekOverride];
-          if(!r) return;
-          r.weekOverride=sel.value || null;
-          r.week=autoWeekForReplay(r);
-          await saveReplays();
-          renderTicker();
-          render();
-        });
-      });
     }, 0);
-    return `<table><thead><tr><th>Week</th><th>Matchup</th><th>Format</th><th>Week override</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `<table><thead><tr><th>Week</th><th>Matchup</th><th>Format</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function weekSelectorHtml(id){
+    const weeks = weeksList();
+    return `<select id="${id}">
+      <option value="ALL">All season</option>
+      ${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}
+    </select>`;
+  }
+
+  function renderLeaderboards(){
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Damage Leaderboard</h2>
+        <div class="row" style="align-items:flex-end;">
+          <div><label>Scope</label>${weekSelectorHtml('globalWeek')}</div>
+          <div style="flex:0;"><button class="ghost" id="exportGlobal">Export CSV</button></div>
+        </div>
+        <div id="globalTable"></div>
+        <a class="nav-link" id="toTeamsLink">Want per-team breakdowns? → View Franchise Stats</a>
+      </div>`;
+
+    document.getElementById('toTeamsLink').addEventListener('click', ()=> goToTab('teams'));
+
+    const sel = document.getElementById('globalWeek');
+    function drawGlobal(){
+      const stats = globalPokemonStats(sel.value);
+      document.getElementById('globalTable').innerHTML = stats.length===0 ? `<div class="empty-state">No data for this scope yet.</div>` :
+        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
+        ${stats.map((s,i)=>`<tr>
+          <td class="rank">${i+1}</td>
+          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
+          <td class="num dealt">${s.dealt.toFixed(1)}</td>
+          <td class="num taken">${s.taken.toFixed(1)}</td>
+          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
+          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
+          <td class="num">${s.games}</td>
+          <td class="num">${(s.games? s.dealt/s.games:0).toFixed(1)}</td>
+        </tr>`).join('')}</tbody></table>`;
+    }
+    sel.addEventListener('change', drawGlobal);
+    document.getElementById('exportGlobal').addEventListener('click', ()=> exportGlobalCSV(sel.value, sel.value==='ALL'?'Season':sel.value));
+    drawGlobal();
+  }
+
+  function renderGoldenFist(){
+    contentEl.innerHTML = `
+      <div class="panel gf-panel">
+        <h2>🥇 Golden Fist</h2>
+        <div class="row" style="align-items:flex-end;">
+          <div><label>Scope</label>${weekSelectorHtml('gfWeek')}</div>
+          <div style="flex:0;"><button class="ghost" id="exportGF">Export CSV</button></div>
+        </div>
+        <div class="note" style="margin-bottom:12px;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
+        <div id="gfList"></div>
+      </div>`;
+
+    const gfSel = document.getElementById('gfWeek');
+    function drawGF(){
+      const stats = globalPokemonStats(gfSel.value)
+        .map(s => ({...s, diff: s.kills - s.deaths}))
+        .sort((a,b)=> b.diff - a.diff || b.kills - a.kills);
+      const el = document.getElementById('gfList');
+      if(stats.length === 0){ el.innerHTML = `<div class="empty-state">No data for this scope yet.</div>`; return; }
+      const medals = ['🥇','🥈','🥉'];
+      el.innerHTML = `<div class="gf-list">${stats.map((s,i)=>`
+        <div class="gf-row ${i<3?'top'+(i+1):''} auditable-row" ${auditDataAttr(s.species,'kills',s.killLog,false)}>
+          <div class="gf-rank">${medals[i] || (i+1)}</div>
+          ${spriteImg(s.species,'gf-sprite')}
+          <div class="gf-info">
+            <div class="gf-name">${escapeHtml(s.species)}</div>
+            <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
+            <div class="gf-sub">${s.kills} kills · ${s.deaths} deaths · ${s.games} games</div>
+          </div>
+          <div class="gf-diff ${s.diff<0?'neg':''}">${s.diff>0?'+':''}${s.diff}</div>
+        </div>`).join('')}</div>`;
+    }
+    gfSel.addEventListener('change', drawGF);
+    document.getElementById('exportGF').addEventListener('click', ()=>{
+      const stats = globalPokemonStats(gfSel.value).map(s=>({...s, diff:s.kills-s.deaths})).sort((a,b)=>b.diff-a.diff || b.kills-a.kills);
+      const rows = [['Rank','Pokemon','Kills','Deaths','Differential','Games Played','Coach(es)']];
+      stats.forEach((s,i)=> rows.push([i+1, s.species, s.kills, s.deaths, s.diff, s.games, Array.from(s.coaches).sort().join('; ')]));
+      download(`Golden Fist - ${gfSel.value==='ALL'?'Season':gfSel.value}.csv`, toCSV(rows));
+    });
+    drawGF();
+  }
+
+  function renderTeams(){
+    const teams = Object.keys(teamPokemonStats('ALL')).sort();
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Franchise Stats</h2>
+        <div class="row" style="align-items:flex-end;">
+          <div><label>Scope</label>${weekSelectorHtml('teamsWeek')}</div>
+          <div><label>Team</label><select id="teamSelect">${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
+          <div style="flex:0;"><button class="ghost" id="exportTeams">Export all teams (CSV)</button></div>
+        </div>
+        ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-6px 0 14px;"></div><div id="teamTable"></div>`}
+      </div>`;
+    if(teams.length===0) return;
+    const weekSel = document.getElementById('teamsWeek');
+    const teamSel = document.getElementById('teamSelect');
+    function draw(){
+      const coaches = usernamesForTeamLabel(teamSel.value);
+      document.getElementById('coachLine').innerHTML = coaches.length===0 ? '' :
+        `Coached by <strong>${coaches.map(escapeHtml).join(', ')}</strong>`;
+      const data = teamPokemonStats(weekSel.value);
+      const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>b.dealt-a.dealt);
+      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team/scope.</div>` :
+        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
+        ${list.map((s,i)=>`<tr>
+          <td class="rank">${i+1}</td>
+          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
+          <td class="num dealt">${s.dealt.toFixed(1)}</td>
+          <td class="num taken">${s.taken.toFixed(1)}</td>
+          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
+          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
+          <td class="num">${s.games}</td>
+        </tr>`).join('')}</tbody></table>`;
+    }
+    weekSel.addEventListener('change', draw);
+    teamSel.addEventListener('change', draw);
+    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs(weekSel.value, weekSel.value==='ALL'?'Season':weekSel.value));
+    draw();
   }
 
   // ---------- replays grouped by player ----------
@@ -1341,11 +1214,6 @@
         </div>
       </div>
       <div class="panel">
-        <h2>Franchise logos</h2>
-        <div class="note">Paste a public image URL for each squad. These logos appear on the public League Overview and team banner.</div>
-        <div id="teamLogoRows" style="margin-top:12px;"></div>
-      </div>
-      <div class="panel">
         <h2>Possible duplicate players</h2>
         <div class="note">Usernames that look like the same person typed differently (e.g. <code>dossa37</code> / <code>dossa_37</code>, or <code>podraa</code> / <code>podrrraaa</code>). Merging points every variant at whichever one has played the most games.</div>
         <div id="dupPlayers" style="margin-top:12px;"></div>
@@ -1356,17 +1224,10 @@
         <div id="dupTeams" style="margin-top:12px;"></div>
       </div>
       <div class="panel">
-        <h2>Shared data</h2>
-        <div class="note">Shared database: <strong>Supabase</strong>. You are signed in as the league administrator.</div>
-        <div class="foot-actions">
-          <button class="ghost" id="migrateLocal">Migrate old browser data to shared database</button>
-          <button class="ghost" id="refreshShared">Reload shared data</button>
-          <button class="ghost" id="adminLogout">Log out</button>
-        </div>
-      </div>
-      <div class="panel">
         <h2>Data</h2>
-        <div class="note">Removing a replay updates every leaderboard immediately. Back up regularly.</div>
+        <div class="note">
+          Storage mode: <strong>${hasCloudStorage && !cloudBroken ? 'Claude cloud storage (shared with anyone who opens this artifact link)' : 'Browser local storage — data lives only in this browser, on this device. Clear browser data / a different browser or machine won\'t see it.'}</strong>
+        </div>
         <div class="note">Removing a replay updates every leaderboard immediately. Back up regularly if you're on local storage.</div>
         <div class="foot-actions">
           <button class="ghost" id="exportBackup">Download backup (.json)</button>
@@ -1395,14 +1256,6 @@
       });
     }
     drawMap();
-
-    const teamLogoRows = document.getElementById('teamLogoRows');
-    function drawTeamLogos(){
-      const teams = Object.keys(teamPokemonStats('ALL')).sort();
-      teamLogoRows.innerHTML = teams.length ? teams.map(t=>`<div class="map-row"><input value="${escapeHtml(t)}" disabled><input type="text" data-logo-team="${escapeHtml(t)}" placeholder="https://.../logo.png" value="${escapeHtml(STATE.settings.teamLogos?.[groupKey(t)]||'')}"><button class="ghost small" data-save-logo="${escapeHtml(t)}">Save</button></div>`).join('') : '<div class="empty-state">No franchises found yet.</div>';
-      teamLogoRows.querySelectorAll('[data-save-logo]').forEach(btn=>btn.addEventListener('click',async()=>{ const t=btn.dataset.saveLogo; const input=teamLogoRows.querySelector(`[data-logo-team="${CSS.escape(t)}"]`); STATE.settings.teamLogos[groupKey(t)]=(input.value||'').trim(); await saveSettings(); drawTeamLogos(); }));
-    }
-    drawTeamLogos();
 
     const dupPlayersEl = document.getElementById('dupPlayers');
     function drawDupPlayers(){
@@ -1474,27 +1327,10 @@
       document.getElementById('newTeam').value='';
       drawMap();
     });
-    document.getElementById('migrateLocal').addEventListener('click', async ()=>{
-      try{
-        if(!confirm('Upload this browser\'s old local dashboard data to the shared database? Existing shared data will be merged/replaced by the local state.')) return;
-        await migrateLocalData();
-        alert('Migration complete. The shared database now contains this browser\'s dashboard data.');
-        renderTicker(); render();
-      }catch(err){ alert('Migration failed: ' + err.message); }
-    });
-    document.getElementById('refreshShared').addEventListener('click', async ()=>{
-      await loadState(); renderTicker(); render();
-    });
-    document.getElementById('adminLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
-      adminUser = null;
-      showAdminLogin();
-    });
     document.getElementById('resetAll').addEventListener('click', async ()=>{
       if(!confirm('This clears every processed replay for the whole league. Continue?')) return;
       STATE.replays = {};
-      await deleteAllRemote();
-      await saveSharedState();
+      await saveReplays();
       renderTicker();
       render();
     });
@@ -1520,7 +1356,8 @@
         STATE.teamMap = data.teamMap || {};
         STATE.settings = Object.assign({caseInsensitiveNames:true}, data.settings || {});
         await saveReplays();
-        await saveSharedState();
+        await saveTeamMap();
+        await saveSettings();
         renderTicker();
         render();
       }catch(err){
@@ -1540,16 +1377,9 @@
     }catch(err){ /* malformed payload, ignore */ }
   });
   (async function init(){
-    const ok = await initAdminAuth();
-    if(IS_ADMIN_PAGE && !ok) return;
     await loadState();
     renderTicker();
     render();
-    // Public dashboard polls the shared database every 10 seconds. This keeps the
-    // viewer page read-only while still making new replay data appear automatically.
-    if(!IS_ADMIN_PAGE){
-      setInterval(async ()=>{ try{ await refreshSharedState(); }catch(e){ console.warn('Shared refresh failed', e); } }, POLL_MS);
-    }
   })();
 })();
 </script>
