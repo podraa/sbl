@@ -15,6 +15,23 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 .detail{display:none}.detail.open{display:block}.back{margin-bottom:14px}.detail-head{display:flex;align-items:center;justify-content:space-between;gap:18px}.detail-title{display:flex;align-items:center;gap:14px}.detail-title img{width:82px;height:82px}.speed-option{margin-bottom:10px}.scarf-toggle{display:inline-flex;align-items:center;gap:8px;color:var(--text);font-size:12px;cursor:pointer}.scarf-toggle input{width:auto;margin:0}.section-title{font-size:14px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);margin:0 0 10px}.bar{height:8px;background:var(--panel);border:1px solid var(--border);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--amber)}.range-grid{display:grid;gap:10px}.range-row{display:grid;grid-template-columns:90px 1fr 80px;gap:10px;align-items:center;font-size:12px}.range-row .val{text-align:right;font-family:var(--mono)}
 .set-list{display:grid;gap:10px}.set-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:12px}.set-card .chips{margin-top:8px}.empty{padding:26px;text-align:center;color:var(--text-dim);border:1px dashed var(--border);border-radius:8px}.small{font-size:11px;color:var(--text-dim)}
 @media(max-width:850px){.overview,.two{grid-template-columns:1fr 1fr}}@media(max-width:600px){#app{width:min(100% - 20px,1500px)}.overview,.two{grid-template-columns:1fr}.panel{padding:16px}.detail-head{align-items:flex-start;flex-direction:column}}
+
+.speed-row{display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(2,minmax(110px,.7fr));align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.speed-mon{display:flex;align-items:center;gap:10px;min-width:0}
+.speed-mon .sprite-small{width:44px;height:44px;object-fit:contain;image-rendering:pixelated}
+.speed-mon-name{font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.speed-stat{display:flex;flex-direction:column;gap:2px}
+.speed-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);font-weight:800}
+.speed-stat strong{font-size:18px;line-height:1.1}
+@media(max-width:700px){.speed-row{grid-template-columns:1fr 1fr}.speed-mon{grid-column:1/-1}}
+
+
+.speed-tab-mon{display:flex;align-items:center;gap:8px;font-weight:750}
+.speed-tab-mon .sprite-small{width:42px;height:42px;object-fit:contain;image-rendering:pixelated}
+.speed-tab-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:800;margin-bottom:2px}
+.speed-tab-mon + strong,.speed-tab-label + strong{font-size:18px}
+
+.selected-mon-heading{font-size:18px;font-weight:800;margin:8px 0 6px}
 </style>
 <style>
 .comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -531,10 +548,10 @@ function defensiveTypeRows(data,total){
 }
 function defensiveProfileCard(title,data,total){
   const rows=defensiveTypeRows(data,total);
-  return `<div class="defensive-team"><h3>${title}</h3><table class="type-count-table"><thead><tr><th>Type</th><th class="num">Weak</th><th class="num">Resist</th><th class="num">Immune</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${typePills([x.t])}</td><td class="num ${x.w?'count-bad':'count-neutral'}">${x.w}/${total}</td><td class="num ${x.r?'count-good':'count-neutral'}">${x.r}/${total}</td><td class="num ${x.i?'count-good':'count-neutral'}">${x.i}/${total}</td></tr>`).join('')}</tbody></table><div class="small" style="margin-top:9px">Weak = 2× or more. Resist = ½× or less. Immunity = 0×.</div></div>`;
+  return `<div class="defensive-team"><h3>${title}</h3><table class="type-count-table"><thead><tr><th>Type</th><th class="num">Weak</th><th class="num">Resist</th><th class="num">Immune</th></tr></thead><tbody>${rows.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(x=>`<tr><td>${typePills([x.t])}</td><td class="num ${x.w?'count-bad':'count-neutral'}">${x.w}/${total}</td><td class="num ${x.r?'count-good':'count-neutral'}">${x.r}/${total}</td><td class="num ${x.i?'count-good':'count-neutral'}">${x.i}/${total}</td></tr>`).join('')}</tbody></table><div class="small" style="margin-top:9px">Weak = 2× or more. Resist = ½× or less. Immunity = 0×.</div></div>`;
 }
 function threatScoreForOpponent(o,your,yourTypes,oppTypes,getSpeed){
-  const matchups=your.map(y=>{
+  const matchups=your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(y=>{
     const vals=(oppTypes[o.species]||[]).map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]));
     const pressure=vals.length?Math.max(...vals):null;
     const row=getSpeed(y,o);
@@ -554,7 +571,7 @@ async function renderComparison(team){
   const all=[...your,...opp];
   const typesArr=await Promise.all(all.map(async m=>[m.species,await fetchTypes(m.species)]));
   const typeMap={};typesArr.forEach(([s,t])=>typeMap[s]=t);
-  const yourTypes=Object.fromEntries(your.map(m=>[m.species,typeMap[m.species]||[]]));
+  const yourTypes=Object.fromEntries(your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>[m.species,typeMap[m.species]||[]]));
   const oppTypes=Object.fromEntries(opp.map(m=>[m.species,typeMap[m.species]||[]]));
   const controls=`<section class="panel"><div class="compare-hero"><div><h2>Team Comparison</h2><p class="panel-desc" style="margin-bottom:0">Scout the opponent through the parts that matter in a match: threats, typing, individual matchups, Speed and likely role-based sets.</p></div><div class="compare-team"><span class="compare-vs">MATCHUP</span><strong class="compare-team-name">${esc(team)}</strong><span class="compare-vs">vs</span><strong class="compare-team-name">${esc(currentOpponent||'—')}</strong></div></div><div class="comparison-grid" style="margin-top:18px"><div class="compare-select"><label>Your Team</label><select id="compareYour">${names.map(n=>`<option value="${esc(n)}" ${n===team?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>n!==team).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div></section>`;
   if(!currentOpponent)return controls+`<section class="panel"><div class="empty">Select an opponent franchise to compare.</div></section>`;
@@ -572,24 +589,24 @@ async function renderComparison(team){
   };
   const defaultSelected=STATE.comparePokemon&&your.some(m=>m.species===STATE.comparePokemon)?STATE.comparePokemon:(your[0]?.species||'');
   const selectedMon=your.find(m=>m.species===defaultSelected)||your[0];
-  const offense=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Pick one of your Pokémon to see its matchup across the entire opposing roster. The result is type-only; it does not model move power, abilities, stats or STAB.</p><div class="matchup-select-wrap"><div><label>Your Pokémon</label><select id="offensePokemon">${your.map(m=>`<option value="${esc(m.species)}" ${m.species===selectedMon?.species?'selected':''}>${esc(m.species)}</option>`).join('')}</select></div><div class="matchup-selected">${selectedMon?sprite(selectedMon.species)+`<div><strong>${esc(selectedMon.species)}</strong>${typePills(yourTypes[selectedMon.species]||[])}<div class="small">Select another Pokémon above to compare its attacks into the full opposing roster.</div></div>`:''}</div></div><div id="offenseResults" class="opponent-matchups">${renderOffenseResults(defaultSelected)}</div></section>`;
+  const offense=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Pick one of your Pokémon to see its matchup across the entire opposing roster. The result is type-only; it does not model move power, abilities, stats or STAB.</p><div class="matchup-select-wrap"><div><label>Your Pokémon</label><select id="offensePokemon">${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>`<option value="${esc(m.species)}" ${m.species===selectedMon?.species?'selected':''}>${esc(m.species)}</option>`).join('')}</select></div><div class="matchup-selected">${selectedMon?sprite(selectedMon.species)+`<div><strong>${esc(selectedMon.species)}</strong>${typePills(yourTypes[selectedMon.species]||[])}<div class="small">Select another Pokémon above to compare its attacks into the full opposing roster.</div></div>`:''}</div></div><div id="offenseResults" class="opponent-matchups">${renderOffenseResults(defaultSelected)}</div></section>`;
 
   const yourWeak=weaknessSummary(yourTypes),oppWeak=weaknessSummary(oppTypes);
   
 
-  const speedCard=(title,mons,typesMap,side)=>{const list=mons.map(m=>{const row=side==='your'?speedRows.find(x=>x.y.species===m.species):speedRows.find(x=>x.o.species===m.species);return {m,max:side==='your'?row?.ymax:row?.omax,scarf:side==='your'?row?.scarf:row?.oscarf}}).sort((a,b)=>(b.max??-1)-(a.max??-1));return `<div class="speed-team"><h3>${esc(title)}</h3><div class="speed-row" style="border-bottom:1px solid var(--border);color:var(--text-dim);font-size:9px;text-transform:uppercase"><span></span><span>Pokémon</span><span class="speed-num">Max</span><span class="speed-num">Scarf</span></div>${list.map(x=>`<div class="speed-row">${sprite(x.m.species)}<div><div class="sname">${esc(x.m.species)}</div><div class="types">${typePills(typesMap[x.m.species]||[])}</div></div><div class="speed-num">${x.max??'—'}</div><div class="speed-num">${x.scarf??'—'}</div></div>`).join('')}</div>`};
+  const speedCard=(title,mons,typesMap,side)=>{const list=mons.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>{const row=side==='your'?speedRows.find(x=>x.y.species===m.species):speedRows.find(x=>x.o.species===m.species);return {m,max:side==='your'?row?.ymax:row?.omax,scarf:side==='your'?row?.scarf:row?.oscarf}}).sort((a,b)=>(b.max??-1)-(a.max??-1));return `<div class="speed-team"><h3>${esc(title)}</h3><div class="speed-row" style="border-bottom:1px solid var(--border);color:var(--text-dim);font-size:9px;text-transform:uppercase"><span></span><span>Pokémon</span><span class="speed-num">Max</span><span class="speed-num">Scarf</span></div>${list.map(x=>`<div class="speed-row">${sprite(x.m.species)}<div><div class="sname">${esc(x.m.species)}</div><div class="types">${typePills(typesMap[x.m.species]||[])}</div></div><div class="speed-num">${x.max??'—'}</div><div class="speed-num">${x.scarf??'—'}</div></div>`).join('')}</div>`};
   const speedSection=`<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">Both rosters side by side, sorted by Level 100 maximum Speed. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial nature; Scarf is 1.5× that benchmark.</p><div class="speed-columns">${speedCard(team,your,yourTypes,'your')}${speedCard(currentOpponent,opp,oppTypes,'opp')}</div></section>`;
 
   const threatData=opp.map(o=>threatScoreForOpponent(o,your,yourTypes,oppTypes,getSpeed));
   const threats=`<section class="panel"><h2>Biggest Threats</h2><p class="panel-desc">For each opposing Pokémon, see exactly which of your Pokémon it is good against and which of your Pokémon match up well into it.</p><div class="threat-grid">${threatData.map(x=>`<article class="threat-card"><div class="threat-head">${sprite(x.o.species)}<div><div class="threat-name">${esc(x.o.species)}</div>${typePills(oppTypes[x.o.species]||[])}</div></div><div class="threat-section"><div class="section-label">Good against your team</div>${x.goodAgainst.length?x.goodAgainst.slice(0,6).map(t=>`<div class="threat-row"><span>${sprite(t.m.species,'sprite-tiny')}${esc(t.m.species)}</span><strong>${scoutingEffectiveness(t.pressure)}</strong></div>`).join(''):'<div class="small">No clear type advantage against your roster.</div>'}</div><div class="threat-section"><div class="section-label">Loses to your team</div>${x.losesTo.length?x.losesTo.slice(0,6).map(t=>`<div class="threat-row"><span>${sprite(t.m.species,'sprite-tiny')}${esc(t.m.species)}</span><strong>${scoutingEffectiveness(t.pressure)}</strong></div>`).join(''):'<div class="small">No clear type disadvantage against your roster.</div>'}</div></article>`).join('')||'<div class="empty">No threat data available.</div>'}</div></section>`;
-  const defensiveMatrix=`<section class="panel"><h2>Defensive Matchups</h2><p class="panel-desc">How strongly each opponent Pokémon's typing pressures each of your Pokémon.</p><div style="overflow:auto"><table class="matchup-table"><thead><tr><th>Your Pokémon</th>${opp.map(o=>`<th><div class="matchup-name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</th>`).join('')}</tr></thead><tbody>${your.map(y=>`<tr><th><div class="mon-inline">${sprite(y.species,'sprite-small')}<div><div class="name">${esc(y.species)}</div>${typePills(yourTypes[y.species]||[])}</div></div></th>${opp.map(o=>{const vals=(oppTypes[o.species]||[]).map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]));const max=vals.length?Math.max(...vals):null;const [l,c]=matchupLabel(max);return `<td class="matchup-cell"><span class="matchup-pill ${c}">${scoutingEffectiveness(max)} · ${l}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></div></section>`;
+  const defensiveMatrix=`<section class="panel"><h2>Defensive Matchups</h2><p class="panel-desc">How strongly each opponent Pokémon's typing pressures each of your Pokémon.</p><div style="overflow:auto"><table class="matchup-table"><thead><tr><th>Your Pokémon</th>${opp.map(o=>`<th><div class="matchup-name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</th>`).join('')}</tr></thead><tbody>${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(y=>`<tr><th><div class="mon-inline">${sprite(y.species,'sprite-small')}<div><div class="name">${esc(y.species)}</div>${typePills(yourTypes[y.species]||[])}</div></div></th>${opp.map(o=>{const vals=(oppTypes[o.species]||[]).map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]));const max=vals.length?Math.max(...vals):null;const [l,c]=matchupLabel(max);return `<td class="matchup-cell"><span class="matchup-pill ${c}">${scoutingEffectiveness(max)} · ${l}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></div></section>`;
 
   const setDefault=STATE.setPokemon&&opp.some(m=>m.species===STATE.setPokemon)?STATE.setPokemon:(opp[0]?.species||'');
   const setMon=opp.find(m=>m.species===setDefault)||opp[0];
   const renderSetDetail=(species)=>{const m=opp.find(x=>x.species===species)||opp[0];if(!m)return '<div class="empty">No Pokémon selected.</div>';return `<div class="set-detail-head">${sprite(m.species)}<div><h3 style="margin:0">${esc(m.species)}</h3>${typePills(oppTypes[m.species]||[])}<div class="small">${m.replays.size} recorded replay${m.replays.size===1?'':'s'} · ${observedMoves(m).length} unique observed moves · ${inferRoles(m).length} inferred role${inferRoles(m).length===1?'':'s'}</div></div></div>${setSuggestionsMarkup(m)}`};
   const setSection=`<section class="panel"><h2>Likely Sets</h2><p class="panel-desc">Select an opposing Pokémon to see role-based set concepts inferred from its observed moves. If a Pokémon has multiple observed roles, each role gets its own separate set concept.</p><div class="set-layout"><div class="set-selector"><label>Opponent Pokémon</label><select id="setPokemonSelect">${opp.map(m=>`<option value="${esc(m.species)}" ${m.species===setMon?.species?'selected':''}>${esc(m.species)}</option>`).join('')}</select><div class="set-mon-list">${opp.map(m=>`<button type="button" class="set-mon-option ${m.species===setMon?.species?'active':''}" data-set-mon="${esc(m.species)}">${sprite(m.species)}<span><strong>${esc(m.species)}</strong><br>${typePills(oppTypes[m.species]||[])}</span></button>`).join('')}</div></div><div class="set-detail" id="setDetail">${renderSetDetail(setDefault)}</div></div></section>`;
 
-  return controls+threats+typeProfile+offense+speedSection+setSection;
+  return controls+threats+offense+speedSection+setSection;
 }
 
 async function render(){
@@ -621,30 +638,42 @@ async function render(){
       await render();
     });
     $('offensePokemon')?.addEventListener('change',(e)=>{
-      STATE.comparePokemon=e.target.value;
-      const results=$('offenseResults');
-      if(!results)return;
       const species=e.target.value;
+      STATE.comparePokemon=species;
+      const selected=e.target.options[e.target.selectedIndex];
+      const label=$('offenseSelectedName');
+      if(label) label.textContent=selected?.textContent?.trim()||species;
       const y=franchiseMons($('teamSelect').value);
       const opponent=STATE.compareOpponent||teamNames().find(x=>x!==$('teamSelect').value)||'';
       const oppMons=franchiseMons(opponent);
-      // Re-render only the matchup cards; the rest of the comparison stays in place.
-      const selectedTeam=$('teamSelect').value;
+      const target=y.find(m=>m.species===species)||y[0];
+      const results=$('offenseResults');
+      if(!target||!results)return;
       Promise.all([...y,...oppMons].map(async m=>[m.species,await fetchTypes(m.species)])).then(typePairs=>{
-        const map=Object.fromEntries(typePairs);
-        const target=y.find(m=>m.species===species)||y[0];
-        if(!target)return;
+        const typeMap=Object.fromEntries(typePairs);
         results.innerHTML=oppMons.map(o=>{
-          const mult=combinedMultiplier(map[target.species]||[],map[o.species]||[]);
+          const mult=combinedMultiplier(typeMap[target.species]||[],typeMap[o.species]||[]);
           const [tl,tc]=matchupLabel(mult);
           const baseY=baseSpeedForSpecies(target.species);
           const baseO=baseSpeedForSpecies(o.species);
           const ymax=baseY==null?null:maxSpeedFromBase(baseY,100);
           const omax=baseO==null?null:maxSpeedFromBase(baseO,100);
           const [sl,sc]=ymax==null||omax==null?['Unknown','matchup-neutral']:ymax>omax?['Faster','matchup-good']:ymax<omax?['Slower','matchup-bad']:['Tie','matchup-neutral'];
-          return `<article class="opponent-card"><div class="top"><div class="mon-inline">${sprite(o.species,'sprite-small')}<div><div class="name">${esc(o.species)}</div>${typePills(map[o.species]||[])}</div></div><span class="speed-badge ${sc}">${sl}</span></div><div class="matchup-result"><div><div class="mult">${scoutingEffectiveness(mult)}</div><div class="small">best type interaction</div></div><div class="label">${tl}<br><span class="small">${ymax!=null&&omax!=null?`${ymax} vs ${omax} max Speed`:'Speed unavailable'}</span></div></div></article>`;
+          return `<article class="opponent-card">
+            <div class="top">
+              <div class="mon-inline">${sprite(o.species,'sprite-small')}<div><div class="name">${esc(o.species)}</div>${typePills(typeMap[o.species]||[])}</div></div>
+              <span class="speed-badge ${sc}">${sl}</span>
+            </div>
+            <div class="matchup-result">
+              <div><div class="mult">${scoutingEffectiveness(mult)}</div><div class="small">type matchup</div></div>
+              <div class="label">${tl}<br><span class="small">${ymax!=null&&omax!=null?`${ymax} vs ${omax} max Speed`:'Speed unavailable'}</span></div>
+            </div>
+          </article>`;
         }).join('');
-      }).catch(err=>console.error('Offensive matchup update failed:',err));
+      }).catch(err=>{
+        console.error('Offensive matchup update failed:',err);
+        results.innerHTML='<div class="empty">Could not load matchup data.</div>';
+      });
     });
     $('setPokemonSelect')?.addEventListener('change',async(e)=>{
       STATE.setPokemon=e.target.value;
