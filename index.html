@@ -687,13 +687,6 @@
   function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
 
   // ---------- replay parsing ----------
-  function classifyIndirectCause(tags){
-    const t=(tags||'').toLowerCase();
-    if(t.includes('stealth rock') || t.includes('spikes') || t.includes('toxic spikes') || t.includes('sticky web')) return 'Hazard';
-    if(t.includes('recoil')) return 'Recoil';
-    if(t.includes('psn') || t.includes('tox') || t.includes('brn') || t.includes('poison') || t.includes('burn')) return 'Status';
-    return 'Other';
-  }
   function parseLog(json, replayId){
     const lines = json.log.split('\n');
     const players = {p1:'', p2:''};
@@ -946,7 +939,7 @@
           // Clear any earlier attacker on file for this slot — otherwise a mon that
           // survives a real hit and later dies to something untraceable still has
           // the kill wrongly credited to whoever landed that earlier real hit.
-          lastAttacker[slot] = {stats:null, cause:classifyIndirectCause(tags), turn:currentTurn};
+          lastAttacker[slot] = {stats:null, cause:'Other', turn:currentTurn};
         }
       } else if(cmd === '-heal' || cmd === '-sethp'){
         const slotFull = parts[2];
