@@ -165,6 +165,12 @@
   #pokemonSearchTable table{min-width:700px;}
   .search-match{background:var(--panel-alt); border-radius:8px;}
 
+  .type-badges{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:7px;vertical-align:middle;}
+  .type-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.12);font:600 9px/1.1 var(--sans);letter-spacing:.03em;color:#fff;text-transform:uppercase;background:#555;}
+  .type-normal{background:#777;} .type-fire{background:#b84b3e;} .type-water{background:#3f78a8;} .type-electric{background:#9a7a18;} .type-grass{background:#4f7f4d;} .type-ice{background:#5f9aa2;} .type-fighting{background:#8d4b42;} .type-poison{background:#744c83;} .type-ground{background:#8b6a43;} .type-flying{background:#687eaa;} .type-psychic{background:#a14f75;} .type-bug{background:#66843c;} .type-rock{background:#78684d;} .type-ghost{background:#62527f;} .type-dragon{background:#6651a0;} .type-dark{background:#4f4b50;} .type-steel{background:#66717b;} .type-fairy{background:#a96c88;}
+  .summary-mon-main .type-badges,.gf-name .type-badges{display:flex;margin:4px 0 0;}
+  .team-card-top-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .team-card-top-type .type-badges{margin:0;}
   /* golden fist */
   .cause-subheading{font-size:14px;font-weight:600;color:var(--text);margin:4px 0 14px;}
   .gf-list{display:flex; flex-direction:column; gap:8px;}
@@ -401,6 +407,10 @@
     margin-left:auto !important;
     margin-right:auto !important;
   }
+.profile-two-col .type-badge{display:none!important;}
+.pokemon-type-filter{min-width:150px;}
+.pokemon-type-filter label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+.pokemon-type-filter select{width:100%;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px;font:inherit;}
 </style>
 </head>
 <body data-admin="false">
@@ -617,9 +627,25 @@
     const safe = escapeHtml(species);
     return `<img class="${cls}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
   }
-  function pokemonLink(species, innerHtml, title){
+  // Pokémon typing is loaded from Showdown's public Pokédex and cached locally.
+  // This keeps the dashboard data-driven while avoiding a huge hard-coded type table.
+  let POKEDEX_TYPES = {};
+  function dexKey(species){
+    return String(species||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  }
+  function pokemonTypes(species){
+    const d = POKEDEX_TYPES[dexKey(species)];
+    return d?.types || [];
+  }
+  const TYPE_CLASS = {Normal:'normal',Fire:'fire',Water:'water',Electric:'electric',Grass:'grass',Ice:'ice',Fighting:'fighting',Poison:'poison',Ground:'ground',Flying:'flying',Psychic:'psychic',Bug:'bug',Rock:'rock',Ghost:'ghost',Dragon:'dragon',Dark:'dark',Steel:'steel',Fairy:'fairy'};
+  function typeBadges(species){
+    const types = pokemonTypes(species);
+    if(!types.length) return '';
+    return `<span class="type-badges">${types.map(t=>`<span class="type-badge type-${TYPE_CLASS[t]||'other'}">${escapeHtml(t)}</span>`).join('')}</span>`;
+  }
+  function pokemonLink(species, innerHtml, title, showType=true){
     const safe = escapeHtml(species);
-    return `<span class="pokemon-click" role="button" tabindex="0" data-pokemon="${safe}" title="${escapeHtml(title || `Open ${species} profile`)}">${innerHtml}</span>`;
+    return `<span class="pokemon-click" role="button" tabindex="0" data-pokemon="${safe}" title="${escapeHtml(title || `Open ${species} profile`)}">${innerHtml}${showType ? typeBadges(species) : ''}</span>`;
   }
   function pokemonName(species, withSprite=true, spriteClass='sprite'){
     return pokemonLink(species, withSprite ? `${spriteImg(species,spriteClass)}<span>${escapeHtml(species)}</span>` : `<span>${escapeHtml(species)}</span>`);
@@ -1358,7 +1384,7 @@
           <div class="audit-sub">Every ${type==='kills'?'kill':'death'} credited to this Pokémon this scope, with the turn${showLink?', replay,':''} and why it was credited.</div>
           ${rows.length===0 ? `<div class="empty-state">No entries.</div>` : `<ul class="audit-list">
             ${rows.map(r=>`<li>
-              <span>Turn ${r.turn} — ${type==='kills' ? 'vs ' + (r.victim ? pokemonLink(r.victim, escapeHtml(r.victim)) : '?') : (r.killer ? 'by ' + pokemonLink(r.killer, escapeHtml(r.killer)) : 'unattributed')} <span class="audit-cause">(${escapeHtml(r.cause||'—')})</span></span>
+              <span>Turn ${r.turn} — ${type==='kills' ? 'vs ' + (r.victim ? pokemonLink(r.victim, escapeHtml(r.victim), '', false) : '?') : (r.killer ? 'by ' + pokemonLink(r.killer, escapeHtml(r.killer), '', false) : 'unattributed')} <span class="audit-cause">(${escapeHtml(r.cause||'—')})</span></span>
               ${showLink ? `<a href="https://replay.pokemonshowdown.com/${escapeHtml(r.replayId)}" target="_blank" rel="noopener">${escapeHtml(r.replayId)}</a>` : ''}
             </li>`).join('')}
           </ul>`}
@@ -1416,7 +1442,7 @@
     contentEl.innerHTML=`<div class="panel"><h2>League Overview</h2><div class="note">Click a franchise for a quick league summary.</div><div id="overviewTeams" style="margin-top:18px"></div></div>`;
     const el=document.getElementById('overviewTeams');
     if(!data.length){el.innerHTML='<div class="empty-state">No team data yet.</div>';return;}
-    el.innerHTML=`<div class="team-card-grid">${data.map(t=>{const mons=Object.values(teamPokemonStats('ALL')[t.team]||{}).sort((a,b)=>b.games-a.games||b.dealt-a.dealt); const top=mons[0]?.species; const logo=teamLogo(t.team); const sprite=top?spriteImg(top,'team-card-top-sprite'):''; return `<div class="team-card" data-team-card="${escapeHtml(t.team)}"><div class="team-card-head"><div class="team-card-copy">${logo?`<img class="team-logo" src="${escapeHtml(logo)}" alt="" style="display:none">`:''}<div class="team-card-name">${escapeHtml(t.team)}</div><div class="team-card-sub">${t.wins}-${t.losses}</div></div>${sprite}</div></div>`}).join('')}</div>`;
+    el.innerHTML=`<div class="team-card-grid">${data.map(t=>{const mons=Object.values(teamPokemonStats('ALL')[t.team]||{}).sort((a,b)=>b.games-a.games||b.dealt-a.dealt); const top=mons[0]?.species; const logo=teamLogo(t.team); const sprite=top?`<div class="team-card-top-wrap">${spriteImg(top,'team-card-top-sprite')}</div>`:''; return `<div class="team-card" data-team-card="${escapeHtml(t.team)}"><div class="team-card-head"><div class="team-card-copy">${logo?`<img class="team-logo" src="${escapeHtml(logo)}" alt="" style="display:none">`:''}<div class="team-card-name">${escapeHtml(t.team)}</div><div class="team-card-sub">${t.wins}-${t.losses}</div></div>${sprite}</div></div>`}).join('')}</div>`;
     el.querySelectorAll('[data-team-card]').forEach(card=>card.addEventListener('click',()=>openTeamOverview(card.dataset.teamCard)));
   }
   function openTeamOverview(team){
@@ -1564,16 +1590,25 @@
             <input type="text" id="pokemonSearchInput" placeholder="e.g. Slowking-Galar, Haxorus, Cinderace…" autocomplete="off">
             <div class="pokemon-search-hint">Search is live as you type. Press <strong>/</strong> anywhere on the dashboard to jump here.</div>
           </div>
+          <div class="pokemon-type-filter">
+            <label>Search by type</label>
+            <select id="pokemonTypeFilter">
+              <option value="all">All types</option>
+              ${Object.keys(TYPE_CLASS).map(t=>`<option value="${t}">${t}</option>`).join('')}
+            </select>
+          </div>
         </div>
         <div id="pokemonSearchTable"></div>
       </div>`;
 
     const input = document.getElementById('pokemonSearchInput');
+    const typeFilter = document.getElementById('pokemonTypeFilter');
     const table = document.getElementById('pokemonSearchTable');
 
     function draw(){
       const q = input.value.trim().toLowerCase();
-      const stats = globalPokemonStats('ALL').filter(s => !q || s.species.toLowerCase().includes(q)).sort((a,b)=>a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
+      const wantedType = typeFilter.value;
+      const stats = globalPokemonStats('ALL').filter(s => (!q || s.species.toLowerCase().includes(q)) && (wantedType==='all' || pokemonTypes(s.species).includes(wantedType))).sort((a,b)=>a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
       if(!stats.length){
         table.innerHTML = `<div class="empty-state">${q ? `No Pokémon matching <strong>${escapeHtml(input.value.trim())}</strong> in this scope.` : 'No Pokémon data for this scope yet.'}</div>`;
         return;
@@ -1596,6 +1631,7 @@
     }
 
     input.addEventListener('input', draw);
+    typeFilter.addEventListener('change', draw);
     setTimeout(()=>input.focus(), 0);
     draw();
   }
@@ -1664,8 +1700,8 @@
       </div>
       <div class="section-divider"></div>
       <div class="profile-two-col">
-        <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim)) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
-        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer)) : 'Unattributed'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
+        <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim), '', false) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
+        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer), '', false) : 'Unattributed'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
       </div>
     </div>`;
   }
@@ -1684,7 +1720,7 @@
         }
       }
       const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-      document.getElementById('causeBody').innerHTML=!rows.length?`<div class="empty-state">No deaths recorded.</div>`:`<div class="death-cause-list">${rows.map(([c,n],i)=>{const top=Object.entries(pokemon[c]).sort((a,b)=>b[1]-a[1]).slice(0,6);return `<div class="death-cause-entry"><div class="death-cause-rank">${i+1}</div><div class="death-cause-main"><div class="death-cause-title">${escapeHtml(c)} <span class="badge">${n}</span></div><div class="death-cause-mons">${top.map(([sp,v])=>`<span class="death-cause-mon">${spriteImg(sp,'death-cause-sprite')}${pokemonLink(sp, escapeHtml(sp))}<span class="badge">${v}</span></span>`).join('')}</div></div></div>`}).join('')}</div>`;
+      document.getElementById('causeBody').innerHTML=!rows.length?`<div class="empty-state">No deaths recorded.</div>`:`<div class="death-cause-list">${rows.map(([c,n],i)=>{const top=Object.entries(pokemon[c]).sort((a,b)=>b[1]-a[1]).slice(0,6);return `<div class="death-cause-entry"><div class="death-cause-rank">${i+1}</div><div class="death-cause-main"><div class="death-cause-title">${escapeHtml(c)} <span class="badge">${n}</span></div><div class="death-cause-mons">${top.map(([sp,v])=>`<span class="death-cause-mon">${spriteImg(sp,'death-cause-sprite')}${pokemonLink(sp, escapeHtml(sp), '', false)}<span class="badge">${v}</span></span>`).join('')}</div></div></div>`}).join('')}</div>`;
     }
     draw();
   }
@@ -1741,7 +1777,7 @@
           <div class="gf-rank">${medals[i] || (i+1)}</div>
           ${spriteImg(s.species,'gf-sprite')}
           <div class="gf-info">
-            <div class="gf-name">${pokemonLink(s.species, escapeHtml(s.species))}</div>
+            <div class="gf-name"><span class="pokemon-click" role="button" tabindex="0" data-pokemon="${escapeHtml(s.species)}" title="Open ${escapeHtml(s.species)} profile">${escapeHtml(s.species)}</span></div>
             <div class="gf-sub">${s.kills} kills · ${s.deaths} deaths · ${s.games} games</div>
           </div>
           <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
@@ -2066,6 +2102,24 @@
     });
   }
 
+  async function loadPokemonTypes(){
+    try{
+      const cached = localStorage.getItem('sbl_pokedex_types_v1');
+      if(cached) POKEDEX_TYPES = JSON.parse(cached);
+      const res = await fetch('https://play.pokemonshowdown.com/data/pokedex.json',{cache:'force-cache'});
+      if(!res.ok) throw new Error('Pokédex request failed');
+      const dex = await res.json();
+      const out = {};
+      for(const [key,val] of Object.entries(dex)){
+        if(Array.isArray(val.types)) out[key.toLowerCase().replace(/[^a-z0-9]/g,'')] = {types:val.types};
+      }
+      POKEDEX_TYPES = out;
+      localStorage.setItem('sbl_pokedex_types_v1',JSON.stringify(out));
+    }catch(e){
+      console.warn('Could not load Pokémon typing data; cached data will be used.',e);
+    }
+  }
+
   // ---------- init ----------
   document.addEventListener('keydown', (e)=>{
     if(e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -2117,6 +2171,9 @@
     const ok = await initAdminAuth();
     if(IS_ADMIN_PAGE && !ok) return;
     await loadState();
+    renderTicker();
+    render();
+    await loadPokemonTypes();
     renderTicker();
     render();
     // Public dashboard polls the shared database every 10 seconds. This keeps the
