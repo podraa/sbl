@@ -554,7 +554,7 @@ async function renderComparison(team){
 
   const controls=`<section class="panel">
     <h2>Team Comparison</h2>
-    <p class="panel-desc">Compare your roster against the opponent's roster for match preparation. Type interactions and Level 100 Speed benchmarks are shown together.</p>
+    <p class="panel-desc">Compare your roster against the opponent's roster for match preparation.</p>
     <div class="comparison-grid">
       <div class="compare-select"><label>Your Team</label><select id="compareYour">${names.map(n=>`<option value="${esc(n)}" ${n===team?'selected':''}>${esc(n)}</option>`).join('')}</select></div>
       <div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>n!==team).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div>
@@ -563,17 +563,16 @@ async function renderComparison(team){
 
   if(!currentOpponent)return controls+`<section class="panel"><div class="empty">Select an opponent franchise to compare.</div></section>`;
 
-  const speedRows=[];
-  for(const y of your){
-    const yb=await fetchBaseSpeed(y.species);
-    const ymax=yb===null?null:maxSpeedFromBase(yb,100);
-    for(const o of opp){
-      const ob=await fetchBaseSpeed(o.species);
-      const omax=ob===null?null:maxSpeedFromBase(ob,100);
-      speedRows.push({y,o,ymax,omax,scarf:o.maxSpeed||null,oscarf:omax===null?null:scarfSpeedFromMax(omax)});
-    }
-  }
+  const speedPairs=await Promise.all(your.flatMap(y=>opp.map(async o=>{
+    const [yb,ob]=await Promise.all([fetchBaseSpeed(y.species),fetchBaseSpeed(o.species)]);
+    return {
+      y:o?y:null,o,
+      ymax:yb===null?null:maxSpeedFromBase(yb,100),
+      omax:ob===null?null:maxSpeedFromBase(ob,100)
+    };
+  })));
 
+  const speedFor=(y,o)=>speedPairs.find(x=>x.y.species===y.species&&x.o.species===o.species);
   const speedText=(a,b)=>{
     if(a===null||b===null)return ['Unknown','matchup-neutral'];
     if(a>b)return ['Outspeeds','matchup-good'];
@@ -581,65 +580,66 @@ async function renderComparison(team){
     return ['Speed tie','matchup-neutral'];
   };
 
+  const matrixRows=await Promise.all(your.map(async y=>{
+    const cells=await Promise.all(opp.map(async o=>{
+      const mult=await broadMatchup(y.species,o.species);
+      const s=speedFor(y,o);
+      const [speedLabel,speedClass]=speedText(s?.ymax??null,s?.omax??null);
+      const [typeLabel,typeClass]=matchupLabel(mult);
+      return `<td class="matchup-cell">
+        <span class="matchup-pill ${typeClass}">${mult===null?'Type unknown':typeLabel}</span>
+        <div class="matchup-meta">${mult===null?'':mult+'× type'}</div>
+        <span class="matchup-pill ${speedClass}" style="margin-top:5px">${speedLabel}</span>
+      </td>`;
+    }));
+    return `<tr><th>${esc(y.species)}</th>${cells.join('')}</tr>`;
+  }));
+
   const matrix=`<section class="panel">
     <h2>What Counters What</h2>
-    <p class="panel-desc">Each matchup combines broad type effectiveness with Level 100 maximum Speed. This is a preparation aid, not a full damage calculator.</p>
-    <div style="overflow:auto"><table class="matchup-table"><thead><tr><th>Your Pokémon</th>${opp.map(m=>`<th>${esc(m.species)}</th>`).join('')}</tr></thead><tbody>
-      ${(await Promise.all(your.map(async y=>`<tr><th>${esc(y.species)}</th>${(await Promise.all(opp.map(async o=>{
-        const mult=await broadMatchup(y.species,o.species);
-        const [speedLabel,speedClass]=speedText(
-          speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species)?.ymax??null,
-          speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species)?.omax??null
-        );
-        const [typeLabel,typeClass]=matchupLabel(mult);
-        return `<td class="matchup-cell">
-          <span class="matchup-pill ${typeClass}">${mult===null?'Type unknown':typeLabel}</span>
-          <div class="matchup-meta">${mult===null?'':mult+'× type'} </div>
-          <span class="matchup-pill ${speedClass}" style="margin-top:5px">${speedLabel}</span>
-        </td>`;
-      })).join('')}</tr>`))).join('')}
-    </tbody></table></div>
+    <p class="panel-desc">Type effectiveness and Level 100 maximum Speed are shown together.</p>
+    <div style="overflow:auto"><table class="matchup-table">
+      <thead><tr><th>Your Pokémon</th>${opp.map(m=>`<th>${esc(m.species)}</th>`).join('')}</tr></thead>
+      <tbody>${matrixRows.join('')}</tbody>
+    </table></div>
   </section>`;
 
-  const threatData=opp.map(o=>{
+  const answerData=await Promise.all(opp.map(async o=>{
     const scored=await Promise.all(your.map(async y=>{
       const mult=await broadMatchup(y.species,o.species);
-      const row=speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species);
-      const speed=(row?.ymax!=null&&row?.omax!=null)?(row.ymax-row.omax):null;
-      return {m:y,v:mult,speed};
+      const s=speedFor(y,o);
+      return {m:y,v:mult,faster:s?.ymax!=null&&s?.omax!=null&&s.ymax>s.omax};
     }));
-    scored.sort((a,b)=>(b.v??-1)-(a.v??-1)||(b.speed??-999)-(a.speed??-999));
+    scored.sort((a,b)=>(b.v??-1)-(a.v??-1)||(b.faster?1:0)-(a.faster?1:0));
     return {o,scored};
-  });
+  }));
 
   const answers=`<section class="panel">
     <h2>Best Answers</h2>
-    <p class="panel-desc">Your strongest candidates against each opponent Pokémon, prioritizing favorable typing and then Speed.</p>
-    <div class="compare-columns">${threatData.map(x=>`<div class="answer-card"><h3>${esc(x.o.species)}</h3>${x.scored.slice(0,3).map((z,i)=>{
-      const type=z.v===null?'Unknown':z.v+'×';
-      const row=speedRows.find(r=>r.y.species===z.m.species&&r.o.species===x.o.species);
-      const speed=row?.ymax!=null&&row?.omax!=null?(row.ymax>row.omax?'Faster':row.ymax<row.omax?'Slower':'Tie'):'Speed unknown';
-      return `<div class="threat-row"><span>${i+1}. ${esc(z.m.species)}</span><strong>${type} · ${speed}</strong></div>`;
-    }).join('')}</div>`).join('')}</div>
+    <p class="panel-desc">Your strongest candidates into each opponent Pokémon, prioritizing type advantage and then Speed.</p>
+    <div class="compare-columns">${answerData.map(x=>`<div class="answer-card">
+      <h3>${esc(x.o.species)}</h3>
+      ${x.scored.slice(0,3).map((z,i)=>`<div class="threat-row"><span>${i+1}. ${esc(z.m.species)}</span><strong>${z.v===null?'?':z.v+'×'} · ${z.faster?'Faster':'Slower/unknown'}</strong></div>`).join('')}
+    </div>`).join('')}</div>
   </section>`;
 
-  const biggestThreats=your.map(y=>{
-    const favorable=opp.map(o=>{
-      const mult=await broadMatchup(o.species,y.species);
-      const row=speedRows.find(r=>r.y.species===y.species&&r.o.species===o.species);
-      const faster=row?.omax!=null&&row?.ymax!=null&&row.omax>row.ymax;
-      return {o,mult,faster};
-    }));
-    favorable.sort((a,b)=>(b.faster?1:0)-(a.faster?1:0)||(b.mult??-1)-(a.mult??-1));
-    return {y,favorable};
-  });
+  const summaryPairs=[];
+  for(const x of answerData){
+    const best=x.scored[0];
+    if(best)summaryPairs.push({opp:x.o,y:best.m,mult:best.v,faster:best.faster});
+  }
+  summaryPairs.sort((a,b)=>(b.mult??-1)-(a.mult??-1)||(b.faster?1:0)-(a.faster?1:0));
 
   const summary=`<section class="panel">
     <h2>Matchup Summary</h2>
-    <p class="panel-desc">A quick prep snapshot of where the two rosters have their clearest advantages.</p>
+    <p class="panel-desc">Quick preparation snapshot of the clearest answers and threats between the two rosters.</p>
     <div class="compare-columns">
-      <div class="answer-card"><h3>Your strongest answers</h3>${threatData.slice().sort((a,b)=>(b.scored[0]?.v??-1)-(a.scored[0]?.v??-1)).slice(0,5).map(x=>`<div class="threat-row"><span>${esc(x.o.species)}</span><strong>${esc(x.scored[0]?.m.species||'—')}</strong></div>`).join('')}</div>
-      <div class="answer-card"><h3>Opponent's biggest threats</h3>${biggestThreats.flatMap(x=>x.favorable.slice(0,1).map(z=>({y:x.y,o:z.o,m:z.mult,f:z.faster}))).sort((a,b)=>(b.f?1:0)-(a.f?1:0)||(b.m??-1)-(a.m??-1)).slice(0,6).map(z=>`<div class="threat-row"><span>${esc(z.o.species)} → ${esc(z.y.species)}</span><strong>${z.f?'Faster':'Slower'} · ${z.m===null?'?':z.m+'×'}</strong></div>`).join('')}</div>
+      <div class="answer-card"><h3>Your strongest answers</h3>
+        ${summaryPairs.slice(0,6).map(z=>`<div class="threat-row"><span>${esc(z.y.species)} → ${esc(z.opp.species)}</span><strong>${z.mult===null?'?':z.mult+'×'} · ${z.faster?'Faster':'Slower/unknown'}</strong></div>`).join('')}
+      </div>
+      <div class="answer-card"><h3>Opponent threats</h3>
+        ${summaryPairs.slice().reverse().slice(0,6).map(z=>`<div class="threat-row"><span>${esc(z.opp.species)} → ${esc(z.y.species)}</span><strong>${z.mult===null?'?':z.mult+'×'} · ${z.faster?'Opponent slower':'Opponent faster'}</strong></div>`).join('')}
+      </div>
     </div>
   </section>`;
 
@@ -690,33 +690,45 @@ async function load(){
   try{
     const {data,error}=await supabase.from('replays').select('replay_id,replay_data');
     if(error)throw error;
-    for(const row of data||[]){
+
+    for(const row of (data||[])){
       if(row.replay_id===STATE_ID){
-        STATE.teamMap=row.replay_data?.teamMap||{};
-        STATE.settings=Object.assign(STATE.settings,row.replay_data?.settings||{});
+        const rd=row.replay_data||{};
+        STATE.teamMap=rd.teamMap||{};
+        STATE.settings=Object.assign(STATE.settings,rd.settings||{});
       }else if(row.replay_id){
         STATE.replays[row.replay_id]=row.replay_data||{};
       }
     }
+
+    const teams=[...new Set(allRows().flatMap(r=>[
+      teamFor(r.players?.p1),
+      teamFor(r.players?.p2),
+      r.team1,r.team2,r.player1Team,r.player2Team
+    ]).filter(x=>typeof x==='string'&&x.trim()))]
+      .map(x=>x.trim())
+      .sort((a,b)=>a.localeCompare(b));
+
+    const qs=new URLSearchParams(location.search);
+    const requested=qs.get('team');
+
+    $('teamSelect').innerHTML=teams.length
+      ? teams.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')
+      : '<option value="">No teams found</option>';
+
+    if(requested&&teams.includes(requested))$('teamSelect').value=requested;
+
+    if(!teams.length){
+      $('main').innerHTML='<div class="panel"><div class="empty">No teams were found in the loaded replay data.</div></div>';
+      return;
+    }
+
+    await render();
   }catch(e){
-    $('main').innerHTML=`<div class="panel"><div class="empty">Could not load shared replay data: ${esc(e.message)}</div></div>`;
-    return;
+    console.error('Team Analysis load failed:',e);
+    $('teamSelect').innerHTML='<option value="">Load error</option>';
+    $('main').innerHTML=`<div class="panel"><div class="empty">Could not load replay data: ${esc(e.message||e)}</div></div>`;
   }
-
-  const teams=[...new Set(allRows()
-    .flatMap(r=>[teamFor(r.players?.p1),teamFor(r.players?.p2)])
-    .filter(Boolean))]
-    .sort((a,b)=>a.localeCompare(b));
-
-  const qs=new URLSearchParams(location.search);
-  const requested=qs.get('team');
-
-  $('teamSelect').innerHTML=teams.length
-    ? teams.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')
-    : '<option value="">No teams found</option>';
-
-  if(requested&&teams.includes(requested))$('teamSelect').value=requested;
-  await render();
 }
 
 $('teamSelect').addEventListener('change',async()=>{
