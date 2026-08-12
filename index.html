@@ -272,7 +272,7 @@
   .banner-team-card:last-child{border-right:none;}
   .banner-team-card .team-logo{width:46px;height:46px;flex:none;}
   .banner-team-card .banner-stat{font-family:var(--mono);font-size:18px;color:var(--amber);}
-  .overview-modal{max-width:520px;}
+  .overview-modal{max-width:760px; width:min(760px,calc(100vw - 32px)); margin:0 auto;}
   .banner-pokemon{flex:1 0 210px;min-width:210px;padding:12px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:10px;}
   .banner-pokemon:last-child{border-right:none;}
 
@@ -363,7 +363,7 @@
   .auth-box input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:13px;}
   .auth-error{display:none;color:var(--red);font-size:12px;margin-top:12px;line-height:1.4;}
 
-  .replay-summary-box{max-width:900px;}
+  .replay-summary-box{max-width:1080px; width:min(1080px,calc(100vw - 32px)); margin:0 auto;}
   .summary-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:14px;}
   .summary-kicker{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.08em;}
   .summary-header h3{font-size:21px;margin:5px 0 3px;}
@@ -383,7 +383,7 @@
   .summary-mon-stats{font-size:10px;color:var(--text-dim);margin-top:2px;}
   .summary-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
   .danger-badge{color:var(--red);}
-  @media(max-width:700px){.summary-grid{grid-template-columns:1fr}.summary-header{flex-direction:column}.summary-meta{align-items:flex-start;text-align:left}}
+  @media(max-width:700px){.summary-grid{grid-template-columns:1fr}.summary-header{flex-direction:column}.summary-meta{align-items:flex-start;text-align:left}.replay-summary-box,.overview-modal{width:calc(100vw - 20px);max-width:none}.overview-modal{padding:16px}.replay-summary-box{padding:14px}}
 
 
   /* compact league overview cards */
@@ -395,6 +395,12 @@
   .overview-card *{font-weight:400;}
   .overview-card .team-name{font-weight:500 !important;}
 
+
+  /* Larger, centered summary/profile overlay */
+  .modal, .modal-card, .profile-modal, .summary-modal {
+    margin-left:auto !important;
+    margin-right:auto !important;
+  }
 </style>
 </head>
 <body data-admin="false">
@@ -1672,7 +1678,7 @@
       for(const r of allReplays(sel.value)) for(const k in r.mons){
         const m=r.mons[k];
         for(const d of (m.deathLog||[])){
-          const raw=(d.cause||'Other'); const c=/^(unattributed)$/i.test(raw)?'Other':(/stealth rock|spikes|toxic spikes|sticky web/i.test(raw)?'Hazard':(/recoil/i.test(raw)?'Recoil':(/psn|tox|brn|poison|burn/i.test(raw)?'Status':raw))); counts[c]=(counts[c]||0)+1;
+          const raw=(d.cause||'Other'); const cleanCause=String(raw).replace(/^(item|ability):\s*/i,'').trim(); const c=/^(unattributed)$/i.test(cleanCause)?'Other':(/stealth rock|spikes|toxic spikes|sticky web/i.test(cleanCause)?'Hazard':(/recoil/i.test(cleanCause)?'Recoil':(/psn|tox|brn|poison|burn/i.test(cleanCause)?'Status':cleanCause))); counts[c]=(counts[c]||0)+1;
           if(!pokemon[c]) pokemon[c]={}; const sp=m.species; pokemon[c][sp]=(pokemon[c][sp]||0)+1;
           if(!causeLogs[c]) causeLogs[c]=[]; causeLogs[c].push({pokemon:sp,...d});
         }
