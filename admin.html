@@ -218,6 +218,7 @@
     <button data-tab="global">Leaderboards</button>
     <button data-tab="goldenfist">Golden Fist</button>
     <button data-tab="teams">Franchise Stats</button>
+    <a class="nav-link" href="team-analysis.html" style="align-self:center;margin-left:4px;">Team Analysis ↗</a>
     <button data-tab="players">Replays by Player</button>
     <button data-tab="settings">Settings</button>
   </nav>
@@ -500,8 +501,13 @@
       const k = monKey(slot);
       if(!mons[k]) mons[k] = {
         side:s.side, species:s.species, damageDealt:0, damageTaken:0,
-        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[]
+        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[],
+        moves: {},
+        maxHpObserved: null
       };
+      if(s.hp && Number.isFinite(s.hp.max)){
+        mons[k].maxHpObserved = Math.max(mons[k].maxHpObserved || 0, s.hp.max);
+      }
       if(!appearedThisReplay.has(k)){
         appearedThisReplay.add(k);
         mons[k].appearances += 1;
@@ -548,7 +554,14 @@
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
         const target = parts[4] ? parts[4].split(':')[0].trim() : null;
         const moveName = parts[3] ? parts[3].trim() : '';
-        if(source) lastMove = {source, target, move: moveName};
+        if(source) {
+          lastMove = {source, target, move: moveName};
+          const moveStats = ensureMon(source);
+          if(moveStats && moveName){
+            if(!moveStats.moves) moveStats.moves = {};
+            moveStats.moves[moveName] = (moveStats.moves[moveName] || 0) + 1;
+          }
+        }
         if(source && HAZARD_MOVES.includes(moveName)){
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
           const setterStats = ensureMon(source);
