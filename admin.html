@@ -2727,7 +2727,7 @@
       <div class="trade-head">
         <div>
           <div class="trade-teams">${escapeHtml(p.team_name || '(no team picked yet)')}</div>
-          <div class="trade-sub">${escapeHtml(p.email)} · joined ${new Date(p.created_at).toLocaleDateString()}</div>
+          <div class="trade-sub"><strong>${escapeHtml(p.username || '(no username)')}</strong> · ${escapeHtml(p.email)} · joined ${new Date(p.created_at).toLocaleDateString()}</div>
         </div>
         <span class="status-pill ${p.status}">${p.status}</span>
       </div>
@@ -2745,6 +2745,7 @@
         ${p.is_commissioner
           ? `<button class="ghost small" data-comm-action="remove-commissioner" data-id="${p.id}">Remove commissioner</button>`
           : `<button class="ghost small" data-comm-action="make-commissioner" data-id="${p.id}">Make commissioner</button>`}
+        <button class="ghost small" data-comm-action="edit-profile" data-id="${p.id}">Edit profile</button>
       </div>
       <div class="note danger" id="commErr-${p.id}"></div>
     </div>`;
@@ -3009,20 +3010,46 @@
   }
 
   async function logAdminAction(actionType, message, metadata={}){
+    const user = adminUser || (await supabase.auth.getUser()).data?.user;
+    const entry = {
+      admin_id: user?.id || null,
+      admin_email: user?.email || null,
+      action_type: actionType,
+      message,
+      metadata: Object.assign({
+        season: STATE.settings?.activeSeason || DEFAULT_SEASON,
+        page: 'admin.html'
+      }, metadata || {})
+    };
+
+    // Primary audit store. Do not silently swallow this failure: if the insert
+    // is rejected by Supabase (for example, an RLS policy), keep a local/shared
+    // fallback so the action is still visible in the Admin Log.
     try{
-      const user = adminUser || (await supabase.auth.getUser()).data?.user;
-      const {error} = await supabase.from('admin_logs').insert({
-        admin_id: user?.id || null,
-        admin_email: user?.email || null,
-        action_type: actionType,
-        message,
-        metadata: Object.assign({
-          season: STATE.settings?.activeSeason || DEFAULT_SEASON,
-          page: 'admin.html'
-        }, metadata || {})
+      const {error} = await supabase.from('admin_logs').insert(entry);
+      if(!error) return true;
+      console.warn('Admin log write failed:', error);
+    }catch(e){
+      console.warn('Admin log write failed:', e);
+    }
+
+    try{
+      STATE.settings = STATE.settings || {};
+      const fallback = Array.isArray(STATE.settings.adminLogFallback)
+        ? STATE.settings.adminLogFallback
+        : [];
+      fallback.unshift({
+        ...entry,
+        created_at: new Date().toISOString(),
+        id: `fallback-${Date.now()}-${Math.random().toString(36).slice(2,8)}`
       });
-      if(error) console.warn('Admin log write failed:', error);
-    }catch(e){ console.warn('Admin log write failed:', e); }
+      STATE.settings.adminLogFallback = fallback.slice(0, 500);
+      await saveSharedState();
+      return false;
+    }catch(e){
+      console.warn('Admin log fallback write failed:', e);
+      return false;
+    }
   }
 
   async function drawAdminLog(){
@@ -3034,6 +3061,19 @@
       if(error) throw error;
       logs = data || [];
     }catch(e){ loadError = e.message || 'Could not load admin log.'; }
+
+    // Include any entries that could not be written to admin_logs (for example
+    // while the table's INSERT policy is being fixed).
+    const fallback = Array.isArray(STATE.settings?.adminLogFallback)
+      ? STATE.settings.adminLogFallback : [];
+    if(fallback.length){
+      const seen = new Set(logs.map(x => `${x.created_at}|${x.action_type}|${x.message}`));
+      fallback.forEach(x => {
+        const key = `${x.created_at}|${x.action_type}|${x.message}`;
+        if(!seen.has(key)) logs.push(x);
+      });
+      logs.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }
     const actions = [...new Set(logs.map(log => String(log.action_type || 'action')).filter(Boolean))].sort();
     contentEl.innerHTML = `
       <div class="panel">
@@ -3135,6 +3175,24 @@
         btn.disabled=true;
         try{
           let patch=null;
+          if(action==='edit-profile'){
+            const profile = (COMM_PROFILES || []).find(p => String(p.id) === String(id));
+            if(!profile) throw new Error('Profile not found.');
+            const username = prompt('Username:', profile.username || '');
+            if(username === null){ btn.disabled=false; return; }
+            const clean = username.trim();
+            if(!/^[A-Za-z0-9_-]{2,24}$/.test(clean)) throw new Error('Username must be 2–24 characters and use only letters, numbers, underscores or hyphens.');
+            const team = prompt('Franchise name:', profile.team_name || '');
+            if(team === null){ btn.disabled=false; return; }
+            const cleanTeam = team.trim();
+            if(!cleanTeam) throw new Error('Franchise name cannot be empty.');
+            const {error}=await supabase.from('profiles').update({username:clean, team_name:cleanTeam}).eq('id',id);
+            if(error) throw error;
+            await logAdminAction('edit_profile', `Edited profile ${profile.email || id}: username/franchise changed.`, {profileId:id, username:clean, team:cleanTeam});
+            await loadCommissionerData();
+            if(activeTab==='commissioner') drawCommissioner();
+            return;
+          }
           if(action==='approve') patch={status:'approved'};
           else if(action==='reject') patch={status:'rejected'};
           else if(action==='revoke') patch={status:'pending'};
