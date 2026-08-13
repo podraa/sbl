@@ -270,12 +270,16 @@ async function fetchTypes(name){
   return [];
 }
 
-// Kick off type fetches for all mons in the pool, non-blocking.
+// Kick off type fetches only for mons we don't already have cached, non-blocking.
 // render() checks typeCache synchronously; types appear as they load.
+// Skips entirely (no render calls at all) once everything is cached, so the
+// periodic refresh below doesn't rebuild the whole grid for no reason.
 async function prefetchTypes(mons){
+  const pending=mons.filter(m=>!typeCache[key(m.name)]);
+  if(!pending.length) return;
   const batch=8; // parallel requests
-  for(let i=0;i<mons.length;i+=batch){
-    await Promise.allSettled(mons.slice(i,i+batch).map(m=>fetchTypes(m.name)));
+  for(let i=0;i<pending.length;i+=batch){
+    await Promise.allSettled(pending.slice(i,i+batch).map(m=>fetchTypes(m.name)));
     render(); // re-render as each batch completes so type badges appear progressively
   }
 }
@@ -300,6 +304,8 @@ function openSelection(mon){
   modal.onclick=e=>{if(e.target===modal)modal.remove();};
 }
 
+let lastDataSignature=null;
+
 async function load(){
   const res=await db.from('replays').select('replay_id,replay_data')
     .in('replay_id',['__dashboard_state__','__rosters__']);
@@ -310,8 +316,15 @@ async function load(){
   }
   if(!Object.keys(allRosters).length) allRosters=normalizeRosters(settings.rosters||{});
   const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
-  render();
-  prefetchTypes(mons); // non-blocking, re-renders as types load
+
+  // Skip the (expensive, focus-stealing) re-render on the periodic 5s poll
+  // unless the pool or rosters actually changed since last time.
+  const signature=JSON.stringify({mons,allRosters});
+  const changed=signature!==lastDataSignature;
+  lastDataSignature=signature;
+  if(changed) render();
+
+  prefetchTypes(mons); // non-blocking, re-renders as new types load
 }
 
 function applyFilters(mons){
@@ -335,6 +348,13 @@ function applyFilters(mons){
 }
 
 function render(){
+  // Preserve focus/cursor position across the DOM rebuild below, so a
+  // background refresh or filter click doesn't interrupt someone mid-type.
+  const active=document.activeElement;
+  const hadFocus=active && active.id==='searchName';
+  const selStart=hadFocus?active.selectionStart:null;
+  const selEnd=hadFocus?active.selectionEnd:null;
+
   const allMons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
   const visible=applyFilters(allMons);
 
@@ -416,7 +436,12 @@ function render(){
 
   // ---- bind events ----
   const nameInput=$("searchName");
-  nameInput.oninput=e=>{filterName=e.target.value.trim().toLowerCase();render();$("searchName").focus();};
+  nameInput.oninput=e=>{filterName=e.target.value.trim().toLowerCase();render();};
+
+  if(hadFocus){
+    nameInput.focus();
+    nameInput.setSelectionRange(selStart,selEnd);
+  }
 
   $("filterPoints").onchange=e=>{filterPoints=e.target.value;render();};
 
