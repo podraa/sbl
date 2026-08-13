@@ -5,32 +5,187 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Free Agency</title>
 <style>
-:root{--bg:#f6f7fb;--panel:#fff;--panel2:#f0f2f7;--border:#d9ddea;--text:#202433;--dim:#697083;--accent:#5367d8;--taken:#8a8f9d;--available:#3d8c62}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}.page-nav{position:fixed;top:14px;right:18px;z-index:20;display:flex;gap:7px;align-items:center}.page-nav label{font-size:11px;font-weight:700;color:var(--dim)}.page-nav select{padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}#app{max-width:1500px;margin:auto;padding:70px 24px 40px}header{margin-bottom:22px}h1{margin:0 0 6px;font-size:28px}.sub,.note{color:var(--dim);line-height:1.5}.toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0}.toolbar>div{min-width:220px}label{display:block;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:6px}input{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--panel)}.summary{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}.stat{padding:12px 18px;background:var(--panel);border:1px solid var(--border);border-radius:10px;min-width:120px}.stat b{font-size:22px}.tier{margin:20px 0 28px}.tier-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.tier-head h2{margin:0}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px}.mon{position:relative;min-height:190px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--panel);cursor:pointer;transition:.12s}.mon:hover{transform:translateY(-1px);box-shadow:0 4px 14px #0001}.mon.taken{opacity:.52;cursor:default;background:var(--panel2)}.mon img{display:block;width:90px;height:90px;object-fit:contain;margin:0 auto 5px;image-rendering:pixelated}.name{text-align:center;font-weight:800}.points{text-align:center;margin-top:5px;color:var(--accent);font-weight:800}.status{text-align:center;margin-top:8px;font-size:11px;font-weight:700}.available{color:var(--available)}.taken-status{color:var(--taken)}.empty{padding:34px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--dim);background:var(--panel)}.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.modalbox{width:min(520px,100%);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.btn{padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);cursor:pointer}@media(max-width:650px){#app{padding:60px 12px 30px}.page-nav{top:8px;right:8px}.page-nav label{display:none}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+:root{
+  --bg:#f6f7fb;--panel:#fff;--panel2:#f0f2f7;--border:#d9ddea;
+  --text:#202433;--dim:#697083;--accent:#5367d8;--taken:#8a8f9d;--available:#3d8c62;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
+
+/* page nav */
+.page-nav{position:fixed;top:14px;right:18px;z-index:20;display:flex;gap:7px;align-items:center}
+.page-nav label{font-size:11px;font-weight:700;color:var(--dim)}
+.page-nav select{padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}
+
+#app{max-width:1500px;margin:auto;padding:70px 24px 40px}
+header{margin-bottom:22px}
+h1{margin:0 0 6px;font-size:28px}
+.sub,.note{color:var(--dim);line-height:1.5}
+
+/* toolbar */
+.toolbar{
+  display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
+  margin:18px 0 14px;padding:16px 18px;
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+}
+.toolbar>div{min-width:180px;flex:1}
+.toolbar>div.toolbar-wide{min-width:260px;flex:2}
+label{display:block;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+input[type=text],select.filter-select{
+  width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg);color:var(--text);font:inherit;font-size:13px;
+}
+input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+
+/* type chips */
+.type-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.type-chip{
+  padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;
+  cursor:pointer;border:2px solid transparent;transition:.1s;user-select:none;
+  text-transform:capitalize;
+}
+.type-chip:hover{filter:brightness(.88)}
+.type-chip.active{border-color:rgba(0,0,0,.35);filter:brightness(.82)}
+
+/* type colours */
+.type-normal{background:#A8A77A;color:#fff}
+.type-fire{background:#EE8130;color:#fff}
+.type-water{background:#6390F0;color:#fff}
+.type-electric{background:#F7D02C;color:#333}
+.type-grass{background:#7AC74C;color:#fff}
+.type-ice{background:#96D9D6;color:#333}
+.type-fighting{background:#C22E28;color:#fff}
+.type-poison{background:#A33EA1;color:#fff}
+.type-ground{background:#E2BF65;color:#333}
+.type-flying{background:#A98FF3;color:#fff}
+.type-psychic{background:#F95587;color:#fff}
+.type-bug{background:#A6B91A;color:#fff}
+.type-rock{background:#B6A136;color:#fff}
+.type-ghost{background:#735797;color:#fff}
+.type-dragon{background:#6F35FC;color:#fff}
+.type-dark{background:#705746;color:#fff}
+.type-steel{background:#B7B7CE;color:#333}
+.type-fairy{background:#D685AD;color:#fff}
+
+/* summary bar */
+.summary{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 20px}
+.stat{padding:10px 16px;background:var(--panel);border:1px solid var(--border);border-radius:10px;min-width:110px}
+.stat b{display:block;font-size:20px;margin-top:2px}
+.stat .note{margin:0;font-size:11px}
+
+/* tiers */
+.tier{margin:0 0 28px}
+.tier-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tier-head h2{margin:0;font-size:16px;font-weight:800}
+
+/* grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.mon{
+  position:relative;min-height:190px;padding:12px 10px;
+  border:1px solid var(--border);border-radius:12px;background:var(--panel);
+  cursor:pointer;transition:.12s;display:flex;flex-direction:column;align-items:center;
+}
+.mon:hover{transform:translateY(-2px);box-shadow:0 6px 18px #0001}
+.mon.taken{opacity:.48;cursor:default;background:var(--panel2)}
+.mon img{display:block;width:86px;height:86px;object-fit:contain;image-rendering:pixelated;margin-bottom:4px}
+.mon-name{font-weight:800;font-size:13px;text-align:center;margin-top:2px}
+.mon-points{text-align:center;margin-top:4px;color:var(--accent);font-weight:800;font-size:13px}
+.mon-types{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+.mon-type-badge{
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;
+  text-transform:capitalize;
+}
+.mon-status{text-align:center;margin-top:6px;font-size:11px;font-weight:700}
+.mon-status.available{color:var(--available)}
+.mon-status.taken-status{color:var(--taken)}
+
+/* no results */
+.empty{padding:34px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--dim);background:var(--panel)}
+
+/* modal */
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
+.modalbox{width:min(480px,100%);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:24px}
+.modalbox h2{margin:0 0 6px}
+.modal-types{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.btn{padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);cursor:pointer;font:inherit}
+.btn:hover{border-color:var(--accent)}
+
+/* availability toggle */
+.avail-toggle{display:flex;gap:6px}
+.avail-btn{
+  padding:7px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border);background:var(--panel2);color:var(--dim);transition:.1s;
+}
+.avail-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* clear filters */
+.clear-filters{
+  padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border);background:none;color:var(--dim);white-space:nowrap;
+  align-self:flex-end;
+}
+.clear-filters:hover{color:var(--text);border-color:var(--text)}
+
+@media(max-width:700px){
+  #app{padding:60px 12px 30px}
+  .page-nav{top:8px;right:8px}
+  .page-nav label{display:none}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .toolbar{padding:12px}
+  .toolbar>div,.toolbar>div.toolbar-wide{min-width:0;flex:1 1 140px}
+}
 </style>
 </head>
 <body>
-<div class="page-nav"><label for="pageNavSelect">Page</label><select id="pageNavSelect"><option value="index.html">Stats Dashboard</option><option value="rosters.html">Rosters</option><option value="team-analysis.html">Team Analysis</option><option value="free-agency.html">Free Agency</option></select></div>
-<div id="app"><header><h1>Free Agency</h1><div class="sub">The DRAFT BOARD is grouped by point tier. Pokémon currently on a published roster are shown as taken; undrafted Pokémon are selectable.</div></header><div id="main"><div class="empty">Loading Free Agency…</div></div></div>
+<div class="page-nav">
+  <label for="pageNavSelect">Page</label>
+  <select id="pageNavSelect">
+    <option value="index.html">Stats Dashboard</option>
+    <option value="rosters.html">Rosters</option>
+    <option value="team-analysis.html">Team Analysis</option>
+    <option value="free-agency.html">Free Agency</option>
+  </select>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Free Agency</h1>
+    <div class="sub">Draft board grouped by point tier. Search by name, filter by type or points. Taken = on a published roster.</div>
+  </header>
+  <div id="main"><div class="empty">Loading Free Agency…</div></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (()=>{
 const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
 const SUPABASE_KEY='sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
 let settings={rosters:{},freeAgency:{mons:[]}};
 let allRosters={};
-const $=id=>document.getElementById(id);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Cache: normalized pokemon name -> ['fire','flying'] etc.
+const typeCache={};
 
-// Normalize a Pokémon name for ownership comparison.
-// Preserves hyphens so formes like Landorus-Therian match between
-// the tier list and the roster. Collapses spaces/underscores to hyphens.
-const key=s=>String(s||'').trim().toLowerCase()
-  .replace(/['']/g,'')
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??''). replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const key=s=>String(s||''). trim().toLowerCase()
+  .replace(/[\u2018\u2019]/g,'')
   .replace(/[\s_]+/g,'-')
   .replace(/[^a-z0-9-]/g,'')
   .replace(/-+/g,'-')
   .replace(/^-|-$/g,'');
+
+// --- filter state ---
+let filterName='';
+let filterTypes=new Set();   // empty = all types
+let filterPoints='';         // '' = any, or exact number string
+let filterAvail='all';       // 'all' | 'available' | 'taken'
+
+const ALL_TYPES=['normal','fire','water','electric','grass','ice','fighting','poison',
+  'ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
 
 function normalizeRosters(raw){
   const out={};
@@ -46,19 +201,17 @@ function normalizeRosters(raw){
 
 function owner(name){
   const k=key(name);
-  for(const [team,list] of Object.entries(allRosters)){
-    for(const mon of list){ if(key(mon.name)===k) return team; }
-  }
+  for(const [team,list] of Object.entries(allRosters))
+    for(const mon of list) if(key(mon.name)===k) return team;
   return null;
 }
 
-// Sprite using gen5 (most reliable across all gens on Showdown's CDN).
-// Mirrors the same logic as rosters.html and admin.html.
 function toShowdownId(name){
-  return String(name||'').trim().split('-')
+  return String(name||''). trim().split('-')
     .map(seg=>seg.toLowerCase().replace(/[^a-z0-9]/g,''))
     .filter(Boolean).join('-');
 }
+
 function sprite(name){
   const id=toShowdownId(name);
   const compact=id.replace(/-/g,'');
@@ -72,12 +225,55 @@ function sprite(name){
     `onerror="(function(i){var us=JSON.parse(i.dataset.spriteUrls||'[]');var nx=Number(i.dataset.spriteIdx||0)+1;if(nx<us.length){i.dataset.spriteIdx=nx;i.src=us[nx];}else{i.onerror=null;i.style.opacity='.25';}})(this)">`;
 }
 
+// Fetch types from PokeAPI. Uses the base-form name (strips formes for the lookup).
+// Results are cached in typeCache so each mon is only fetched once per session.
+async function fetchTypes(name){
+  const k=key(name);
+  if(typeCache[k]) return typeCache[k];
+  // Strip forme suffix for the API call — PokeAPI uses base species IDs
+  const apiName=k.split('-')[0]=== 'mr'||k.startsWith('mr-')?
+    k : // keep mr-mime etc whole
+    k.replace(/-(?:therian|incarnate|black|white|sky|land|origin|primal|mega|alola|galar|hisui|paldea|original|hero|teal|aqua|blaze|rapid|single|dusk|dawn|ultra|bond|ash|blade|shield|crowned|eternamax|gmax|stellar|bloodmoon|wellspring|hearthflame|cornerstone|family|four|combat|resolute|confined|unbound|pirouette|aria|cosplay|rock-star|belle|pop-star|phd|libre|wormadam-sandy|wormadam-trash|east|west|striped|blue|orange|red|sunshine|midnight|midday|dusk|dawn|ice|noice|original|zen|standard|low-key|amped|ice-face|noice-face|hangry|full-belly|gulping|gorging|three-segment|two-segment|one-segment|roaming|curly|droopy|stretchy|phony|antique|mightiest|paldean|combat-breed|blaze-breed|aqua-breed).*/,'');
+  try{
+    const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+apiName);
+    if(!r.ok) throw new Error('not found');
+    const d=await r.json();
+    const types=d.types.map(t=>t.type.name);
+    typeCache[k]=types;
+    return types;
+  }catch{
+    typeCache[k]=[];
+    return [];
+  }
+}
+
+// Kick off type fetches for all mons in the pool, non-blocking.
+// render() checks typeCache synchronously; types appear as they load.
+async function prefetchTypes(mons){
+  const batch=8; // parallel requests
+  for(let i=0;i<mons.length;i+=batch){
+    await Promise.allSettled(mons.slice(i,i+batch).map(m=>fetchTypes(m.name)));
+    render(); // re-render as each batch completes so type badges appear progressively
+  }
+}
+
+function typeBadge(t){
+  return `<span class="mon-type-badge type-${t}">${esc(t)}</span>`;
+}
+
 function openSelection(mon){
+  const types=typeCache[key(mon.name)]||[];
   const modal=document.createElement('div');
   modal.className='modal';
-  modal.innerHTML=`<div class="modalbox"><h2>${esc(mon.name)}</h2><div class="note">${mon.points} points · Undrafted</div><p class="note">This Pokémon is available — it does not appear on any currently published roster.</p><div class="actions"><button class="btn" id="close">Close</button></div></div>`;
+  modal.innerHTML=`<div class="modalbox">
+    <h2>${esc(mon.name)}</h2>
+    <div class="note">${mon.points} points · Undrafted</div>
+    <div class="modal-types">${types.map(typeBadge).join('')||''}</div>
+    <p class="note">This Pokémon is available — it does not appear on any currently published roster.</p>
+    <div class="actions"><button class="btn" id="modalClose">Close</button></div>
+  </div>`;
   document.body.appendChild(modal);
-  modal.querySelector('#close').onclick=()=>modal.remove();
+  modal.querySelector('#modalClose').onclick=()=>modal.remove();
   modal.onclick=e=>{if(e.target===modal)modal.remove();};
 }
 
@@ -89,65 +285,145 @@ async function load(){
     if(r.replay_id==='__dashboard_state__') settings=r.replay_data?.settings||settings;
     if(r.replay_id==='__rosters__') allRosters=normalizeRosters(r.replay_data?.rosters||{});
   }
-  // Fall back to rosters embedded in dashboard settings if __rosters__ row is empty
   if(!Object.keys(allRosters).length) allRosters=normalizeRosters(settings.rosters||{});
+  const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
   render();
+  prefetchTypes(mons); // non-blocking, re-renders as types load
+}
+
+function applyFilters(mons){
+  return mons.filter(m=>{
+    // name
+    if(filterName && !String(m.name).toLowerCase().includes(filterName)) return false;
+    // points
+    if(filterPoints!=='' && String(Number(m.points))!==filterPoints) return false;
+    // availability
+    const taken=!!owner(m.name);
+    if(filterAvail==='available' && taken) return false;
+    if(filterAvail==='taken' && !taken) return false;
+    // type — check cache; if not loaded yet, include by default
+    if(filterTypes.size>0){
+      const types=typeCache[key(m.name)];
+      if(!types) return true; // not loaded yet, show optimistically
+      if(!types.some(t=>filterTypes.has(t))) return false;
+    }
+    return true;
+  });
 }
 
 function render(){
-  const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
-  const q=(window._faQuery||'').toLowerCase();
-  const visible=mons.filter(m=>String(m.name).toLowerCase().includes(q));
-  const groups={};
-  visible.forEach(m=>{const p=Number(m.points)||0;(groups[p]??=[]).push(m);});
-  const tiers=Object.keys(groups).sort((a,b)=>Number(b)-Number(a));
+  const allMons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
+  const visible=applyFilters(allMons);
+
+  // point tier options for the select
+  const pointValues=[...new Set(allMons.map(m=>Number(m.points)||0))].sort((a,b)=>b-a);
+
+  // count stats from full list (respects name+type+avail filters but not points filter,
+  // so the summary always reflects the full filtered pool)
   let free=0,taken=0;
   visible.forEach(m=>owner(m.name)?taken++:free++);
 
-  $('main').innerHTML=
-    `<div class="toolbar"><div><label>Search Pokémon</label>`+
-    `<input id="search" value="${esc(window._faQuery||'')}" placeholder="Search…"></div></div>`+
-    `<div class="summary">`+
-    `<div class="stat"><div class="note">Available</div><b>${free}</b></div>`+
-    `<div class="stat"><div class="note">Taken</div><b>${taken}</b></div>`+
-    `<div class="stat"><div class="note">Total</div><b>${visible.length}</b></div>`+
-    `</div>`+
+  // group by points tier
+  const groups={};
+  visible.forEach(m=>{const p=Number(m.points)||0;(groups[p]??=[]).push(m);});
+  const tiers=Object.keys(groups).sort((a,b)=>Number(b)-Number(a));
+
+  // active filter count (for clear button label)
+  const activeFilters=(filterName?1:0)+(filterTypes.size>0?1:0)+(filterPoints!==''?1:0)+(filterAvail!=='all'?1:0);
+
+  $("main").innerHTML=
+    // ---- toolbar ----
+    `<div class="toolbar">
+      <div class="toolbar-wide">
+        <label>Search by name</label>
+        <input type="text" id="searchName" value="${esc(filterName)}" placeholder="e.g. Landorus, Cinderace…" autocomplete="off">
+      </div>
+      <div>
+        <label>Points</label>
+        <select class="filter-select" id="filterPoints">
+          <option value="">Any points</option>
+          ${pointValues.map(p=>`<option value="${p}" ${filterPoints===String(p)?'selected':''} >${p} pts</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Availability</label>
+        <div class="avail-toggle">
+          <button class="avail-btn ${filterAvail==='all'?'active':''}" data-avail="all">All</button>
+          <button class="avail-btn ${filterAvail==='available'?'active':''}" data-avail="available">Available</button>
+          <button class="avail-btn ${filterAvail==='taken'?'active':''}" data-avail="taken">Taken</button>
+        </div>
+      </div>
+      ${activeFilters>0?'<button class="clear-filters" id="clearFilters">Clear filters ('+ activeFilters +')</button>':''} 
+    </div>`+
+    // ---- type chips ----
+    `<div style="margin-bottom:16px">
+      <label style="margin-bottom:8px">Filter by type</label>
+      <div class="type-chips">
+        ${ALL_TYPES.map(t=>`<span class="type-chip type-${t}${filterTypes.has(t)?' active':''}" data-type="${t}">${t}</span>`).join('')}
+      </div>
+    </div>`+
+    // ---- summary ----
+    `<div class="summary">
+      <div class="stat"><div class="note">Showing</div><b>${visible.length}</b></div>
+      <div class="stat"><div class="note">Available</div><b>${free}</b></div>
+      <div class="stat"><div class="note">Taken</div><b>${taken}</b></div>
+      <div class="stat"><div class="note">Total pool</div><b>${allMons.length}</b></div>
+    </div>`+
+    // ---- tiers ----
     (tiers.length
       ? tiers.map(p=>{
           const label=Number(p)===1?'1 POINT':`${p} POINTS`;
-          return `<section class="tier">`+
-            `<div class="tier-head"><h2>${label}</h2><span class="note">${groups[p].length} Pokémon</span></div>`+
-            `<div class="grid">${groups[p].map(m=>{
+          return `<section class="tier">
+            <div class="tier-head"><h2>${label}</h2><span class="note">${groups[p].length} shown</span></div>
+            <div class="grid">${groups[p].map(m=>{
               const o=owner(m.name);
-              return `<article class="mon ${o?'taken':''}" data-name="${esc(m.name)}">`+
-                sprite(m.name)+
-                `<div class="name">${esc(m.name)}</div>`+
-                `<div class="points">${m.points} pts</div>`+
-                `<div class="status ${o?'taken-status':'available'}">${o?'Taken — '+esc(o):'Available'}</div>`+
-                `</article>`;
-            }).join('')}</div></section>`;
+              const types=typeCache[key(m.name)]||[];
+              return `<article class="mon ${o?'taken':''}" data-name="${esc(m.name)}">
+                ${sprite(m.name)}
+                <div class="mon-name">${esc(m.name)}</div>
+                <div class="mon-points">${m.points} pts</div>
+                <div class="mon-types">${types.map(typeBadge).join('')}</div>
+                <div class="mon-status ${o?'taken-status':'available'}">${o?'Taken — '+esc(o):'Available'}</div>
+              </article>`;
+            }).join('')}</div>
+          </section>`;
         }).join('')
-      : `<div class="empty">No Free Agency pool has been published yet.</div>`
+      : `<div class="empty">${allMons.length?'No Pokémon match your filters.':'No Free Agency pool has been published yet.'}</div>`
     );
 
-  const s=$('search');
-  s.oninput=e=>{
-    window._faQuery=e.target.value;
-    render();
-    // Restore focus and cursor position after re-render
-    const n=$('search');
-    n.focus();
-    n.setSelectionRange(n.value.length,n.value.length);
+  // ---- bind events ----
+  const nameInput=$("searchName");
+  nameInput.oninput=e=>{filterName=e.target.value.trim().toLowerCase();render();$("searchName").focus();};
+
+  $("filterPoints").onchange=e=>{filterPoints=e.target.value;render();};
+
+  document.querySelectorAll('[data-avail]').forEach(btn=>{
+    btn.onclick=()=>{filterAvail=btn.dataset.avail;render();};
+  });
+
+  document.querySelectorAll('[data-type]').forEach(chip=>{
+    chip.onclick=()=>{
+      const t=chip.dataset.type;
+      filterTypes.has(t)?filterTypes.delete(t):filterTypes.add(t);
+      render();
+    };
+  });
+
+  const clearBtn=$("clearFilters");
+  if(clearBtn) clearBtn.onclick=()=>{
+    filterName='';filterTypes.clear();filterPoints='';filterAvail='all';render();
   };
+
   document.querySelectorAll('.mon:not(.taken)').forEach(el=>el.onclick=()=>{
+    const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
     const m=mons.find(x=>key(x.name)===key(el.dataset.name));
     if(m) openSelection(m);
   });
 }
 
-$('pageNavSelect').value='free-agency.html';
-$('pageNavSelect').onchange=e=>location.href=e.target.value;
-load().catch(e=>$('main').innerHTML=`<div class="empty">Could not load Free Agency: ${esc(String(e?.message||e))}</div>`);
+$("pageNavSelect").value='free-agency.html';
+$("pageNavSelect").onchange=e=>location.href=e.target.value;
+load().catch(e=>$("main").innerHTML=`<div class="empty">Could not load Free Agency: ${esc(String(e?.message||e))}</div>`);
 setInterval(()=>{if(!document.hidden)load().catch(()=>{});},5000);
 })();
 </script>
