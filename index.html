@@ -582,15 +582,15 @@
 
     document.getElementById('submitTradeBtn').onclick = async ()=>{
       const msgEl = document.getElementById('tradeMsg');
-      if(draft.requested.size === 0){ msgEl.className='note danger'; msgEl.textContent='Pick at least one Pokémon you want to receive.'; return; }
+      if(draft.offered.size !== 1 || draft.requested.size !== 1){ msgEl.className='note danger'; msgEl.textContent='Trades are limited to exactly one Pokémon for one Pokémon.'; return; }
       const btn = document.getElementById('submitTradeBtn'); btn.disabled = true;
       msgEl.className='note'; msgEl.textContent='Sending…';
       try{
         const {error} = await supabase.from('trade_requests').insert({
           proposer_team: profile.team_name,
           target_team: targetIsFA ? null : draft.target,
-          mons_offered: Array.from(draft.offered),
-          mons_requested: Array.from(draft.requested)
+          mons_offered: Array.from(draft.offered).slice(0,1),
+          mons_requested: Array.from(draft.requested).slice(0,1)
         });
         if(error) throw error;
         draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };

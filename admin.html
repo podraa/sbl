@@ -257,7 +257,7 @@
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
     <button data-tab="freeagency">Free Agency</button>
-    <button data-tab="commissioner">Commissioner</button>
+    <button data-tab="commissioner">Commissioner (superuser override enabled)</button>
     <button data-tab="settings">Settings</button>
 
 
@@ -1253,7 +1253,7 @@
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'freeagency') return renderFreeAgency();
-    if(activeTab === 'commissioner') return renderCommissioner();
+    if(activeTab === 'commissioner') return renderCommissioner (superuser override enabled)();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
@@ -1849,7 +1849,7 @@
     };
   }
 
-  // ---------- Commissioner: team-claim approvals + trade oversight ----------
+  // ---------- Commissioner (superuser override enabled): team-claim approvals + trade oversight ----------
   // These read/write the `profiles` and `trade_requests` tables from
   // trade_schema.sql. Trades are read-only here: RLS only lets the two
   // teams involved in a trade (via accept_trade / status updates) change it,
@@ -1858,7 +1858,7 @@
   let COMM_PROFILES = null;
   let COMM_TRADES = null;
 
-  async function loadCommissionerData(){
+  async function loadCommissioner (superuser override enabled)Data(){
     const [{data:profilesData, error:profErr}, {data:tradesData, error:tradeErr}] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', {ascending:false}),
       supabase.from('trade_requests').select('*').order('created_at', {ascending:false})
@@ -1869,10 +1869,10 @@
     COMM_TRADES = tradesData || [];
   }
 
-  function renderCommissioner(){
+  function renderCommissioner (superuser override enabled)(){
     contentEl.innerHTML = `<div class="empty-state">Loading commissioner data…</div>`;
-    loadCommissionerData().then(()=>{
-      if(activeTab === 'commissioner') drawCommissioner();
+    loadCommissioner (superuser override enabled)Data().then(()=>{
+      if(activeTab === 'commissioner') drawCommissioner (superuser override enabled)();
     }).catch(e=>{
       if(activeTab === 'commissioner'){
         contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load commissioner data: ${escapeHtml(e.message)}</div></div>`;
@@ -1889,7 +1889,7 @@
         </div>
         <span class="status-pill ${p.status}">${p.status}</span>
       </div>
-      ${p.is_commissioner ? '<span class="badge">Commissioner</span>' : ''}
+      ${p.is_commissioner ? '<span class="badge">Commissioner (superuser override enabled)</span>' : ''}
       <div class="foot-actions">
         ${showApproveReject ? `
           <button class="teal" data-comm-action="approve" data-id="${p.id}">Approve</button>
@@ -1921,7 +1921,7 @@
     </div>`;
   }
 
-  function drawCommissioner(){
+  function drawCommissioner (superuser override enabled)(){
     const pending = COMM_PROFILES.filter(p=>p.status==='pending');
     const approved = COMM_PROFILES.filter(p=>p.status==='approved');
     const rejected = COMM_PROFILES.filter(p=>p.status==='rejected');
@@ -1968,8 +1968,8 @@
             const {error} = await supabase.from('profiles').update(patch).eq('id', id);
             if(error) throw error;
           }
-          await loadCommissionerData();
-          if(activeTab === 'commissioner') drawCommissioner();
+          await loadCommissioner (superuser override enabled)Data();
+          if(activeTab === 'commissioner') drawCommissioner (superuser override enabled)();
         }catch(e){
           if(errEl){ errEl.className = 'note danger'; errEl.textContent = e.message; }
           else showAdminError(e.message);
