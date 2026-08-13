@@ -257,7 +257,7 @@
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
     <button data-tab="freeagency">Free Agency</button>
-    <button data-tab="commissioner">Commissioner (superuser override enabled)</button>
+    <button data-tab="commissioner">Commissioner</button>
     <button data-tab="settings">Settings</button>
 
 
@@ -1253,7 +1253,7 @@
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'freeagency') return renderFreeAgency();
-    if(activeTab === 'commissioner') return renderCommissioner (superuser override enabled)();
+    if(activeTab === 'commissioner') return renderCommissioner();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
@@ -1849,7 +1849,7 @@
     };
   }
 
-  // ---------- Commissioner (superuser override enabled): team-claim approvals + trade oversight ----------
+  // ---------- Commissioner: team-claim approvals + trade oversight ----------
   // These read/write the `profiles` and `trade_requests` tables from
   // trade_schema.sql. Trades are read-only here: RLS only lets the two
   // teams involved in a trade (via accept_trade / status updates) change it,
@@ -1858,7 +1858,7 @@
   let COMM_PROFILES = null;
   let COMM_TRADES = null;
 
-  async function loadCommissioner (superuser override enabled)Data(){
+  async function loadCommissionerData(){
     const [{data:profilesData, error:profErr}, {data:tradesData, error:tradeErr}] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', {ascending:false}),
       supabase.from('trade_requests').select('*').order('created_at', {ascending:false})
@@ -1869,10 +1869,10 @@
     COMM_TRADES = tradesData || [];
   }
 
-  function renderCommissioner (superuser override enabled)(){
+  function renderCommissioner(){
     contentEl.innerHTML = `<div class="empty-state">Loading commissioner data…</div>`;
-    loadCommissioner (superuser override enabled)Data().then(()=>{
-      if(activeTab === 'commissioner') drawCommissioner (superuser override enabled)();
+    loadCommissionerData().then(()=>{
+      if(activeTab === 'commissioner') drawCommissioner();
     }).catch(e=>{
       if(activeTab === 'commissioner'){
         contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load commissioner data: ${escapeHtml(e.message)}</div></div>`;
@@ -1889,7 +1889,7 @@
         </div>
         <span class="status-pill ${p.status}">${p.status}</span>
       </div>
-      ${p.is_commissioner ? '<span class="badge">Commissioner (superuser override enabled)</span>' : ''}
+      ${p.is_commissioner ? '<span class="badge">Commissioner</span>' : ''}
       <div class="foot-actions">
         ${showApproveReject ? `
           <button class="teal" data-comm-action="approve" data-id="${p.id}">Approve</button>
@@ -1906,6 +1906,8 @@
   }
 
   function commTradeRow(t){
+    const canRevoke = t.status !== 'pending'; // send an already-resolved trade back to pending
+    const canRevert = t.status === 'accepted'; // undo an accepted trade's roster swap
     return `<div class="trade-card">
       <div class="trade-head">
         <div>
@@ -1918,10 +1920,15 @@
         <div class="trade-col"><h4>Offered</h4><div class="note">${(t.mons_offered||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
         <div class="trade-col"><h4>Requested</h4><div class="note">${(t.mons_requested||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
       </div>
+      ${(canRevoke || canRevert) ? `<div class="foot-actions">
+        ${canRevert ? `<button class="ghost small danger-btn" data-trade-action="revert" data-trade-id="${t.id}">Revert (undo roster swap)</button>` : ''}
+        ${canRevoke ? `<button class="ghost small" data-trade-action="revoke" data-trade-id="${t.id}">Reset to pending</button>` : ''}
+      </div>` : ''}
+      <div class="note danger" id="tradeCommErr-${t.id}"></div>
     </div>`;
   }
 
-  function drawCommissioner (superuser override enabled)(){
+  function drawCommissioner(){
     const pending = COMM_PROFILES.filter(p=>p.status==='pending');
     const approved = COMM_PROFILES.filter(p=>p.status==='approved');
     const rejected = COMM_PROFILES.filter(p=>p.status==='rejected');
@@ -1946,9 +1953,37 @@
       </div>` : ''}
       <div class="panel">
         <h2>All Trades <span class="badge">${COMM_TRADES.length}</span></h2>
-        <div class="note">Read-only — only the two teams involved in a trade can accept, reject, or withdraw it here.</div>
+        <div class="note">Only the two teams involved can accept, reject, or withdraw a trade. As commissioner you can reset a resolved trade back to pending, or revert an accepted trade (undoing the roster swap).</div>
         ${COMM_TRADES.length ? COMM_TRADES.map(commTradeRow).join('') : '<div class="empty-state">No trades yet.</div>'}
       </div>`;
+
+    contentEl.querySelectorAll('button[data-trade-action]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = Number(btn.dataset.tradeId);
+        const action = btn.dataset.tradeAction;
+        const errEl = document.getElementById(`tradeCommErr-${id}`);
+        if(errEl){ errEl.textContent = ''; }
+        if(action === 'revert' && !confirm('This undoes the roster swap from this accepted trade and puts it back to pending. Continue?')) return;
+        btn.disabled = true;
+        try{
+          if(action === 'revoke'){
+            const {error} = await supabase.from('trade_requests')
+              .update({ status:'pending', responded_at:null, responded_by:null })
+              .eq('id', id);
+            if(error) throw error;
+          } else if(action === 'revert'){
+            const {error} = await supabase.rpc('commissioner_revert_trade', { trade_id: id });
+            if(error) throw error;
+          }
+          await loadCommissionerData();
+          if(activeTab === 'commissioner') drawCommissioner();
+        }catch(e){
+          if(errEl){ errEl.className = 'note danger'; errEl.textContent = e.message; }
+          else showAdminError(e.message);
+          btn.disabled = false;
+        }
+      });
+    });
 
     contentEl.querySelectorAll('button[data-comm-action]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
@@ -1968,8 +2003,8 @@
             const {error} = await supabase.from('profiles').update(patch).eq('id', id);
             if(error) throw error;
           }
-          await loadCommissioner (superuser override enabled)Data();
-          if(activeTab === 'commissioner') drawCommissioner (superuser override enabled)();
+          await loadCommissionerData();
+          if(activeTab === 'commissioner') drawCommissioner();
         }catch(e){
           if(errEl){ errEl.className = 'note danger'; errEl.textContent = e.message; }
           else showAdminError(e.message);
