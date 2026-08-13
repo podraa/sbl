@@ -68,11 +68,29 @@
   .sprite{width:32px; height:32px; object-fit:contain; vertical-align:middle; image-rendering:pixelated; background:var(--panel-alt); border-radius:6px;}
   .mon-pill{display:inline-flex; align-items:center; gap:6px; background:var(--panel-alt); border:1px solid var(--border); border-radius:20px; padding:3px 10px 3px 3px; font-size:12px; margin:3px 4px 3px 0;}
   .mon-list{display:flex; flex-wrap:wrap; margin-top:4px;}
-  .mon-pick{display:flex; align-items:center; gap:8px; background:var(--panel-alt); border:1px solid var(--border); border-radius:8px; padding:6px 10px; margin:4px 4px 4px 0; cursor:pointer; font-size:12px;}
-  .mon-pick input{margin:0;}
-  .mon-pick.checked{border-color:var(--amber);}
-  .mon-pick-grid{display:flex; flex-wrap:wrap;}
   .pts{color:var(--text-dim); font-family:var(--mono); font-size:11px;}
+
+  /* trade picker: pokemon cards */
+  .pick-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); gap:8px; margin-top:10px;}
+  .pick-card{position:relative; display:flex; flex-direction:column; align-items:center; gap:5px; background:var(--panel-alt); border:1px solid var(--border); border-radius:12px; padding:10px 6px 9px; cursor:pointer; text-align:center; transition:.15s ease; user-select:none;}
+  .pick-card:hover{border-color:var(--amber);}
+  .pick-card:focus-visible{outline:2px solid var(--amber); outline-offset:1px;}
+  .pick-card.checked{border-color:var(--amber); background:#241d0f;}
+  .pick-card .sprite{width:40px; height:40px;}
+  .pick-card-name{font-size:11.5px; font-weight:600; line-height:1.25;}
+  .pick-card-pts{font-family:var(--mono); font-size:10px; color:var(--amber);}
+  .pick-card-check{position:absolute; top:6px; right:6px; width:16px; height:16px; border-radius:50%; background:var(--amber); color:#1a1206; font-size:10px; font-weight:800; line-height:16px; text-align:center; opacity:0; transform:scale(.6); transition:.15s ease;}
+  .pick-card.checked .pick-card-check{opacity:1; transform:scale(1);}
+
+  .selected-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .selected-row:empty{display:none; margin:0;}
+  .selected-chip{display:inline-flex; align-items:center; gap:6px; background:var(--panel-alt); border:1px solid var(--amber); border-radius:20px; padding:3px 6px 3px 3px; font-size:11.5px;}
+  .selected-chip .sprite{width:22px; height:22px;}
+  .selected-chip button{background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; line-height:1; padding:0 2px; font-family:var(--sans);}
+  .selected-chip button:hover{color:var(--red);}
+
+  .fa-search-wrap{position:relative; margin-top:2px;}
+  .fa-hint, .fa-empty{color:var(--text-dim); font-size:12px; padding:18px 4px; text-align:center; border:1px dashed var(--border); border-radius:10px; margin-top:10px;}
 
   .budget-bar{height:8px; border-radius:6px; background:var(--panel-alt); border:1px solid var(--border); overflow:hidden; margin-top:8px;}
   .budget-fill{height:100%; background:var(--amber);}
@@ -167,7 +185,7 @@
   let DASH = { teamMap:{}, settings:{ rosters:{}, freeAgency:{ mons:[] } }, replays:{} };
   let trades = [];
   let activeTab = 'myteam';
-  let draft = { target:'', offered:new Set(), requested:new Set() };
+  let draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
   let statusMsg = '';
 
   // ---------- helpers ----------
@@ -439,7 +457,35 @@
     const otherTeams = teamsList().filter(t=>t!==profile.team_name);
     const targetIsFA = draft.target === '';
     const targetRoster = targetIsFA ? null : (DASH.settings.rosters[draft.target] || []);
-    const requestPool = targetIsFA ? freeAgencyMons() : targetRoster;
+    const requestPool = targetIsFA ? freeAgencyMons() : (targetRoster || []);
+
+    function pickCard(m, role){
+      const set = role === 'offered' ? draft.offered : draft.requested;
+      const checked = set.has(m.name);
+      return `<div class="pick-card${checked?' checked':''}" data-role="${role}" data-name="${escapeHtml(m.name)}" role="button" tabindex="0" aria-pressed="${checked}">
+        <span class="pick-card-check">✓</span>
+        ${spriteImg(m.name,'sprite')}
+        <div class="pick-card-name">${escapeHtml(m.name)}</div>
+        ${m.points!=null?`<div class="pick-card-pts">${escapeHtml(m.points)} pts</div>`:''}
+      </div>`;
+    }
+
+    function chipsHtml(role){
+      const set = role === 'offered' ? draft.offered : draft.requested;
+      const pool = role === 'offered' ? roster : requestPool;
+      return Array.from(set).map(name=>{
+        const m = pool.find(x=>x.name===name) || {name, points:null};
+        return `<span class="selected-chip">${spriteImg(m.name,'sprite')} ${escapeHtml(m.name)}<button type="button" data-remove="${escapeHtml(name)}" data-role="${role}" aria-label="Remove ${escapeHtml(name)}">×</button></span>`;
+      }).join('');
+    }
+
+    function faResultsHtml(){
+      const q = (draft.faQuery||'').trim().toLowerCase();
+      if(!q) return '<div class="fa-hint">Start typing a Pokémon’s name to search free agency.</div>';
+      const matches = freeAgencyMons().filter(m=>m.name.toLowerCase().includes(q)).slice(0,30);
+      if(!matches.length) return `<div class="fa-empty">No free agents match “${escapeHtml(draft.faQuery)}”.</div>`;
+      return matches.map(m=>pickCard(m,'requested')).join('');
+    }
 
     el.innerHTML = `
       <h2>Propose a Trade</h2>
@@ -455,23 +501,24 @@
       <div class="trade-cols">
         <div class="trade-col">
           <h4>You give ${targetIsFA?'(optional for a free-agency pickup)':''}</h4>
-          <div class="mon-pick-grid" id="offeredPicks">
-            ${roster.length ? roster.map(m=>`
-              <label class="mon-pick${draft.offered.has(m.name)?' checked':''}" data-name="${escapeHtml(m.name)}">
-                <input type="checkbox" data-role="offered" value="${escapeHtml(m.name)}" ${draft.offered.has(m.name)?'checked':''}>
-                ${spriteImg(m.name,'sprite')} ${escapeHtml(m.name)} ${m.points!=null?`<span class="pts">${escapeHtml(m.points)}pt</span>`:''}
-              </label>`).join('') : '<div class="empty-state">Your roster is empty.</div>'}
+          <div class="selected-row" id="offeredSelected">${chipsHtml('offered')}</div>
+          <div class="pick-grid" id="offeredPicks">
+            ${roster.length ? roster.map(m=>pickCard(m,'offered')).join('') : '<div class="empty-state">Your roster is empty.</div>'}
           </div>
         </div>
         <div class="trade-col">
           <h4>You get</h4>
-          <div class="mon-pick-grid" id="requestedPicks">
-            ${requestPool && requestPool.length ? requestPool.map(m=>`
-              <label class="mon-pick${draft.requested.has(m.name)?' checked':''}" data-name="${escapeHtml(m.name)}">
-                <input type="checkbox" data-role="requested" value="${escapeHtml(m.name)}" ${draft.requested.has(m.name)?'checked':''}>
-                ${spriteImg(m.name,'sprite')} ${escapeHtml(m.name)} ${m.points!=null?`<span class="pts">${escapeHtml(m.points)}pt</span>`:''}
-              </label>`).join('') : `<div class="empty-state">${targetIsFA?'Free agency pool is empty.':'That team has no published roster.'}</div>`}
-          </div>
+          <div class="selected-row" id="requestedSelected">${chipsHtml('requested')}</div>
+          ${targetIsFA ? `
+            <div class="fa-search-wrap">
+              <input type="text" id="faSearch" placeholder="Search free agency by name…" value="${escapeHtml(draft.faQuery||'')}" autocomplete="off">
+            </div>
+            <div class="pick-grid" id="requestedPicks">${faResultsHtml()}</div>
+          ` : `
+            <div class="pick-grid" id="requestedPicks">
+              ${requestPool.length ? requestPool.map(m=>pickCard(m,'requested')).join('') : '<div class="empty-state">That team has no published roster.</div>'}
+            </div>
+          `}
         </div>
       </div>
       <div class="foot-actions">
@@ -482,16 +529,56 @@
     document.getElementById('targetSelect').onchange = (e)=>{
       draft.target = e.target.value;
       draft.requested = new Set();
+      draft.faQuery = '';
       renderProposeTrade();
     };
 
-    el.querySelectorAll('input[data-role]').forEach(cb=>{
-      cb.addEventListener('change', ()=>{
-        const set = cb.dataset.role === 'offered' ? draft.offered : draft.requested;
-        if(cb.checked) set.add(cb.value); else set.delete(cb.value);
-        cb.closest('.mon-pick').classList.toggle('checked', cb.checked);
+    function bindPickCards(container){
+      container.querySelectorAll('.pick-card').forEach(card=>{
+        const toggle = ()=>{
+          const role = card.dataset.role, name = card.dataset.name;
+          const set = role === 'offered' ? draft.offered : draft.requested;
+          if(set.has(name)) set.delete(name); else set.add(name);
+          card.classList.toggle('checked', set.has(name));
+          card.setAttribute('aria-pressed', set.has(name));
+          const rowId = role === 'offered' ? 'offeredSelected' : 'requestedSelected';
+          document.getElementById(rowId).innerHTML = chipsHtml(role);
+          bindChipRemovers();
+        };
+        card.addEventListener('click', toggle);
+        card.addEventListener('keydown', (e)=>{
+          if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); }
+        });
       });
-    });
+    }
+
+    function bindChipRemovers(){
+      el.querySelectorAll('.selected-chip button[data-remove]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const role = btn.dataset.role, name = btn.dataset.remove;
+          const set = role === 'offered' ? draft.offered : draft.requested;
+          set.delete(name);
+          document.getElementById(role === 'offered' ? 'offeredSelected' : 'requestedSelected').innerHTML = chipsHtml(role);
+          const grid = document.getElementById(role === 'offered' ? 'offeredPicks' : 'requestedPicks');
+          const card = grid && Array.from(grid.querySelectorAll('.pick-card')).find(c=>c.dataset.name === name);
+          if(card){ card.classList.remove('checked'); card.setAttribute('aria-pressed','false'); }
+          bindChipRemovers();
+        };
+      });
+    }
+
+    bindPickCards(el);
+    bindChipRemovers();
+
+    if(targetIsFA){
+      const searchInput = document.getElementById('faSearch');
+      searchInput.addEventListener('input', (e)=>{
+        draft.faQuery = e.target.value;
+        const grid = document.getElementById('requestedPicks');
+        grid.innerHTML = faResultsHtml();
+        bindPickCards(grid);
+      });
+    }
 
     document.getElementById('submitTradeBtn').onclick = async ()=>{
       const msgEl = document.getElementById('tradeMsg');
@@ -506,7 +593,7 @@
           mons_requested: Array.from(draft.requested)
         });
         if(error) throw error;
-        draft = { target:'', offered:new Set(), requested:new Set() };
+        draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
         await loadTrades();
         activeTab = 'trades';
         setStatus('Trade proposal sent.', false);
@@ -556,7 +643,6 @@
     const history = trades.filter(t=> t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam));
 
     contentEl.innerHTML = `
-      <div class="panel" id="proposePanel"></div>
       <div class="panel">
         <h2>Incoming <span class="badge">${incoming.length}</span></h2>
         ${incoming.length ? incoming.map(t=>tradeCard(t,'incoming')).join('') : '<div class="empty-state">No incoming trade offers.</div>'}
@@ -568,8 +654,16 @@
       <div class="panel">
         <h2>History <span class="badge">${history.length}</span></h2>
         ${history.length ? history.map(t=>tradeCard(t,'history')).join('') : '<div class="empty-state">No resolved trades yet.</div>'}
-      </div>`;
-    renderProposeTrade();
+      </div>
+      <div class="panel" id="proposePanel"></div>`;
+    // History/Incoming/Outgoing are always rendered above — this always runs
+    // regardless of what (or whether) a trade target has been picked, so a
+    // problem building the picker never hides trade history.
+    try{ renderProposeTrade(); }
+    catch(e){
+      const p = document.getElementById('proposePanel');
+      if(p) p.innerHTML = `<h2>Propose a Trade</h2><div class="note danger">Couldn't load the trade builder: ${escapeHtml(e.message||String(e))}</div>`;
+    }
 
     contentEl.querySelectorAll('button[data-action]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
