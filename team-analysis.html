@@ -32,6 +32,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 .speed-tab-mon + strong,.speed-tab-label + strong{font-size:18px}
 
 .selected-mon-heading{font-size:18px;font-weight:800;margin:8px 0 6px}
+
+.speed-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:10px}
+.speed-order{min-width:190px;display:flex;flex-direction:column;gap:5px}
+.speed-order select{width:100%}
+@media(max-width:700px){.speed-header{flex-direction:column}.speed-order{width:100%;min-width:0}}
 </style>
 <style>
 .comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -143,7 +148,7 @@ const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
 const SUPABASE_KEY='sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
 const STATE_ID='__dashboard_state__';
 const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let STATE={replays:{},teamMap:{},settings:{caseInsensitiveNames:true}};
+let STATE={replays:{},teamMap:{},settings:{caseInsensitiveNames:true},speedSort:'name'};
 const $=id=>document.getElementById(id);
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function norm(s){return String(s||'').trim().toLowerCase().replace(/[-_]/g,' ')}
@@ -457,25 +462,32 @@ function scarfSpeedFromMax(max){ return Math.floor(max*1.5); }
 
 async function speedTableForTeam(team){
   const a=aggregate(team);
-  const list=Object.values(a.mons).sort((x,y)=>x.species.localeCompare(y.species));
+  const list=Object.values(a.mons);
   if(!list.length)return `<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">No Pokémon have been recorded for this franchise.</p></section>`;
-  const rows=await Promise.all(list.map(async m=>{
+
+  const entries=await Promise.all(list.map(async m=>{
     const base=await fetchBaseSpeed(m.species);
-    if(base===null){
-      return `<tr><td>${esc(m.species)}</td><td class="num">Unavailable</td><td class="num">—</td><td class="num">—</td></tr>`;
-    }
+    if(base===null)return {...m,baseSpeed:null,maxSpeed:null,scarfSpeed:null,names:[m.species]};
     const max=maxSpeedFromBase(base,100);
-    return `<tr><td>${esc(m.species)}</td><td class="num">${base}</td><td class="num">${max}</td><td class="num">${scarfSpeedFromMax(max)}</td></tr>`;
+    return {...m,baseSpeed:base,maxSpeed:max,scarfSpeed:scarfSpeedFromMax(max),names:[m.species]};
   }));
+  const grouped=groupEquivalentVariants(entries);
+
+  const sortMode=$('speedOrderSelect')?.value||'name';
+  const nameOf=x=>displaySpecies(x);
+  if(sortMode==='speed-asc') grouped.sort((a,b)=>(a.maxSpeed??Infinity)-(b.maxSpeed??Infinity)||nameOf(a).localeCompare(nameOf(b)));
+  else if(sortMode==='speed-desc') grouped.sort((a,b)=>(b.maxSpeed??-Infinity)-(a.maxSpeed??-Infinity)||nameOf(a).localeCompare(nameOf(b)));
+  else grouped.sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
+
+  const renderRow=x=>`<tr><td>${esc(nameOf(x))}</td><td class="num">${x.baseSpeed===null?'Unavailable':x.baseSpeed}</td><td class="num">${x.maxSpeed===null?'—':x.maxSpeed}</td><td class="num">${x.scarfSpeed===null?'—':x.scarfSpeed}</td></tr>`;
+
   return `<section class="panel">
-    <h2>Speed Tiers</h2>
-    <p class="panel-desc">All values are <strong>Level 100</strong>. Base Speed is the species' base stat. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial Speed nature. Choice Scarf is calculated at 1.5× the maximum Speed.</p>
-    <div class="notice" style="margin-bottom:14px">Source convention: Pokémon Database's Level 100 stat ranges use 31 IVs, 252 EVs and a beneficial nature for maximum values. citeturn0search3turn0search4</div>
+    <div class="speed-header"><div><h2>Speed Tiers</h2><p class="panel-desc">All values are <strong>Level 100</strong>. Base Speed is the species' base stat. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial Speed nature. Choice Scarf is calculated at 1.5× the maximum Speed.</p></div><div class="speed-order"><label for="speedOrderSelect">Order by</label><select id="speedOrderSelect"><option value="name" ${sortMode==='name'?'selected':''}>Name</option><option value="speed-asc" ${sortMode==='speed-asc'?'selected':''}>Speed ascending</option><option value="speed-desc" ${sortMode==='speed-desc'?'selected':''}>Speed descending</option></select></div></div>
+    <div class="notice" style="margin-bottom:14px">Variants with identical relevant stats are grouped together; forms with different stats remain separate.</div>
     <table><thead><tr><th>Pokémon</th><th class="num">Base Speed</th><th class="num">Max Speed</th><th class="num">Max + Choice Scarf</th></tr></thead>
-    <tbody>${rows.join('')}</tbody></table>
+    <tbody>${grouped.map(renderRow).join('')}</tbody></table>
   </section>`;
 }
-
 
 function teamNames(){
   return [...new Set(allRows().flatMap(r=>[
@@ -483,9 +495,34 @@ function teamNames(){
   ]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
 
-function franchiseMons(team){
-  return Object.values(aggregate(team).mons)
-    .sort((a,b)=>b.appearances-a.appearances||a.species.localeCompare(b.species));
+function variantGroupName(species){
+  const raw=String(species||'').trim().toLowerCase();
+  const compact=raw.replace(/[\s_-]+/g,'');
+  const aliases={gastrodoneast:'gastrodon',gastrodonwest:'gastrodon'};
+  return aliases[compact]||raw;
+}
+function groupEquivalentVariants(list){
+  const groups=new Map(),out=[];
+  for(const m of list){
+    const key=variantGroupName(m.species);
+    if(!groups.has(key)){
+      const g={...m,names:[m.species],variantGroup:key}; groups.set(key,g); out.push(g);
+    }else{
+      const g=groups.get(key);
+      if(!g.names.includes(m.species))g.names.push(m.species);
+      g.appearances=(Number(g.appearances)||0)+(Number(m.appearances)||0);
+      if(m.replays?.size && g.replays?.size)m.replays.forEach(x=>g.replays.add(x));
+    }
+  }
+  return out;
+}
+function displaySpecies(m){
+  const first=m.names?.[0]||m.species||'';
+  const key=variantGroupName(first);
+  const canonical={
+    gastrodon:'Gastrodon'
+  };
+  return canonical[key]||first;
 }
 
 function typeChartMultiplier(attacking, defending){
@@ -594,19 +631,7 @@ function defensiveProfileCard(title,data,total){
   const rows=defensiveTypeRows(data,total);
   return `<div class="defensive-team"><h3>${title}</h3><table class="type-count-table"><thead><tr><th>Type</th><th class="num">Weak</th><th class="num">Resist</th><th class="num">Immune</th></tr></thead><tbody>${rows.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(x=>`<tr><td>${typePills([x.t])}</td><td class="num ${x.w?'count-bad':'count-neutral'}">${x.w}/${total}</td><td class="num ${x.r?'count-good':'count-neutral'}">${x.r}/${total}</td><td class="num ${x.i?'count-good':'count-neutral'}">${x.i}/${total}</td></tr>`).join('')}</tbody></table><div class="small" style="margin-top:9px">Weak = 2× or more. Resist = ½× or less. Immunity = 0×.</div></div>`;
 }
-function threatScoreForOpponent(o,your,yourTypes,oppTypes,getSpeed){
-  const matchups=your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(y=>{
-    const vals=(oppTypes[o.species]||[]).map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]));
-    const pressure=vals.length?Math.max(...vals):null;
-    const row=getSpeed(y,o);
-    return {m:y,pressure,faster:row?.omax!=null&&row?.ymax!=null&&row.omax>row.ymax};
-  });
-  return {
-    o,
-    goodAgainst:matchups.filter(x=>x.pressure!=null&&x.pressure>=2).sort((a,b)=>b.pressure-a.pressure),
-    losesTo:matchups.filter(x=>x.pressure!=null&&x.pressure<1).sort((a,b)=>a.pressure-b.pressure)
-  };
-}
+
 async function renderComparison(team){
   const names=teamNames();
   const opponentDefault=names.find(x=>x!==team)||'';
@@ -645,15 +670,13 @@ async function renderComparison(team){
   };
   const defaultSelected=STATE.comparePokemon&&your.some(m=>m.species===STATE.comparePokemon)?STATE.comparePokemon:(your[0]?.species||'');
   const selectedMon=your.find(m=>m.species===defaultSelected)||your[0];
-  const offense=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Pick one of your Pokémon to see its matchup across the entire opposing roster. The result is type-only; it does not model move power, abilities, stats or STAB.</p><div class="matchup-select-wrap"><div><label>Your Pokémon</label><select id="offensePokemon">${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>`<option value="${esc(m.species)}" ${m.species===selectedMon?.species?'selected':''}>${esc(m.species)}</option>`).join('')}</select></div><div class="matchup-selected">${selectedMon?`<div class="selected-offense-mon">${sprite(selectedMon.species)}<div><strong>${esc(selectedMon.species)}</strong>${typePills(yourTypes[selectedMon.species]||[])}<div class="small">Compare this Pokémon against the full opposing roster.</div></div></div>`:''}</div></div><div id="offenseResults" class="opponent-matchups">${renderOffenseResults(defaultSelected)}</div></section>`;
+  const offense=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Pick one of your Pokémon to see its matchup across the entire opposing roster. The result is type-only; it does not model move power, abilities, stats or STAB.</p><div class="matchup-select-wrap"><div><label>Your Pokémon</label><select id="offensePokemon">${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>`<option value="${esc(displaySpecies(m))}" ${m.species===selectedMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select></div><div class="matchup-selected">${selectedMon?`<div class="selected-offense-mon">${sprite(selectedMon.species)}<div><strong>${esc(selectedMon.species)}</strong>${typePills(yourTypes[selectedMon.species]||[])}<div class="small">Compare this Pokémon against the full opposing roster.</div></div></div>`:''}</div></div><div id="offenseResults" class="opponent-matchups">${renderOffenseResults(defaultSelected)}</div></section>`;
 
   const yourWeak=weaknessSummary(yourTypes),oppWeak=weaknessSummary(oppTypes);
   
 
   const speedCard=(title,mons,typesMap,side)=>{const list=mons.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>{const row=side==='your'?speedRows.find(x=>x.y.species===m.species):speedRows.find(x=>x.o.species===m.species);return {m,max:side==='your'?row?.ymax:row?.omax,scarf:side==='your'?row?.scarf:row?.oscarf}}).sort((a,b)=>(b.max??-1)-(a.max??-1));return `<div class="speed-team"><h3>${esc(title)}</h3><div class="speed-row" style="border-bottom:1px solid var(--border);color:var(--text-dim);font-size:9px;text-transform:uppercase"><span></span><span>Pokémon</span><span class="speed-num">Max</span><span class="speed-num">Scarf</span></div>${list.map(x=>`<div class="speed-row">${sprite(x.m.species)}<div><div class="sname">${esc(x.m.species)}</div><div class="types">${typePills(typesMap[x.m.species]||[])}</div></div><div class="speed-num">${x.max??'—'}</div><div class="speed-num">${x.scarf??'—'}</div></div>`).join('')}</div>`};
   const speedSection=`<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">Both rosters side by side, sorted by Level 100 maximum Speed. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial nature; Scarf is 1.5× that benchmark.</p><div class="speed-columns">${speedCard(team,your,yourTypes,'your')}${speedCard(currentOpponent,opp,oppTypes,'opp')}</div></section>`;
-
-  const threatData=opp.map(o=>threatScoreForOpponent(o,your,yourTypes,oppTypes,getSpeed));
 
   const defensiveMatchup=(mult)=>{
     if(mult===null)return ['Neutral matchup','defensive-neutral'];
@@ -665,10 +688,10 @@ async function renderComparison(team){
 
   const setDefault=STATE.setPokemon&&opp.some(m=>m.species===STATE.setPokemon)?STATE.setPokemon:(opp[0]?.species||'');
   const setMon=opp.find(m=>m.species===setDefault)||opp[0];
-  const renderSetDetail=(species)=>{const m=opp.find(x=>x.species===species)||opp[0];if(!m)return '<div class="empty">No Pokémon selected.</div>';return `<div class="set-detail-head">${sprite(m.species)}<div><h3 style="margin:0">${esc(m.species)}</h3>${typePills(oppTypes[m.species]||[])}<div class="small">${m.replays.size} recorded replay${m.replays.size===1?'':'s'} · ${observedMoves(m).length} unique observed moves · ${inferRoles(m).length} inferred role${inferRoles(m).length===1?'':'s'}</div></div></div>${setSuggestionsMarkup(m)}`};
-  const setSection=`<section class="panel"><h2>Likely Sets</h2><p class="panel-desc">Select an opposing Pokémon to see role-based set concepts inferred from its observed moves. If a Pokémon has multiple observed roles, each role gets its own separate set concept.</p><div class="set-layout"><div class="set-selector"><label>Opponent Pokémon</label><select id="setPokemonSelect">${opp.map(m=>`<option value="${esc(m.species)}" ${m.species===setMon?.species?'selected':''}>${esc(m.species)}</option>`).join('')}</select><div class="set-mon-list">${opp.map(m=>`<button type="button" class="set-mon-option ${m.species===setMon?.species?'active':''}" data-set-mon="${esc(m.species)}">${sprite(m.species)}<span><strong>${esc(m.species)}</strong><br>${typePills(oppTypes[m.species]||[])}</span></button>`).join('')}</div></div><div class="set-detail" id="setDetail">${renderSetDetail(setDefault)}</div></div></section>`;
+  const renderSetDetail=(species)=>{const m=opp.find(x=>x.species===species)||opp[0];if(!m)return '<div class="empty">No Pokémon selected.</div>';return `<div class="set-detail-head">${sprite(m.species)}<div><h3 style="margin:0">${esc(displaySpecies(m))}</h3>${typePills(oppTypes[m.species]||[])}<div class="small">${m.replays.size} recorded replay${m.replays.size===1?'':'s'} · ${observedMoves(m).length} unique observed moves · ${inferRoles(m).length} inferred role${inferRoles(m).length===1?'':'s'}</div></div></div>${setSuggestionsMarkup(m)}`};
+  const setSection=`<section class="panel"><h2>Likely Sets</h2><p class="panel-desc">Select an opposing Pokémon to see role-based set concepts inferred from its observed moves. If a Pokémon has multiple observed roles, each role gets its own separate set concept.</p><div class="set-layout"><div class="set-selector"><label>Opponent Pokémon</label><select id="setPokemonSelect">${opp.map(m=>`<option value="${esc(displaySpecies(m))}" ${m.species===setMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select><div class="set-mon-list">${opp.map(m=>`<button type="button" class="set-mon-option ${m.species===setMon?.species?'active':''}" data-set-mon="${esc(displaySpecies(m))}">${sprite(m.species)}<span><strong>${esc(displaySpecies(m))}</strong><br>${typePills(oppTypes[m.species]||[])}</span></button>`).join('')}</div></div><div class="set-detail" id="setDetail">${renderSetDetail(setDefault)}</div></div></section>`;
 
-  return controlsoffense+speedSection+setSection;
+  return controls+offense+speedSection+defensiveMatrix+setSection;
 }
 
 async function render(){
@@ -677,6 +700,8 @@ async function render(){
   if($('viewSelect') && $('viewSelect').value==='speed'){
     $('main').innerHTML='<div class="panel"><div class="empty">Loading Speed Tiers…</div></div>';
     $('main').innerHTML=await speedTableForTeam(team);
+    const speedOrder=$('speedOrderSelect');
+    if(speedOrder) speedOrder.addEventListener('change',()=>render());
     return;
   }
   if($('viewSelect') && $('viewSelect').value==='comparison'){
@@ -748,23 +773,34 @@ async function render(){
     return;
   }
   const a=aggregate(team);
-  const list=Object.values(a.mons).sort((x,y)=>y.appearances-x.appearances||y.kills-x.kills);
+  const list=groupEquivalentVariants(Object.values(a.mons).sort((x,y)=>y.appearances-x.appearances||y.kills-x.kills));
   const pairs=Object.entries(a.pairCounts).sort((x,y)=>y[1]-x[1]).slice(0,8);
   $('main').innerHTML=`<section class="panel"><h2>${esc(team)}</h2><p class="panel-desc">This is the scouting workspace for <strong>${esc(team)}</strong>. It uses the same shared replay data as the dashboard, but keeps opponent-prep analysis separate from league statistics.</p><div class="grid overview"><div class="statbox"><div class="k">Games analyzed</div><div class="v">${a.games.length}</div></div><div class="statbox"><div class="k">Record</div><div class="v">${a.wins}-${a.losses}</div></div><div class="statbox"><div class="k">Unique Pokémon</div><div class="v">${list.length}</div></div><div class="statbox"><div class="k">Pokémon appearances</div><div class="v">${list.reduce((n,m)=>n+m.appearances,0)}</div></div></div></section>
-  <section class="panel"><h2>Pokémon scouting</h2><p class="panel-desc">Select a Pokémon to inspect the exact moves it brought in each individual replay, along with performance.</p><div class="grid pokemon-grid">${list.map(m=>`<div class="mon-card" data-mon="${esc(norm(m.species))}"><div class="mon-head">${sprite(m.species)}<div><div class="mon-name">${esc(m.species)}</div><div class="muted">${m.replays.size} replay${m.replays.size===1?'':'s'} · ${m.appearances} appearances</div></div></div><div class="chips"><span class="chip"><b>${m.kills}</b> K</span><span class="chip"><b>${m.deaths}</b> D</span><span class="chip"><b>${m.dealt.toFixed(0)}</b> dmg</span><span class="chip"><b>${m.gameSets.filter(g=>g.moves.length).length}</b> sets recorded</span></div></div>`).join('')}</div></section>
+  <section class="panel"><h2>Pokémon scouting</h2><p class="panel-desc">Select a Pokémon to inspect the exact moves it brought in each individual replay, along with performance.</p><div class="grid pokemon-grid">${list.map(m=>`<div class="mon-card" data-mon="${esc(m.variantGroup||norm(m.species))}"><div class="mon-head">${sprite(m.species)}<div><div class="mon-name">${esc(displaySpecies(m))}</div><div class="muted">${m.replays.size} replay${m.replays.size===1?'':'s'} · ${m.appearances} appearances</div></div></div><div class="chips"><span class="chip"><b>${m.kills}</b> K</span><span class="chip"><b>${m.deaths}</b> D</span><span class="chip"><b>${m.dealt.toFixed(0)}</b> dmg</span><span class="chip"><b>${m.gameSets.filter(g=>g.moves.length).length}</b> sets recorded</span></div></div>`).join('')}</div></section>
   <section class="panel"><h2>Common Pokémon pairs</h2><p class="panel-desc">Pairs are counted when both Pokémon appeared for the selected franchise in the same replay.</p>${pairs.length?`<table><thead><tr><th>Pair</th><th class="num">Games</th></tr></thead><tbody>${pairs.map(([key,n])=>{const [x,y]=key.split('|');const names=list.filter(m=>norm(m.species)===x||norm(m.species)===y).map(m=>m.species);return `<tr><td>${names.join(' + ')||key.replace('|',' + ')}</td><td class="num">${n}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Not enough roster data.</div>'}</section>
   <div id="detail"></div>`;
   document.querySelectorAll('.mon-card').forEach(c=>c.addEventListener('click',()=>openMon(team,c.dataset.mon)));
 }
 function openMon(team,key){
-  const a=aggregate(team);const m=a.mons[key];if(!m)return;const detail=$('detail');
+  const a=aggregate(team);
+  const matching=Object.values(a.mons).filter(m=>variantGroupName(m.species)===key||norm(m.species)===key);
+  if(!matching.length)return;
+  const m={...matching[0],names:matching.map(x=>x.species),replays:new Set(),gameSets:[],appearances:0,kills:0,deaths:0,dealt:0,taken:0};
+  for(const x of matching){
+    x.replays?.forEach(r=>m.replays.add(r));
+    m.gameSets.push(...(x.gameSets||[]));
+    m.appearances+=Number(x.appearances||0);m.kills+=Number(x.kills||0);m.deaths+=Number(x.deaths||0);
+    m.dealt+=Number(x.dealt||0);m.taken+=Number(x.taken||0);
+  }
+  const detail=$('detail');
   const sets=m.gameSets.slice();
-  detail.innerHTML=`<section class="panel detail open"><div class="detail-head"><div class="detail-title">${sprite(m.species)}<div><h2>${esc(m.species)}</h2><div class="muted">${m.replays.size} replays · ${m.appearances} appearances · ${m.kills} K · ${m.deaths} D</div></div></div><button id="closeDetail">Close</button></div><div style="height:18px"></div>
-  <section class="panel" style="padding:16px;margin:0 0 14px"><h2 style="font-size:17px">Sets</h2><p class="panel-desc">The individual move sets captured for <strong>${esc(m.species)}</strong>. Each set represents one recorded instance of the Pokémon.</p>${sets.length?`<div class="set-list">${sets.map((g,i)=>`<div class="set-card"><div class="muted">Set ${i+1}</div><div class="chips">${g.moves.length?g.moves.map(x=>`<span class="chip">${esc(x)}</span>`).join(''):'<span class="small">No move lines captured</span>'}</div></div>`).join('')}</div>`:'<div class="empty">No sets are available.</div>'}</section>
+  detail.innerHTML=`<section class="panel detail open"><div class="detail-head"><div class="detail-title">${sprite(m.species)}<div><h2>${esc(displaySpecies(m))}</h2><div class="muted">${m.replays.size} replays · ${m.appearances} appearances · ${m.kills} K · ${m.deaths} D</div></div></div><button id="closeDetail">Close</button></div><div style="height:18px"></div>
+  <section class="panel" style="padding:16px;margin:0 0 14px"><h2 style="font-size:17px">Sets</h2><p class="panel-desc">The individual move sets captured for <strong>${esc(displaySpecies(m))}</strong>. Each set represents one recorded instance of the Pokémon.</p>${sets.length?`<div class="set-list">${sets.map((g,i)=>`<div class="set-card"><div class="muted">Set ${i+1}</div><div class="chips">${g.moves.length?g.moves.map(x=>`<span class="chip">${esc(x)}</span>`).join(''):'<span class="small">No move lines captured</span>'}</div></div>`).join('')}</div>`:'<div class="empty">No sets are available.</div>'}</section>
   <section class="panel" style="padding:16px;margin:0"><div class="section-title">Performance</div><table><tbody><tr><td>Appearances</td><td class="num">${m.appearances}</td></tr><tr><td>Kills</td><td class="num">${m.kills}</td></tr><tr><td>Deaths</td><td class="num">${m.deaths}</td></tr><tr><td>Damage dealt</td><td class="num">${m.dealt.toFixed(0)}</td></tr><tr><td>Damage taken</td><td class="num">${m.taken.toFixed(0)}</td></tr></tbody></table></section></section>`;
   detail.scrollIntoView({behavior:'smooth',block:'start'});
   $('closeDetail').addEventListener('click',()=>{detail.innerHTML='';window.scrollTo({top:0,behavior:'smooth'})});
 }
+
 async function load(){
   try{
     const {data,error}=await supabase.from('replays').select('replay_id,replay_data');
@@ -807,6 +843,14 @@ $('teamSelect').addEventListener('change',async()=>{
 
 $('viewSelect').addEventListener('change',async()=>{
   await render();
+});
+
+document.addEventListener('change',async(e)=>{
+  if(e.target?.id==='speedSort'){
+    STATE.speedSort=e.target.value;
+    const team=$('teamSelect')?.value;
+    if(team && $('viewSelect')?.value==='speed')$('main').innerHTML=await speedTableForTeam(team);
+  }
 });
 
 $('backDashboard').addEventListener('click',()=>{
