@@ -239,6 +239,29 @@
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
     <button data-tab="settings">Settings</button>
+<div class="section-divider"></div>
+
+<h3>Import from Excel</h3>
+<p class="note">
+  Upload the season workbook. Each sheet becomes a franchise,
+  Column A is treated as the point value, and Column C is treated
+  as the Pokémon name. Existing replay, leaderboard, and franchise
+  functionality is not modified.
+</p>
+
+<div class="row">
+  <div>
+    <label for="rosterFile">Roster workbook (.xlsx)</label>
+    <input type="file" id="rosterFile" accept=".xlsx,.xls,.csv">
+  </div>
+</div>
+
+<button class="primary" id="uploadRosterBtn">
+  Upload Excel Rosters
+</button>
+
+<div id="rosterUploadLog" class="log"></div>
+
   </nav>
 
   <div id="content"></div>
@@ -1707,6 +1730,101 @@
       showAdminError('Admin initialization failed: ' + e.message);
     }
   })();
+
+/* =========================================================
+   ROSTER EXCEL IMPORT
+   - Safe additive feature
+   - Does NOT modify replay processing, leaderboards,
+     Golden Fist, franchise stats, or any existing logic
+   ========================================================= */
+
+const rosterFileInput = document.getElementById('rosterFile');
+const uploadRosterBtn = document.getElementById('uploadRosterBtn');
+const rosterUploadLog = document.getElementById('rosterUploadLog');
+
+function logRosterUpload(message, ok = true){
+  if(!rosterUploadLog) return;
+  rosterUploadLog.innerHTML = `<span class="${ok ? 'ok' : 'err'}">${message}</span>`;
+}
+
+function normalizeRosterName(name){
+  return String(name || '')
+    .replace(/[_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+if(uploadRosterBtn){
+  uploadRosterBtn.addEventListener('click', async () => {
+    try{
+      requireAdmin();
+
+      const file = rosterFileInput?.files?.[0];
+      if(!file){
+        logRosterUpload('Choose an Excel workbook first.', false);
+        return;
+      }
+
+      uploadRosterBtn.disabled = true;
+      logRosterUpload('Reading workbook…');
+
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer);
+
+      const importedRosters = {};
+
+      workbook.SheetNames.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        if(!sheet) return;
+
+        const rows = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          defval: ''
+        });
+
+        const mons = [];
+
+        rows.forEach(row => {
+          const rawPoints = row[0];
+          const rawName = row[2];
+
+          const points = Number(rawPoints);
+          const name = normalizeRosterName(rawName);
+
+          if(!name) return;
+          if(Number.isNaN(points)) return;
+
+          mons.push({
+            name,
+            points
+          });
+        });
+
+        if(mons.length){
+          importedRosters[normalizeRosterName(sheetName)] = mons;
+        }
+      });
+
+      STATE.settings = STATE.settings || {};
+      STATE.settings.rosters = importedRosters;
+
+      await saveSharedState();
+
+      if(typeof renderRosterAdmin === 'function'){
+        renderRosterAdmin();
+      }
+
+      logRosterUpload(`Imported ${Object.keys(importedRosters).length} franchises successfully.`);
+
+    }catch(err){
+      console.error(err);
+      logRosterUpload(`Roster import failed: ${err.message}`, false);
+    }finally{
+      uploadRosterBtn.disabled = false;
+    }
+  });
+}
+
 })();
 </script>
 
@@ -1719,6 +1837,101 @@
   select.addEventListener('change',function(){
     if(this.value) location.href=this.value;
   });
+
+/* =========================================================
+   ROSTER EXCEL IMPORT
+   - Safe additive feature
+   - Does NOT modify replay processing, leaderboards,
+     Golden Fist, franchise stats, or any existing logic
+   ========================================================= */
+
+const rosterFileInput = document.getElementById('rosterFile');
+const uploadRosterBtn = document.getElementById('uploadRosterBtn');
+const rosterUploadLog = document.getElementById('rosterUploadLog');
+
+function logRosterUpload(message, ok = true){
+  if(!rosterUploadLog) return;
+  rosterUploadLog.innerHTML = `<span class="${ok ? 'ok' : 'err'}">${message}</span>`;
+}
+
+function normalizeRosterName(name){
+  return String(name || '')
+    .replace(/[_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+if(uploadRosterBtn){
+  uploadRosterBtn.addEventListener('click', async () => {
+    try{
+      requireAdmin();
+
+      const file = rosterFileInput?.files?.[0];
+      if(!file){
+        logRosterUpload('Choose an Excel workbook first.', false);
+        return;
+      }
+
+      uploadRosterBtn.disabled = true;
+      logRosterUpload('Reading workbook…');
+
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer);
+
+      const importedRosters = {};
+
+      workbook.SheetNames.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        if(!sheet) return;
+
+        const rows = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          defval: ''
+        });
+
+        const mons = [];
+
+        rows.forEach(row => {
+          const rawPoints = row[0];
+          const rawName = row[2];
+
+          const points = Number(rawPoints);
+          const name = normalizeRosterName(rawName);
+
+          if(!name) return;
+          if(Number.isNaN(points)) return;
+
+          mons.push({
+            name,
+            points
+          });
+        });
+
+        if(mons.length){
+          importedRosters[normalizeRosterName(sheetName)] = mons;
+        }
+      });
+
+      STATE.settings = STATE.settings || {};
+      STATE.settings.rosters = importedRosters;
+
+      await saveSharedState();
+
+      if(typeof renderRosterAdmin === 'function'){
+        renderRosterAdmin();
+      }
+
+      logRosterUpload(`Imported ${Object.keys(importedRosters).length} franchises successfully.`);
+
+    }catch(err){
+      console.error(err);
+      logRosterUpload(`Roster import failed: ${err.message}`, false);
+    }finally{
+      uploadRosterBtn.disabled = false;
+    }
+  });
+}
+
 })();
 </script>
 </body>
