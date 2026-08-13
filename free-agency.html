@@ -136,6 +136,38 @@ input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent
   .toolbar>div,.toolbar>div.toolbar-wide{min-width:0;flex:1 1 140px}
 }
 </style>
+<script>
+// Site-wide theme: picked on the My Team page's Account tab, saved to
+// localStorage, and applied here so every page matches once a choice is made.
+// If nothing has been explicitly chosen yet, this page keeps its own default colors.
+// This page's design uses different variable names (--panel2, --dim, --accent
+// instead of --panel-alt, --text-dim, --amber) so they're mapped below.
+(function(){
+  var THEMES={
+    amber:  {bg:'#0e1218',panel:'#161c26',panelAlt:'#1c2432',border:'#2a3444',text:'#e8edf5',textDim:'#8996a8',accent:'#ffb454'},
+    teal:   {bg:'#071614',panel:'#0d2220',panelAlt:'#122d2a',border:'#1f4a44',text:'#eafffa',textDim:'#8fc7bb',accent:'#5eead4'},
+    sky:    {bg:'#071426',panel:'#0d2038',panelAlt:'#142b47',border:'#2b4c70',text:'#eef6ff',textDim:'#9db4cc',accent:'#60a5fa'},
+    violet: {bg:'#171224',panel:'#241b38',panelAlt:'#302448',border:'#51406f',text:'#f7f2ff',textDim:'#b9aecf',accent:'#a78bfa'},
+    rose:   {bg:'#1c0510',panel:'#2c0a1c',panelAlt:'#3a0f26',border:'#5a1c3c',text:'#fdeef4',textDim:'#c99cb2',accent:'#f472b6'},
+    emerald:{bg:'#071410',panel:'#0d2119',panelAlt:'#122c22',border:'#1f4a37',text:'#eafff3',textDim:'#8fc7a8',accent:'#4ade80'},
+    orange: {bg:'#1a0f05',panel:'#2a1a0a',panelAlt:'#38220e',border:'#5a3a1a',text:'#fdf3e8',textDim:'#cbab84',accent:'#fb923c'},
+    yellow: {bg:'#17150a',panel:'#26220f',panelAlt:'#332d14',border:'#544b1f',text:'#fdfaea',textDim:'#c9c08a',accent:'#facc15'},
+    cyan:   {bg:'#051519',panel:'#0a2129',panelAlt:'#0f2c35',border:'#1c4a57',text:'#eafcff',textDim:'#8bc2cf',accent:'#22d3ee'},
+    indigo: {bg:'#0e0f1f',panel:'#171a30',panelAlt:'#1f2340',border:'#38406a',text:'#eef0ff',textDim:'#a3a8cf',accent:'#818cf8'}
+  };
+  var id; try{ id = localStorage.getItem('sbl_dashboard_theme'); }catch(e){}
+  var t = THEMES[id];
+  if(!t) return;
+  var root = document.documentElement.style;
+  root.setProperty('--bg', t.bg);
+  root.setProperty('--panel', t.panel);
+  root.setProperty('--panel2', t.panelAlt);
+  root.setProperty('--border', t.border);
+  root.setProperty('--text', t.text);
+  root.setProperty('--dim', t.textDim);
+  root.setProperty('--accent', t.accent);
+})();
+</script>
 </head>
 <body>
 <div class="page-nav">
@@ -172,13 +204,8 @@ function selectedSeasonSnapshot(shared){
   return{name:settings.activeSeason||DEFAULT_SEASON,key:'',settings,archived:false,archives};
 }
 function installSeasonPicker(shared){
-  const snap=selectedSeasonSnapshot(shared),entries=Object.entries(snap.archives||{}).sort((a,b)=>String(b[1]?.archivedAt||'').localeCompare(String(a[1]?.archivedAt||'')));
-  let box=document.getElementById('seasonPicker');if(!box){box=document.createElement('div');box.id='seasonPicker';box.style.cssText='position:fixed;top:14px;left:18px;z-index:1000;display:flex;align-items:center;gap:7px;';document.body.appendChild(box);}
-  box.innerHTML='<label style="font-size:11px;color:var(--dim);font-weight:700">Season</label><select id="seasonSelect" style="font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)"></select>';
-  const sel=box.querySelector('#seasonSelect'),opts=[{value:'',label:`${snap.name}${snap.archived?' (Archived)':''}`}];entries.forEach(([key,a])=>opts.push({value:key,label:`${a.name} (Archived)`}));
-  sel.innerHTML=opts.map(o=>`<option value="${o.value}" ${o.value===(snap.archived?snap.key:'')?'selected':''}>${o.label}</option>`).join('');
-  sel.onchange=()=>{const u=new URL(location.href);if(sel.value)u.searchParams.set('season',sel.value);else u.searchParams.delete('season');location.href=u.toString();};
-  return snap;
+  // Season picker UI removed; still resolve which season's data to use.
+  return selectedSeasonSnapshot(shared);
 }
 
 

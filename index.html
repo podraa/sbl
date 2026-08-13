@@ -13,6 +13,7 @@
     --text:#e8edf5;
     --text-dim:#8996a8;
     --amber:#ffb454;
+    --amber-text:#1a1206;
     --teal:#5eead4;
     --red:#ff7a7a;
     --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
@@ -43,7 +44,7 @@
   .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
   .row > div{flex:1; min-width:160px;}
 
-  button.primary{background:var(--amber); color:#1a1206; border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans);}
+  button.primary{background:var(--amber); color:var(--amber-text); border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans);}
   button.primary:disabled{opacity:.5; cursor:default;}
   button.ghost{background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer; font-family:var(--sans);}
   button.ghost:hover{border-color:var(--amber);}
@@ -80,7 +81,7 @@
   .pick-card .sprite{width:40px; height:40px;}
   .pick-card-name{font-size:11.5px; font-weight:600; line-height:1.25;}
   .pick-card-pts{font-family:var(--mono); font-size:10px; color:var(--amber);}
-  .pick-card-check{position:absolute; top:6px; right:6px; width:16px; height:16px; border-radius:50%; background:var(--amber); color:#1a1206; font-size:10px; font-weight:800; line-height:16px; text-align:center; opacity:0; transform:scale(.6); transition:.15s ease;}
+  .pick-card-check{position:absolute; top:6px; right:6px; width:16px; height:16px; border-radius:50%; background:var(--amber); color:var(--amber-text); font-size:10px; font-weight:800; line-height:16px; text-align:center; opacity:0; transform:scale(.6); transition:.15s ease;}
   .pick-card.checked .pick-card-check{opacity:1; transform:scale(1);}
 
   .selected-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
@@ -109,7 +110,7 @@
   .trade-column-main,.trade-column-side{min-width:0;}
   .trade-history-mini{position:sticky;top:16px;}
   .trade-tab-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
-  .tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--amber);color:#1a1206;font-size:10px;font-family:var(--mono);vertical-align:middle;margin-left:4px;}
+  .tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--amber);color:var(--amber-text);font-size:10px;font-family:var(--mono);vertical-align:middle;margin-left:4px;}
   @media(max-width:800px){.trade-column-grid{grid-template-columns:1fr;}.trade-history-mini{position:static;}}
 
 
@@ -148,6 +149,16 @@
   .meta-box .value.taken{color:var(--red);}
   .meta-box .value.kills{color:var(--teal);}
   .pokemon-sub{color:var(--text-dim);font-size:11px;margin-top:2px;}
+
+  .theme-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:8px;}
+  .theme-swatch{display:flex; flex-direction:column; gap:8px; background:var(--panel-alt); border:1px solid var(--border); border-radius:10px; padding:10px; cursor:pointer; font-family:var(--sans); font-size:12px; color:var(--text); text-align:left;}
+  .theme-swatch:hover{border-color:var(--text-dim);}
+  .theme-swatch.active{border-color:var(--theme-accent,var(--amber)); box-shadow:0 0 0 1px var(--theme-accent,var(--amber));}
+  .theme-swatch .preview{display:flex; height:34px; border-radius:6px; overflow:hidden; border:1px solid rgba(255,255,255,.08);}
+  .theme-swatch .preview span{flex:1;}
+  .theme-swatch .label-row{display:flex; align-items:center; justify-content:space-between;}
+  .theme-swatch .check{color:var(--theme-accent); font-weight:800; opacity:0;}
+  .theme-swatch.active .check{opacity:1;}
 
 </style>
 </head>
@@ -188,21 +199,58 @@
     return {name:settings.activeSeason||DEFAULT_SEASON,key:'',teamMap:shared?.teamMap||{},settings,replays:null,archived:false,archives};
   }
   function installSeasonPicker(shared){
-    const snap=selectedSeasonSnapshot(shared), entries=Object.entries(snap.archives||{}).sort((a,b)=>String(b[1]?.archivedAt||'').localeCompare(String(a[1]?.archivedAt||'')));
-    let box=document.getElementById('seasonPicker');
-    if(!box){box=document.createElement('div');box.id='seasonPicker';box.style.cssText='position:fixed;top:14px;left:18px;z-index:1000;display:flex;align-items:center;gap:7px;';document.body.appendChild(box);}
-    box.innerHTML='<label style="font-size:11px;color:var(--text-dim);font-weight:700">Season</label><select id="seasonSelect" style="font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)"></select>';
-    const sel=box.querySelector('#seasonSelect'),opts=[{value:'',label:`${snap.name}${snap.archived?' (Archived)':''}`}];
-    entries.forEach(([key,a])=>opts.push({value:key,label:`${a.name} (Archived)`}));
-    sel.innerHTML=opts.map(o=>`<option value="${o.value}" ${o.value===(snap.archived?snap.key:'')?'selected':''}>${o.label}</option>`).join('');
-    sel.onchange=()=>{const u=new URL(location.href);if(sel.value)u.searchParams.set('season',sel.value);else u.searchParams.delete('season');location.href=u.toString();};
-    if(snap.archived){const note=document.createElement('div');note.style.cssText='position:fixed;top:50px;left:18px;z-index:999;font-size:10px;color:var(--amber);';note.textContent='Archived season — read only';document.body.appendChild(note);}
-    return snap;
+    // Season picker UI removed; still resolve which season's data to use.
+    return selectedSeasonSnapshot(shared);
   }
 
   const ROSTER_BUDGET = 115; // keep in sync with the `budget` constant in accept_trade()
   function currentSeason(){ return new Date().getFullYear(); }
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ---------- theme ----------
+  // A per-device full-palette preference for this dashboard: background,
+  // panels, borders, text, and accent all swap together, and the same
+  // palette is read by every other page on the site (see their own loader
+  // scripts) so the whole site stays in sync.
+  const THEMES = [
+    {id:'amber',   name:'Amber',   bg:'#0e1218', panel:'#161c26', panelAlt:'#1c2432', border:'#2a3444', text:'#e8edf5', textDim:'#8996a8', accent:'#ffb454', accentText:'#1a1206'},
+    {id:'teal',    name:'Teal',    bg:'#071614', panel:'#0d2220', panelAlt:'#122d2a', border:'#1f4a44', text:'#eafffa', textDim:'#8fc7bb', accent:'#5eead4', accentText:'#062521'},
+    {id:'sky',     name:'Sky Blue',bg:'#071426', panel:'#0d2038', panelAlt:'#142b47', border:'#2b4c70', text:'#eef6ff', textDim:'#9db4cc', accent:'#60a5fa', accentText:'#0b1a33'},
+    {id:'violet',  name:'Violet',  bg:'#171224', panel:'#241b38', panelAlt:'#302448', border:'#51406f', text:'#f7f2ff', textDim:'#b9aecf', accent:'#a78bfa', accentText:'#1e1033'},
+    {id:'rose',    name:'Rose',    bg:'#1c0510', panel:'#2c0a1c', panelAlt:'#3a0f26', border:'#5a1c3c', text:'#fdeef4', textDim:'#c99cb2', accent:'#f472b6', accentText:'#3b0a24'},
+    {id:'emerald', name:'Emerald', bg:'#071410', panel:'#0d2119', panelAlt:'#122c22', border:'#1f4a37', text:'#eafff3', textDim:'#8fc7a8', accent:'#4ade80', accentText:'#052e12'},
+    {id:'orange',  name:'Orange',  bg:'#1a0f05', panel:'#2a1a0a', panelAlt:'#38220e', border:'#5a3a1a', text:'#fdf3e8', textDim:'#cbab84', accent:'#fb923c', accentText:'#341102'},
+    {id:'yellow',  name:'Yellow',  bg:'#17150a', panel:'#26220f', panelAlt:'#332d14', border:'#544b1f', text:'#fdfaea', textDim:'#c9c08a', accent:'#facc15', accentText:'#332600'},
+    {id:'cyan',    name:'Cyan',    bg:'#051519', panel:'#0a2129', panelAlt:'#0f2c35', border:'#1c4a57', text:'#eafcff', textDim:'#8bc2cf', accent:'#22d3ee', accentText:'#032a30'},
+    {id:'indigo',  name:'Indigo',  bg:'#0e0f1f', panel:'#171a30', panelAlt:'#1f2340', border:'#38406a', text:'#eef0ff', textDim:'#a3a8cf', accent:'#818cf8', accentText:'#141033'}
+  ];
+  // Kills/deaths stat colors stay constant across themes so they keep their
+  // meaning (teal = positive, red = negative) no matter which palette is active.
+  const THEME_TEAL = '#5eead4', THEME_RED = '#ff7a7a';
+  const THEME_STORAGE_KEY = 'sbl_dashboard_theme';
+  function getSavedThemeId(){
+    try{ return localStorage.getItem(THEME_STORAGE_KEY) || 'amber'; }catch(e){ return 'amber'; }
+  }
+  // persist=false just paints the palette without writing to storage, so a
+  // first-ever visit doesn't silently stamp "amber" as an explicit choice
+  // and override every other page's own default look.
+  function applyTheme(id, persist){
+    const theme = THEMES.find(t=>t.id===id) || THEMES[0];
+    const root = document.documentElement.style;
+    root.setProperty('--bg', theme.bg);
+    root.setProperty('--panel', theme.panel);
+    root.setProperty('--panel-alt', theme.panelAlt);
+    root.setProperty('--border', theme.border);
+    root.setProperty('--text', theme.text);
+    root.setProperty('--text-dim', theme.textDim);
+    root.setProperty('--amber', theme.accent);
+    root.setProperty('--amber-text', theme.accentText);
+    root.setProperty('--teal', THEME_TEAL);
+    root.setProperty('--red', THEME_RED);
+    if(persist !== false){ try{ localStorage.setItem(THEME_STORAGE_KEY, theme.id); }catch(e){} }
+    return theme;
+  }
+  applyTheme(getSavedThemeId(), false); // apply saved (or default) theme as early as possible, without forcing a save
 
   const appEl = document.getElementById('app');
   const contentEl = document.getElementById('content');
@@ -288,7 +336,10 @@
         games += appearances;
         if(appearances > 0){
           winGames++;
-          const result = r.results && r.results[m.side] ? r.results[m.side] : null;
+          // Replays store the winner as a username (r.winner), not a per-side
+          // results map, so fall back to comparing against the coach on this side.
+          const result = r.results && r.results[m.side] ? r.results[m.side]
+            : (r.winner && r.winner.toLowerCase()===(r.players?.[m.side]||'').toLowerCase() ? 'W' : (r.winner ? 'L' : null));
           if(result === 'W') wins++;
         }
       }
@@ -981,6 +1032,7 @@
 
   // ---------- Account tab ----------
   function renderAccount(){
+    const currentThemeId = getSavedThemeId();
     contentEl.innerHTML = `
       <div class="panel">
         <h2>Account</h2>
@@ -992,6 +1044,16 @@
           <button class="ghost" id="changeTeamBtn2">Change team pick</button>
           <button class="danger" id="logoutBtn">Log out</button>
         </div>
+      </div>
+      <div class="panel">
+        <h2>Theme</h2>
+        <div class="note" style="margin-top:0">Pick an accent color for your dashboard. This is saved on this device.</div>
+        <div class="theme-grid">
+          ${THEMES.map(t=>`<button type="button" class="theme-swatch${t.id===currentThemeId?' active':''}" data-theme="${t.id}" style="--theme-accent:${t.accent}">
+            <div class="preview" style="background:${t.bg}"><span style="background:${t.panel}"></span><span style="background:${t.accent}"></span></div>
+            <div class="label-row"><span>${escapeHtml(t.name)}</span><span class="check">✓</span></div>
+          </button>`).join('')}
+        </div>
       </div>`;
     document.getElementById('changeTeamBtn2').onclick = renderTeamClaim;
     document.getElementById('logoutBtn').onclick = async ()=>{
@@ -999,6 +1061,12 @@
       session = null; profile = null; trades = [];
       renderAuthGate();
     };
+    contentEl.querySelectorAll('[data-theme]').forEach(btn=>{
+      btn.onclick = ()=>{
+        applyTheme(btn.dataset.theme);
+        renderAccount();
+      };
+    });
   }
 
   // ---------- shell ----------
