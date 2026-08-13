@@ -244,26 +244,7 @@
   </nav>
 
   
-<div class="panel" id="rosterImportPanel">
-  <h2>Import Rosters from Excel</h2>
-  <p class="note">
-    Upload your season workbook. Each sheet becomes a franchise,
-    Column A is the point value, and Column C is the Pokémon name.
-  </p>
-
-  <div class="row">
-    <div>
-      <label for="rosterFile">Roster workbook (.xlsx)</label>
-      <input type="file" id="rosterFile" accept=".xlsx,.xls,.csv">
-    </div>
-  </div>
-
-  <button class="primary" id="uploadRosterBtn">
-    Upload Excel Rosters
-  </button>
-
-  <div id="rosterUploadLog" class="log"></div>
-</div>
+<!-- Roster management lives in the Rosters tab so there is only one upload path. -->
 
 <div id="content"></div>
 </div>
@@ -343,6 +324,18 @@
     const {error} = await supabase.from('replays').upsert([{
       replay_id: SUPABASE_STATE_ID,
       replay_data: {teamMap: STATE.teamMap, settings: STATE.settings},
+      updated_at: new Date().toISOString()
+    }], {onConflict:'replay_id'});
+    if(error) throw error;
+  }
+  // Public rosters are kept in their own row because rosters.html reads
+  // __rosters__ directly. Keeping this separate from dashboard state means
+  // roster publishing cannot overwrite replay/team/settings data.
+  async function savePublishedRosters(rosters){
+    requireAdmin();
+    const {error} = await supabase.from('replays').upsert([{
+      replay_id: '__rosters__',
+      replay_data: {rosters},
       updated_at: new Date().toISOString()
     }], {onConflict:'replay_id'});
     if(error) throw error;
@@ -1480,57 +1473,178 @@
   }
 
 
-  function rosterKey(s){return String(s||'').trim().toLowerCase().replace(/[\s_-]+/g,'');}
+  function rosterKey(s){
+    return String(s||'').trim().toLowerCase().replace(/[\s_-]+/g,'');
+  }
+
+  function normalizeRosterName(name){
+    return String(name || '').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim();
+  }
+
   function parseRosterWorkbook(wb){
-    const out={};
-    const teamHeaders=['team','franchise','team name','franchise name'];
-    const monHeaders=['pokemon','pokémon','species','pokemon species','pick','roster'];
-    for(const sheet of wb.SheetNames){
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheet],{header:1,defval:''});
-      if(!rows.length)continue;
-      const headers=rows[0].map(v=>String(v).trim().toLowerCase());
-      const teamCol=headers.findIndex(h=>teamHeaders.includes(h));
-      const monCol=headers.findIndex(h=>monHeaders.includes(h));
-      const defaultTeam=String(sheet).trim();
+    const out = {};
+    const teamHeaders = ['team','franchise','team name','franchise name'];
+    const monHeaders = ['pokemon','pokémon','species','pokemon species','pick','roster'];
+
+    for(const sheetName of wb.SheetNames){
+      const sheet = wb.Sheets[sheetName];
+      if(!sheet) continue;
+
+      const rows = XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+      if(!rows.length) continue;
+
+      const headers = rows[0].map(v => String(v).trim().toLowerCase());
+      const teamCol = headers.findIndex(h => teamHeaders.includes(h));
+      const monCol = headers.findIndex(h => monHeaders.includes(h));
+
+      // The attached Season 15 workbook uses one team per sheet, with
+      // points in Column A and Pokémon in Column C. Preserve those points.
+      const isPointAndNameLayout = rows.some(row =>
+        !Number.isNaN(Number(row?.[0])) && String(row?.[2] ?? '').trim()
+      );
+
+      if(isPointAndNameLayout){
+        const team = normalizeRosterName(sheetName);
+        const mons = [];
+        for(const row of rows){
+          const name = normalizeRosterName(row?.[2]);
+          const points = Number(row?.[0]);
+          if(!name || Number.isNaN(points)) continue;
+          if(!mons.some(x => rosterKey(x.name) === rosterKey(name))){
+            mons.push({name, points});
+          }
+        }
+        if(team && mons.length) out[team] = mons;
+        continue;
+      }
+
+      // Also support the more generic Team/Franchise + Pokémon/Species format.
+      const defaultTeam = normalizeRosterName(sheetName);
       for(let r=1;r<rows.length;r++){
         const row=rows[r];
-        const team=String(teamCol>=0?row[teamCol]:defaultTeam).trim().replace(/\s+/g,' ');
-        if(!team)continue;
-        const mons=[];
+        const team=normalizeRosterName(teamCol>=0 ? row[teamCol] : defaultTeam);
+        if(!team) continue;
+
+        const values=[];
         if(monCol>=0){
-          const v=String(row[monCol]??'').trim(); if(v)mons.push(v);
+          const value=normalizeRosterName(row[monCol]);
+          if(value) values.push({name:value, points:null});
         }else{
-          for(let c=0;c<row.length;c++){if(c!==teamCol){const v=String(row[c]??'').trim();if(v)mons.push(v)}}
+          for(let c=0;c<row.length;c++){
+            if(c===teamCol) continue;
+            const value=normalizeRosterName(row[c]);
+            if(value) values.push({name:value, points:null});
+          }
         }
-        if(!out[team])out[team]=[];
-        mons.forEach(mon=>{
-          if(!mon || /^(pokemon|pokémon|species|name|pick|roster)$/i.test(mon))return;
-          if(!out[team].some(x=>rosterKey(x)===rosterKey(mon)))out[team].push(mon);
+
+        if(!out[team]) out[team]=[];
+        values.forEach(mon=>{
+          if(/^(pokemon|pokémon|species|name|pick|roster)$/i.test(mon.name)) return;
+          if(!out[team].some(x=>rosterKey(x.name)===rosterKey(mon.name))){
+            out[team].push(mon);
+          }
         });
       }
     }
-    Object.keys(out).forEach(t=>{out[t].sort((a,b)=>a.localeCompare(b));if(!out[t].length)delete out[t]});
+
+    Object.keys(out).forEach(team=>{
+      out[team].sort((a,b)=>a.name.localeCompare(b.name));
+      if(!out[team].length) delete out[team];
+    });
     return out;
   }
+
+  function normalizeStoredRosters(rosters){
+    const out = {};
+    for(const [team, list] of Object.entries(rosters || {})){
+      out[team] = (Array.isArray(list) ? list : []).map(mon => {
+        if(typeof mon === 'string') return {name:mon, points:null};
+        return {name:String(mon?.name ?? ''), points:mon?.points ?? null};
+      }).filter(mon => mon.name);
+    }
+    return out;
+  }
+
+  function rosterDisplay(mon){
+    const points = mon?.points;
+    return `${escapeHtml(mon?.name || '')}${points == null || points === '' ? '' : ` (${escapeHtml(points)} pts)`}`;
+  }
+
+  async function publishRosters(rosters){
+    const normalized = normalizeStoredRosters(rosters);
+    if(!Object.keys(normalized).length) throw new Error('No rosters to publish.');
+
+    STATE.settings = STATE.settings || {};
+    STATE.settings.rosters = normalized;
+
+    // These two writes intentionally remain separate: dashboard state contains
+    // all admin settings, while __rosters__ is the public roster-page contract.
+    await saveSharedState();
+    await savePublishedRosters(normalized);
+  }
+
   function renderRosters(){
-    const rosters=STATE.settings.rosters||{};
+    const rosters=normalizeStoredRosters(STATE.settings.rosters||{});
     const teams=Object.keys(rosters).sort();
+
     contentEl.innerHTML=`<div class="panel"><h2>Current Rosters</h2>
-      <div class="note">Upload an Excel/CSV roster file. You can use a <strong>Team/Franchise</strong> column plus a <strong>Pokémon/Species</strong> column, or put each team on its own sheet.</div>
-      <div class="row" style="align-items:flex-end;margin-top:14px"><div><label>Roster file</label><input id="rosterFile" type="file" accept=".xlsx,.xls,.csv"></div><div style="flex:0"><button class="primary" id="importRosters">Preview import</button></div></div>
+      <div class="note">Upload an Excel/CSV roster file. The attached Season 15 format (one team per sheet, points in Column A, Pokémon in Column C) is supported, as is a Team/Franchise + Pokémon/Species layout.</div>
+      <div class="row" style="align-items:flex-end;margin-top:14px">
+        <div><label>Roster file</label><input id="rosterTabFile" type="file" accept=".xlsx,.xls,.csv"></div>
+        <div style="flex:0"><button class="primary" id="importRosters">Preview import</button></div>
+      </div>
       <div id="rosterStatus" style="margin-top:12px"></div></div>
-      <div class="panel"><h2>Published rosters</h2>${teams.length?`<div class="roster-admin-grid">${teams.map(t=>`<div class="roster-admin-card"><h3>${escapeHtml(t)}</h3><div class="badge">${rosters[t].length} Pokémon</div><div class="roster-admin-mons">${rosters[t].map(escapeHtml).join(', ')}</div></div>`).join('')}</div>`:'<div class="empty-state">No rosters published yet.</div>'}</div>`;
+      <div class="panel"><h2>Published rosters</h2>
+        ${teams.length?`<div class="roster-admin-grid">${teams.map(t=>`
+          <div class="roster-admin-card">
+            <h3>${escapeHtml(t)}</h3>
+            <div class="badge">${rosters[t].length} Pokémon</div>
+            <div class="roster-admin-mons">${rosters[t].map(rosterDisplay).join(', ')}</div>
+          </div>`).join('')}`:'<div class="empty-state">No rosters published yet.</div>'}
+      </div>`;
+
     document.getElementById('importRosters').onclick=async()=>{
-      const file=document.getElementById('rosterFile').files?.[0],status=document.getElementById('rosterStatus');
+      const file=document.getElementById('rosterTabFile').files?.[0];
+      const status=document.getElementById('rosterStatus');
       if(!file){status.innerHTML='<div class="note danger">Choose a file first.</div>';return}
+
+      const btn=document.getElementById('importRosters');
+      btn.disabled=true;
+      status.innerHTML='<div class="note">Reading workbook…</div>';
+
       try{
-        const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),parsed=parseRosterWorkbook(wb);
-        if(!Object.keys(parsed).length)throw new Error('No rosters detected. Use Team/Franchise + Pokémon/Species columns, or one sheet per team.');
-        const preview=Object.entries(parsed).map(([t,a])=>`<li><strong>${escapeHtml(t)}</strong>: ${a.length} — ${a.map(escapeHtml).join(', ')}</li>`).join('');
-        status.innerHTML=`<div class="panel" style="padding:12px"><strong>Preview</strong><ul>${preview}</ul><button class="primary" id="confirmRoster">Publish rosters</button> <button class="ghost" id="cancelRoster">Cancel</button></div>`;
+        const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+        const parsed=parseRosterWorkbook(wb);
+        if(!Object.keys(parsed).length){
+          throw new Error('No rosters detected. Use the Season 15 layout (one team per sheet, points in Column A, Pokémon in Column C) or Team/Franchise + Pokémon/Species columns.');
+        }
+
+        const preview=Object.entries(parsed).map(([t,a])=>
+          `<li><strong>${escapeHtml(t)}</strong>: ${a.length} — ${a.map(rosterDisplay).join(', ')}</li>`
+        ).join('');
+
+        status.innerHTML=`<div class="panel" style="padding:12px">
+          <strong>Preview</strong><ul>${preview}</ul>
+          <button class="primary" id="confirmRoster">Publish rosters</button>
+          <button class="ghost" id="cancelRoster">Cancel</button>
+        </div>`;
+
         document.getElementById('cancelRoster').onclick=renderRosters;
-        document.getElementById('confirmRoster').onclick=async()=>{STATE.settings.rosters=parsed;await saveSettings();renderRosters()};
-      }catch(e){status.innerHTML=`<div class="note danger">${escapeHtml(e.message)}</div>`}
+        document.getElementById('confirmRoster').onclick=async()=>{
+          const confirmBtn=document.getElementById('confirmRoster');
+          confirmBtn.disabled=true;
+          try{
+            await publishRosters(parsed);
+            renderRosters();
+          }catch(e){
+            status.innerHTML=`<div class="note danger">${escapeHtml(e.message)}</div>`;
+          }
+        };
+      }catch(e){
+        status.innerHTML=`<div class="note danger">${escapeHtml(e.message)}</div>`;
+      }finally{
+        btn.disabled=false;
+      }
     };
   }
 
@@ -1731,99 +1845,6 @@
       showAdminError('Admin initialization failed: ' + e.message);
     }
   })();
-
-/* =========================================================
-   ROSTER EXCEL IMPORT
-   - Safe additive feature
-   - Does NOT modify replay processing, leaderboards,
-     Golden Fist, franchise stats, or any existing logic
-   ========================================================= */
-
-const rosterFileInput = document.getElementById('rosterFile');
-const uploadRosterBtn = document.getElementById('uploadRosterBtn');
-const rosterUploadLog = document.getElementById('rosterUploadLog');
-
-function logRosterUpload(message, ok = true){
-  if(!rosterUploadLog) return;
-  rosterUploadLog.innerHTML = `<span class="${ok ? 'ok' : 'err'}">${message}</span>`;
-}
-
-function normalizeRosterName(name){
-  return String(name || '')
-    .replace(/[_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-if(uploadRosterBtn){
-  uploadRosterBtn.addEventListener('click', async () => {
-    try{
-
-      const file = rosterFileInput?.files?.[0];
-      if(!file){
-        logRosterUpload('Choose an Excel workbook first.', false);
-        return;
-      }
-
-      uploadRosterBtn.disabled = true;
-      logRosterUpload('Reading workbook…');
-
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer);
-
-      const importedRosters = {};
-
-      workbook.SheetNames.forEach(sheetName => {
-        const sheet = workbook.Sheets[sheetName];
-        if(!sheet) return;
-
-        const rows = XLSX.utils.sheet_to_json(sheet, {
-          header: 1,
-          defval: ''
-        });
-
-        const mons = [];
-
-        rows.forEach(row => {
-          const rawPoints = row[0];
-          const rawName = row[2];
-
-          const points = Number(rawPoints);
-          const name = normalizeRosterName(rawName);
-
-          if(!name) return;
-          if(Number.isNaN(points)) return;
-
-          mons.push({
-            name,
-            points
-          });
-        });
-
-        if(mons.length){
-          importedRosters[normalizeRosterName(sheetName)] = mons;
-        }
-      });
-
-      STATE.settings = STATE.settings || {};
-      STATE.settings.rosters = importedRosters;
-
-      await saveSharedState();
-
-      if(typeof renderRosterAdmin === 'function'){
-        renderRosterAdmin();
-      }
-
-      logRosterUpload(`Imported ${Object.keys(importedRosters).length} franchises successfully.`);
-
-    }catch(err){
-      console.error(err);
-      logRosterUpload(`Roster import failed: ${err.message}`, false);
-    }finally{
-      uploadRosterBtn.disabled = false;
-    }
-  });
-}
 
 })();
 </script>
