@@ -1851,13 +1851,12 @@
   }
 
   // ---------- Commissioner: team-claim approvals + trade oversight ----------
-  // These read/write the `profiles` and `trade_requests` tables from
-  // trade_schema.sql. Trades are read-only here: RLS only lets the two
-  // teams involved in a trade (via accept_trade / status updates) change it,
-  // so a commissioner viewing here cannot force-accept/reject someone else's
-  // trade — only the profile-approval actions are commissioner-only writes.
+  // These read/write the `profiles` and `trade_requests` tables. Commissioners
+  // can approve/reject Free Agency requests, reset resolved trades, and revert
+  // accepted trades. Team-to-team acceptance remains handled by accept_trade().
   let COMM_PROFILES = null;
   let COMM_TRADES = null;
+  let COMM_TRADE_FILTER = 'pending';
 
   async function loadCommissionerData(){
     const [{data:profilesData, error:profErr}, {data:tradesData, error:tradeErr}] = await Promise.all([
@@ -1907,12 +1906,16 @@
   }
 
   function commTradeRow(t){
-    const canRevoke = t.status !== 'pending'; // send an already-resolved trade back to pending
-    const canRevert = t.status === 'accepted'; // undo an accepted trade's roster swap
+    const canRevoke = t.status !== 'pending';
+    const canRevert = t.status === 'accepted';
+    const isFA = t.target_team === null;
+    const canAcceptFA = isFA && t.status === 'pending';
+    const canRejectFA = isFA && t.status === 'pending';
+
     return `<div class="trade-card">
       <div class="trade-head">
         <div>
-          <div class="trade-teams">${escapeHtml(t.proposer_team)} → ${t.target_team ? escapeHtml(t.target_team) : 'Free Agency'}</div>
+          <div class="trade-teams">${escapeHtml(t.proposer_team)} → ${isFA ? 'Free Agency' : escapeHtml(t.target_team)}</div>
           <div class="trade-sub">${new Date(t.created_at).toLocaleString()}</div>
         </div>
         <span class="status-pill ${t.status}">${t.status}</span>
@@ -1921,7 +1924,9 @@
         <div class="trade-col"><h4>Offered</h4><div class="note">${(t.mons_offered||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
         <div class="trade-col"><h4>Requested</h4><div class="note">${(t.mons_requested||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
       </div>
-      ${(canRevoke || canRevert) ? `<div class="foot-actions">
+      ${(canAcceptFA || canRejectFA || canRevoke || canRevert) ? `<div class="foot-actions">
+        ${canAcceptFA ? `<button class="teal small" data-trade-action="accept-fa" data-trade-id="${t.id}">Accept Free Agency Trade</button>` : ''}
+        ${canRejectFA ? `<button class="danger small" data-trade-action="reject-fa" data-trade-id="${t.id}">Reject</button>` : ''}
         ${canRevert ? `<button class="ghost small danger-btn" data-trade-action="revert" data-trade-id="${t.id}">Revert &amp; end trade</button>` : ''}
         ${canRevoke ? `<button class="ghost small" data-trade-action="revoke" data-trade-id="${t.id}">Reset to pending</button>` : ''}
       </div>` : ''}
@@ -1933,6 +1938,15 @@
     const pending = COMM_PROFILES.filter(p=>p.status==='pending');
     const approved = COMM_PROFILES.filter(p=>p.status==='approved');
     const rejected = COMM_PROFILES.filter(p=>p.status==='rejected');
+
+    const filteredTrades = COMM_TRADES.filter(t=>{
+      if(COMM_TRADE_FILTER === 'pending') return t.status === 'pending';
+      if(COMM_TRADE_FILTER === 'completed') return t.status !== 'pending';
+      if(COMM_TRADE_FILTER === 'freeagency') return t.target_team === null;
+      return true;
+    });
+
+    const pendingFA = COMM_TRADES.filter(t=>t.target_team === null && t.status === 'pending').length;
 
     contentEl.innerHTML = `
       <div class="panel">
@@ -1953,35 +1967,63 @@
         ${rejected.map(p=>commClaimRow(p,false)).join('')}
       </div>` : ''}
       <div class="panel">
-        <h2>All Trades <span class="badge">${COMM_TRADES.length}</span></h2>
-        <div class="note">Only the two teams involved can accept, reject, or withdraw a trade. As commissioner you can reset a resolved trade back to pending, or revert an accepted trade (undoing the roster swap and ending it — a reverted trade stays reverted, it does not go back to pending).</div>
-        ${COMM_TRADES.length ? COMM_TRADES.map(commTradeRow).join('') : '<div class="empty-state">No trades yet.</div>'}
+        <div class="trade-tab-head">
+          <div>
+            <h2>Trade Management <span class="badge">${COMM_TRADES.length}</span></h2>
+            <div class="note">Free Agency trades require commissioner approval. Team-to-team trades are accepted by the receiving team.</div>
+          </div>
+          <div>
+            <label for="commTradeFilter">View</label>
+            <select id="commTradeFilter" style="min-width:180px;">
+              <option value="pending" ${COMM_TRADE_FILTER==='pending'?'selected':''}>Pending${pendingFA ? ` (${pendingFA} FA)` : ''}</option>
+              <option value="completed" ${COMM_TRADE_FILTER==='completed'?'selected':''}>Completed</option>
+              <option value="freeagency" ${COMM_TRADE_FILTER==='freeagency'?'selected':''}>Free Agency</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          ${filteredTrades.length ? filteredTrades.map(commTradeRow).join('') : '<div class="empty-state">No trades in this view.</div>'}
+        </div>
       </div>`;
+
+    document.getElementById('commTradeFilter')?.addEventListener('change', e=>{
+      COMM_TRADE_FILTER = e.target.value;
+      drawCommissioner();
+    });
 
     contentEl.querySelectorAll('button[data-trade-action]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const id = Number(btn.dataset.tradeId);
         const action = btn.dataset.tradeAction;
         const errEl = document.getElementById(`tradeCommErr-${id}`);
-        if(errEl){ errEl.textContent = ''; }
+        if(errEl){ errEl.className='note'; errEl.textContent=''; }
         if(action === 'revert' && !confirm('This undoes the roster swap from this accepted trade and ends it — it will NOT go back to pending. Continue?')) return;
+        if(action === 'accept-fa' && !confirm('Accept this Free Agency trade? This will move the requested Pokémon from Free Agency onto the team and remove the offered Pokémon from the team.')) return;
         btn.disabled = true;
         try{
-          if(action === 'revoke'){
+          if(action === 'accept-fa'){
+            const {error} = await supabase.rpc('commissioner_accept_free_agency_trade', { trade_id:id });
+            if(error) throw error;
+          } else if(action === 'reject-fa'){
+            const {error} = await supabase.from('trade_requests')
+              .update({ status:'rejected', responded_at:new Date().toISOString(), responded_by:adminUser.id })
+              .eq('id', id);
+            if(error) throw error;
+          } else if(action === 'revoke'){
             const {error} = await supabase.from('trade_requests')
               .update({ status:'pending', responded_at:null, responded_by:null })
               .eq('id', id);
             if(error) throw error;
           } else if(action === 'revert'){
-            const {error} = await supabase.rpc('commissioner_revert_trade', { trade_id: id });
+            const {error} = await supabase.rpc('commissioner_revert_trade', { trade_id:id });
             if(error) throw error;
           }
           await loadCommissionerData();
           if(activeTab === 'commissioner') drawCommissioner();
         }catch(e){
-          if(errEl){ errEl.className = 'note danger'; errEl.textContent = e.message; }
+          if(errEl){ errEl.className='note danger'; errEl.textContent=e.message; }
           else showAdminError(e.message);
-          btn.disabled = false;
+          btn.disabled=false;
         }
       });
     });
@@ -1991,25 +2033,25 @@
         const id = btn.dataset.id;
         const action = btn.dataset.commAction;
         const errEl = document.getElementById(`commErr-${id}`);
-        if(errEl) errEl.textContent = '';
-        btn.disabled = true;
+        if(errEl) errEl.textContent='';
+        btn.disabled=true;
         try{
-          let patch = null;
-          if(action === 'approve') patch = {status:'approved'};
-          else if(action === 'reject') patch = {status:'rejected'};
-          else if(action === 'revoke') patch = {status:'pending'};
-          else if(action === 'make-commissioner') patch = {is_commissioner:true};
-          else if(action === 'remove-commissioner') patch = {is_commissioner:false};
+          let patch=null;
+          if(action==='approve') patch={status:'approved'};
+          else if(action==='reject') patch={status:'rejected'};
+          else if(action==='revoke') patch={status:'pending'};
+          else if(action==='make-commissioner') patch={is_commissioner:true};
+          else if(action==='remove-commissioner') patch={is_commissioner:false};
           if(patch){
-            const {error} = await supabase.from('profiles').update(patch).eq('id', id);
+            const {error}=await supabase.from('profiles').update(patch).eq('id',id);
             if(error) throw error;
           }
           await loadCommissionerData();
-          if(activeTab === 'commissioner') drawCommissioner();
+          if(activeTab==='commissioner') drawCommissioner();
         }catch(e){
-          if(errEl){ errEl.className = 'note danger'; errEl.textContent = e.message; }
+          if(errEl){ errEl.className='note danger'; errEl.textContent=e.message; }
           else showAdminError(e.message);
-          btn.disabled = false;
+          btn.disabled=false;
         }
       });
     });

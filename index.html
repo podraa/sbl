@@ -713,7 +713,7 @@
         draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
         await loadTrades();
         activeTab = 'trades';
-        markTradeTabSeen('trades');
+        markTradeTabSeen('all');
         setStatus('Trade proposal sent.', false);
         renderTabs(); render();
       }catch(e){
@@ -786,39 +786,6 @@
     });
   }
 
-  function renderTradeHistory(){
-    if(profile.status !== 'approved'){
-      contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can view trade history.</div></div>`;
-      return;
-    }
-    const myTeam = profile.team_name;
-    const history = trades.filter(t =>
-      t.status !== 'pending' &&
-      (t.proposer_team === myTeam || t.target_team === myTeam)
-    );
-
-    contentEl.innerHTML = `
-      <div class="panel">
-        <div class="trade-tab-head">
-          <div>
-            <h2 style="margin-bottom:4px;">Trade History <span class="badge">${history.length}</span></h2>
-            <div class="note">Completed, rejected, withdrawn, and reverted trades involving your team.</div>
-          </div>
-          <button class="ghost small" id="backToTrades">Back to Trades</button>
-        </div>
-        ${history.length
-          ? history.map(t=>tradeCard(t,'history')).join('')
-          : '<div class="empty-state">No resolved trades yet.</div>'}
-      </div>`;
-
-    document.getElementById('backToTrades').onclick = ()=>{
-      activeTab = 'trades';
-      markTradeTabSeen('trades');
-      renderTabs();
-      render();
-    };
-  }
-
   function renderTrades(){
     if(profile.status !== 'approved'){
       contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can send or receive trades.</div></div>`;
@@ -826,42 +793,72 @@
     }
 
     const myTeam = profile.team_name;
-    const incoming = trades.filter(t=>t.target_team===myTeam && t.status==='pending');
-    const outgoing = trades.filter(t=>t.proposer_team===myTeam && t.status==='pending');
-    const history = trades.filter(t=> t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam));
+    const pending = trades.filter(t =>
+      t.status === 'pending' &&
+      (t.proposer_team === myTeam || t.target_team === myTeam)
+    );
+    const completed = trades.filter(t =>
+      t.status !== 'pending' &&
+      (t.proposer_team === myTeam || t.target_team === myTeam)
+    );
+    const freeAgency = trades.filter(t =>
+      t.target_team === null &&
+      (t.proposer_team === myTeam || t.target_team === myTeam)
+    );
 
-    /*
-      Trade builder intentionally comes FIRST.
-      The active/pending trade queues remain underneath it.
-      History is moved to its own tab, but a compact history panel remains
-      in the Trades column so the user can still see the count and jump to it.
-    */
+    const selected = window.tradeViewFilter || 'pending';
+    const list = selected === 'completed' ? completed : selected === 'freeagency' ? freeAgency : pending;
+
+    const incoming = pending.filter(t => t.target_team === myTeam);
+    const outgoing = pending.filter(t => t.proposer_team === myTeam);
+
+    let body = '';
+
+    if(selected === 'pending'){
+      body = `
+        <div class="panel">
+          <h2>Incoming <span class="badge">${incoming.length}</span></h2>
+          ${incoming.length ? incoming.map(t=>tradeCard(t,'incoming')).join('') : '<div class="empty-state">No incoming trade offers.</div>'}
+        </div>
+        <div class="panel">
+          <h2>Sent by you <span class="badge">${outgoing.length}</span></h2>
+          ${outgoing.length ? outgoing.map(t=>tradeCard(t,'outgoing')).join('') : '<div class="empty-state">You have no pending sent trades.</div>'}
+        </div>`;
+    } else if(selected === 'completed'){
+      body = `
+        <div class="panel">
+          <h2>Completed Trades <span class="badge">${completed.length}</span></h2>
+          <div class="note">Accepted, rejected, withdrawn, and reverted trades involving your team.</div>
+          ${completed.length ? completed.map(t=>tradeCard(t,'history')).join('') : '<div class="empty-state">No completed trades yet.</div>'}
+        </div>`;
+    } else {
+      body = `
+        <div class="panel">
+          <h2>Free Agency Trades <span class="badge">${freeAgency.length}</span></h2>
+          <div class="note">All Free Agency requests involving your team, including pending and completed requests.</div>
+          ${freeAgency.length ? freeAgency.map(t=>tradeCard(t, t.status === 'pending' && t.target_team === myTeam ? 'incoming' : t.status === 'pending' ? 'outgoing' : 'history')).join('') : '<div class="empty-state">No Free Agency trades yet.</div>'}
+        </div>`;
+    }
+
     contentEl.innerHTML = `
       <div class="panel" id="proposePanel"></div>
-
-      <div class="trade-column-grid">
-        <div class="trade-column-main">
-          <div class="panel">
-            <h2>Incoming <span class="badge">${incoming.length}</span></h2>
-            ${incoming.length ? incoming.map(t=>tradeCard(t,'incoming')).join('') : '<div class="empty-state">No incoming trade offers.</div>'}
+      <div class="panel trade-filter-panel">
+        <div class="trade-tab-head">
+          <div>
+            <h2 style="margin-bottom:4px;">Trades</h2>
+            <div class="note">Keep pending, completed, and Free Agency trades separated so the page stays clean.</div>
           </div>
-
-          <div class="panel">
-            <h2>Sent by you <span class="badge">${outgoing.length}</span></h2>
-            ${outgoing.length ? outgoing.map(t=>tradeCard(t,'outgoing')).join('') : '<div class="empty-state">You have no pending sent trades.</div>'}
-          </div>
-        </div>
-
-        <div class="trade-column-side">
-          <div class="panel trade-history-mini">
-            <h2>Trade History <span class="badge">${history.length}</span></h2>
-            <div class="note">Resolved trades are kept here as a quick reference.</div>
-            <div class="foot-actions">
-              <button class="ghost" id="viewTradeHistory">View full trade history</button>
-            </div>
+          <div>
+            <label for="tradeViewSelect">View</label>
+            <select id="tradeViewSelect" style="min-width:190px;">
+              <option value="pending" ${selected==='pending'?'selected':''}>Pending</option>
+              <option value="completed" ${selected==='completed'?'selected':''}>Completed</option>
+              <option value="freeagency" ${selected==='freeagency'?'selected':''}>Free Agency</option>
+            </select>
           </div>
         </div>
-      </div>`;
+      </div>
+      <div id="tradeViewBody">${body}</div>`;
 
     try{
       renderProposeTrade();
@@ -870,11 +867,12 @@
       if(p) p.innerHTML = `<h2>Propose a Trade</h2><div class="note danger">Couldn't load the trade builder: ${escapeHtml(e.message||String(e))}</div>`;
     }
 
-    document.getElementById('viewTradeHistory')?.addEventListener('click', ()=>{
-      activeTab = 'tradehistory';
-      markTradeTabSeen('tradehistory');
-      renderTabs();
-      render();
+    document.getElementById('tradeViewSelect')?.addEventListener('change', e=>{
+      window.tradeViewFilter = e.target.value;
+      if(e.target.value === 'pending') markTradeTabSeen('pending');
+      else if(e.target.value === 'completed') markTradeTabSeen('history');
+      else markTradeTabSeen('all');
+      renderTrades();
     });
 
     bindTradeActions();
@@ -926,11 +924,9 @@
   function setStatus(msg, danger){ statusMsg = msg; }
 
   // ---------- trade notification / seen state ----------
-  // Notifications are local to the signed-in user. A trade remains
-  // unread until the relevant tab is actually opened. Opening Trades
-  // clears pending-trade notifications; opening Trade History clears
-  // resolved-trade notifications. New trades automatically become
-  // unread because their IDs are not in the seen sets.
+  // Notifications are local to the signed-in user. Opening the Trades tab clears
+  // the relevant notification bucket; switching between Pending/Completed/Free
+  // Agency also marks the corresponding records as seen.
   function tradeSeenKey(){
     return `sbl_trade_seen_${session?.user?.id || 'anonymous'}`;
   }
@@ -960,11 +956,14 @@
   function markTradeTabSeen(tab){
     if(!profile?.team_name) return;
     const seen = getTradeSeen();
-    if(tab === 'trades'){
-      trades.filter(t => t.target_team === profile.team_name && t.status === 'pending')
+    const mine = profile.team_name;
+
+    if(tab === 'pending' || tab === 'all'){
+      trades.filter(t => t.target_team === mine && t.status === 'pending')
         .forEach(t => seen.pending.add(Number(t.id)));
-    }else if(tab === 'tradehistory'){
-      trades.filter(t => t.status !== 'pending' && (t.proposer_team === profile.team_name || t.target_team === profile.team_name))
+    }
+    if(tab === 'history' || tab === 'all'){
+      trades.filter(t => t.status !== 'pending' && (t.proposer_team === mine || t.target_team === mine))
         .forEach(t => seen.history.add(Number(t.id)));
     }
     saveTradeSeen(seen);
@@ -989,12 +988,10 @@
       contentEl.before(nav);
     }
     const unread = unreadTradeCounts();
-    const incomingCount = unread.incoming;
-    const historyCount = unread.history;
+    const totalUnread = unread.incoming + unread.history;
     const tabs = [
       ['myteam','My Team'],
-      ['trades',`Trades${incomingCount ? ` <span class="tab-badge">${incomingCount}</span>` : ''}`],
-      ['tradehistory',`Trade History${historyCount ? ` <span class="tab-badge">${historyCount}</span>` : ''}`],
+      ['trades',`Trades${totalUnread ? ` <span class="tab-badge">${totalUnread}</span>` : ''}`],
       ['rosters','All Rosters'],
       ['account','Account']
     ];
@@ -1002,7 +999,7 @@
     nav.querySelectorAll('button').forEach(b=>{
       b.onclick = ()=>{
         activeTab = b.dataset.tab;
-        if(activeTab === 'trades' || activeTab === 'tradehistory') markTradeTabSeen(activeTab);
+        if(activeTab === 'trades') markTradeTabSeen('all');
         renderTabs();
         render();
       };
@@ -1015,7 +1012,6 @@
 
     if(!profile.team_name){ document.getElementById('tabs')?.remove(); renderTeamClaim(); return; }
     if(profile.status === 'pending' || profile.status === 'rejected'){
-      // still show tabs so people can browse Rosters
       renderTabs();
       if(activeTab === 'rosters') return renderRosters();
       if(activeTab === 'account') return renderAccount();
@@ -1025,7 +1021,6 @@
     renderTabs();
     if(activeTab === 'myteam') return renderMyTeam();
     if(activeTab === 'trades') return renderTrades();
-    if(activeTab === 'tradehistory') return renderTradeHistory();
     if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'account') return renderAccount();
   }
