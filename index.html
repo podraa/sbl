@@ -117,7 +117,11 @@
   .pokemon-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
   .meta-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px;}
   .meta-box .label{font-size:10px;text-transform:uppercase;color:var(--text-dim);}
-  .meta-box .value{font-size:16px;font-weight:700;margin-top:4px;}
+  .meta-box .value{font-family:var(--mono);font-size:16px;font-weight:700;margin-top:4px;}
+  .meta-box .value.dealt{color:var(--amber);}
+  .meta-box .value.taken{color:var(--red);}
+  .meta-box .value.kills{color:var(--teal);}
+  .pokemon-sub{color:var(--text-dim);font-size:11px;margin-top:2px;}
 
 </style>
 </head>
@@ -160,7 +164,7 @@
 
   let session = null;
   let profile = null;
-  let DASH = { teamMap:{}, settings:{ rosters:{}, freeAgency:{ mons:[] } } };
+  let DASH = { teamMap:{}, settings:{ rosters:{}, freeAgency:{ mons:[] } }, replays:{} };
   let trades = [];
   let activeTab = 'myteam';
   let draft = { target:'', offered:new Set(), requested:new Set() };
@@ -191,15 +195,57 @@
   function rosterPoints(list){ return (list||[]).reduce((s,m)=> s + (Number(m.points)||0), 0); }
   function freeAgencyMons(){ return Array.isArray(DASH.settings?.freeAgency?.mons) ? DASH.settings.freeAgency.mons : []; }
 
+  // ---------- pokémon stat aggregation (mirrors stats.html) ----------
+  function normName(n){
+    return String(n??'').trim().toLowerCase().replace(/-/g,' ').replace(/_/g,' ').replace(/\s+/g,' ');
+  }
+  function teamFor(username){
+    const key = (username||'').trim().toLowerCase();
+    return DASH.teamMap[key] || (username||'').trim() || 'Unknown';
+  }
+  // Aggregates this coach's season stats for one species across every stored
+  // replay where that Pokémon appeared on the coach's side.
+  function myPokemonStats(species){
+    if(!profile || !profile.team_name) return null;
+    const target = normName(species);
+    let dealt=0, taken=0, kills=0, deaths=0, games=0, winGames=0, wins=0;
+    for(const r of Object.values(DASH.replays||{})){
+      for(const k in (r.mons||{})){
+        const m = r.mons[k];
+        if(normName(m.species) !== target) continue;
+        if(teamFor(r.players?.[m.side]) !== profile.team_name) continue;
+        dealt += m.damageDealt||0;
+        taken += m.damageTaken||0;
+        kills += m.kills||0;
+        deaths += m.deaths||0;
+        const appearances = m.appearances||0;
+        games += appearances;
+        if(appearances > 0){
+          winGames++;
+          const result = r.results && r.results[m.side] ? r.results[m.side] : null;
+          if(result === 'W') wins++;
+        }
+      }
+    }
+    return { dealt, taken, kills, deaths, games, winPct: winGames ? Math.round(100*wins/winGames) : null };
+  }
+
   // ---------- data loading ----------
   async function loadDashboardState(){
-    const {data, error} = await supabase.from('replays').select('replay_id,replay_data').eq('replay_id', SUPABASE_STATE_ID);
+    const {data, error} = await supabase.from('replays').select('replay_id,replay_data');
     if(error) throw error;
-    const row = (data||[])[0];
-    const shared = row ? (row.replay_data||{}) : {};
+    let sharedState = null;
+    const replays = {};
+    for(const row of (data||[])){
+      if(row.replay_id === SUPABASE_STATE_ID){ sharedState = row.replay_data || {}; continue; }
+      if(row.replay_id === '__rosters__' || row.replay_id === '__free_agency__') continue;
+      if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
+    }
+    const shared = sharedState || {};
     DASH.teamMap = shared.teamMap || {};
     DASH.settings = Object.assign({ rosters:{}, freeAgency:{mons:[]} }, shared.settings || {});
     DASH.settings.rosters = normalizeStoredRosters(DASH.settings.rosters||{});
+    DASH.replays = replays;
   }
 
   async function loadProfile(){
@@ -362,27 +408,29 @@
         <h2>Roster</h2>
         ${roster.length ? `
           <div class="roster-cards">
-            ${roster.map(m=>`
+            ${roster.map(m=>{
+              const s = myPokemonStats(m.name);
+              const has = s && s.games > 0;
+              return `
               <div class="pokemon-card">
                 <div class="pokemon-head">
                   ${spriteImg(m.name,'sprite')}
                   <div>
                     <div class="pokemon-name">${escapeHtml(m.name)}</div>
-                    <div class="note">Roster member</div>
+                    <div class="note">${has ? `${s.games} game${s.games===1?'':'s'} played` : 'No games recorded yet'}</div>
                   </div>
                 </div>
                 <div class="pokemon-points">${m.points!=null?escapeHtml(m.points)+' pts':'Unranked'}</div>
                 <div class="pokemon-meta">
-                  <div class="meta-box"><div class="label">Damage dealt</div><div class="value">—</div></div>
-                  <div class="meta-box"><div class="label">KOs</div><div class="value">—</div></div>
-                  <div class="meta-box"><div class="label">Damage taken</div><div class="value">—</div></div>
-                  <div class="meta-box"><div class="label">Win rate</div><div class="value">—</div></div>
+                  <div class="meta-box"><div class="label">Damage dealt</div><div class="value dealt">${has ? s.dealt.toFixed(1) : '—'}</div></div>
+                  <div class="meta-box"><div class="label">KOs</div><div class="value kills">${has ? s.kills : '—'}</div></div>
+                  <div class="meta-box"><div class="label">Damage taken</div><div class="value taken">${has ? s.taken.toFixed(1) : '—'}</div></div>
+                  <div class="meta-box"><div class="label">Win rate</div><div class="value">${has && s.winPct!=null ? s.winPct+'%' : '—'}</div></div>
                 </div>
-              </div>`).join('')}
+              </div>`;
+            }).join('')}
           </div>` : `<div class="empty-state">No roster published for your team yet.</div>`}
-      </div>
-      <div class="panel" id="proposePanel"></div>`;
-    renderProposeTrade();
+      </div>`;
   }
 
   function renderProposeTrade(){
@@ -508,6 +556,7 @@
     const history = trades.filter(t=> t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam));
 
     contentEl.innerHTML = `
+      <div class="panel" id="proposePanel"></div>
       <div class="panel">
         <h2>Incoming <span class="badge">${incoming.length}</span></h2>
         ${incoming.length ? incoming.map(t=>tradeCard(t,'incoming')).join('') : '<div class="empty-state">No incoming trade offers.</div>'}
@@ -520,6 +569,7 @@
         <h2>History <span class="badge">${history.length}</span></h2>
         ${history.length ? history.map(t=>tradeCard(t,'history')).join('') : '<div class="empty-state">No resolved trades yet.</div>'}
       </div>`;
+    renderProposeTrade();
 
     contentEl.querySelectorAll('button[data-action]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
@@ -553,24 +603,6 @@
         }
       });
     });
-  }
-
-  // ---------- Free Agency tab ----------
-  function renderFreeAgency(){
-    const mons = freeAgencyMons();
-    const groups = {};
-    mons.forEach(m=>{ const p = Number(m.points)||0; (groups[p] ??= []).push(m); });
-    const tiers = Object.keys(groups).sort((a,b)=>Number(b)-Number(a));
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Free Agency Pool <span class="badge">${mons.length} Pokémon</span></h2>
-        ${DASH.settings?.freeAgency?.source ? `<div class="note">Source: ${escapeHtml(DASH.settings.freeAgency.source)}</div>` : ''}
-        ${!mons.length ? '<div class="empty-state">No Free Agency pool published yet.</div>' : tiers.map(tier=>`
-          <div style="margin-top:14px;">
-            <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">${tier} pts</h4>
-            <div class="mon-list">${groups[tier].map(m=>`<span class="mon-pill">${spriteImg(m.name)} ${escapeHtml(m.name)}</span>`).join('')}</div>
-          </div>`).join('')}
-      </div>`;
   }
 
   // ---------- All Rosters tab ----------
@@ -629,7 +661,6 @@
     const tabs = [
       ['myteam','My Team'],
       ['trades','Trades'],
-      ['freeagency','Free Agency'],
       ['rosters','All Rosters'],
       ['account','Account']
     ];
@@ -645,9 +676,8 @@
 
     if(!profile.team_name){ document.getElementById('tabs')?.remove(); renderTeamClaim(); return; }
     if(profile.status === 'pending' || profile.status === 'rejected'){
-      // still show tabs so people can browse Free Agency / Rosters
+      // still show tabs so people can browse Rosters
       renderTabs();
-      if(activeTab === 'freeagency') return renderFreeAgency();
       if(activeTab === 'rosters') return renderRosters();
       if(activeTab === 'account') return renderAccount();
       return renderPendingOrRejected();
@@ -656,7 +686,6 @@
     renderTabs();
     if(activeTab === 'myteam') return renderMyTeam();
     if(activeTab === 'trades') return renderTrades();
-    if(activeTab === 'freeagency') return renderFreeAgency();
     if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'account') return renderAccount();
   }
