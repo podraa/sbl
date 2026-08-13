@@ -717,6 +717,7 @@
       </div>
       <div class="note" id="tradeSummary"></div>
       <div class="foot-actions">
+        <button class="ghost" id="clearTradeSelectionBtn" type="button">Clear selected</button>
         <button class="primary" id="submitTradeBtn">Send trade proposal</button>
       </div>
       <div id="tradeMsg" class="note"></div>`;
@@ -806,6 +807,14 @@
         bindPickCards(grid);
       });
     }
+
+    document.getElementById('clearTradeSelectionBtn').onclick = ()=>{
+      draft.offered = new Set();
+      draft.requested = new Set();
+      const msgEl = document.getElementById('tradeMsg');
+      if(msgEl){ msgEl.className='note'; msgEl.textContent=''; }
+      renderProposeTrade();
+    };
 
     document.getElementById('submitTradeBtn').onclick = async ()=>{
       const msgEl = document.getElementById('tradeMsg');
