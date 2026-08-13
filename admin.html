@@ -234,11 +234,11 @@
 <div class="page-nav">
   <label for="pageNavSelect">Page</label>
   <select id="pageNavSelect" aria-label="Choose page">
-    <option value="index.html">Stats Dashboard</option>
+    <option value="stats.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="team.html">My Team</option>
+    <option value="index.html">My Team</option>
   </select>
 </div>
 
@@ -1927,6 +1927,11 @@
     const rejected = COMM_PROFILES.filter(p=>p.status==='rejected');
 
     contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Sign-up page</h2>
+        <div class="note">This is where users sign up, claim a team, and manage trades once approved.</div>
+        <div class="foot-actions"><a class="nav-link" href="team.html" target="_blank" rel="noopener">Open My Team (user dashboard) ↗</a></div>
+      </div>
       <div class="panel">
         <h2>Pending Team Claims <span class="badge">${pending.length}</span></h2>
         ${pending.length ? pending.map(p=>commClaimRow(p,true)).join('') : '<div class="empty-state">No pending claims.</div>'}

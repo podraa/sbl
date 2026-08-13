@@ -3,2310 +3,635 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SBL Dashboard</title>
+<title>My Team — SBL Dashboard</title>
 <style>
   :root{
---bg: #160308;
---panel: #24060d;
---panel-alt: #310a14;
---border: #4a1421;
-
---text: #f7eef0;
---text-dim: #b99da5;
-
---amber: #c56880;
---teal: #a9566d;
---red: #e87891;
+    --bg:#0e1218;
+    --panel:#161c26;
+    --panel-alt:#1c2432;
+    --border:#2a3444;
+    --text:#e8edf5;
+    --text-dim:#8996a8;
+    --amber:#ffb454;
+    --teal:#5eead4;
+    --red:#ff7a7a;
     --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
-    --sans:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family:var(--sans); -webkit-font-smoothing:antialiased;
-  }
-  #app{width:min(1500px,calc(100% - 32px)); max-width:none; margin:0 auto; padding:26px 0 64px;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased;}
+  #app{max-width:920px; margin:0 auto; padding:24px 20px 60px;}
 
-  /* header + ticker */
-  header{margin-bottom:24px;}
-  h1{font-size:clamp(24px,2vw,30px); margin:0 0 2px; letter-spacing:.2px;}
-  .sub{color:var(--text-dim); font-size:14px; margin-bottom:22px; line-height:1.5;}
-  .ticker{
-    display:flex; gap:0; overflow-x:auto; border:1px solid var(--border);
-    border-radius:8px; background:linear-gradient(180deg,var(--panel-alt),var(--panel));
-  }
-  .tick{
-    flex:1 0 220px; padding:14px 18px; border-right:1px solid var(--border);
-    min-width:220px;
-  }
-  .tick:last-child{border-right:none;}
-  .tick .lbl{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim);}
-  .tick .name{font-size:13px; margin:2px 0 4px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .tick .val{font-family:var(--mono); font-size:19px; color:var(--amber);}
-  .tick.empty .val{color:var(--text-dim); font-size:13px;}
+  header{margin-bottom:20px;}
+  h1{font-size:22px; margin:0 0 2px; letter-spacing:.2px;}
+  .sub{color:var(--text-dim); font-size:13px; margin-bottom:16px;}
 
-  /* tabs */
-  nav.tabs{display:flex; gap:4px; margin:24px 0 22px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
-  nav.tabs button{
-    background:none; border:none; color:var(--text-dim); padding:10px 14px;
-    font-size:14px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent;
-    font-family:var(--sans);
-  }
+  nav.tabs{display:flex; gap:4px; margin:20px 0 16px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
+  nav.tabs button{background:none; border:none; color:var(--text-dim); padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; font-family:var(--sans);}
   nav.tabs button.active{color:var(--text); border-bottom-color:var(--amber);}
   nav.tabs button:hover{color:var(--text);}
 
-  .panel{
-    background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:18px;
-    min-width:0;
-  }
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px;}
   .panel + .panel{margin-top:14px;}
-  .panel h2{font-size:clamp(18px,1.35vw,21px); margin:0 0 16px; text-transform:none; letter-spacing:.01em; color:#fff; font-weight:750;}
+  .panel h2{font-size:14px; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim);}
 
   label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px;}
-  textarea, input[type=text]{
+  input[type=text], input[type=email], input[type=password], select{
     width:100%; background:var(--panel-alt); border:1px solid var(--border); border-radius:8px;
-    color:var(--text); padding:10px 12px; font-family:var(--mono); font-size:13px;
+    color:var(--text); padding:10px 12px; font-family:var(--sans); font-size:13px;
   }
-  textarea{min-height:90px; resize:vertical;}
   .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
   .row > div{flex:1; min-width:160px;}
 
-  button.primary{
-    background:var(--amber); color:#1a1206; border:none; border-radius:8px;
-    padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans);
-  }
+  button.primary{background:var(--amber); color:#1a1206; border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans);}
   button.primary:disabled{opacity:.5; cursor:default;}
-  button.ghost{
-    background:none; border:1px solid var(--border); color:var(--text); border-radius:8px;
-    padding:9px 14px; font-size:12px; cursor:pointer; font-family:var(--sans);
-  }
+  button.ghost{background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer; font-family:var(--sans);}
   button.ghost:hover{border-color:var(--amber);}
   button.small{padding:5px 10px; font-size:11px;}
-  .danger-btn{border-color:var(--red); color:var(--red);}
+  button.danger{border:1px solid var(--red); color:var(--red); background:none; border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer;}
+  button.teal{background:var(--teal); color:#062521; border:none; border-radius:8px; padding:9px 14px; font-size:12px; font-weight:700; cursor:pointer;}
 
-  .log{font-family:var(--mono); font-size:12px; white-space:pre-wrap; color:var(--text-dim); margin-top:10px; line-height:1.6;}
-  .log .ok{color:var(--teal);}
-  .log .err{color:var(--red);}
-
-  table{width:100%; border-collapse:collapse; font-size:13px;}
-  /* Tables stay fluid on wide screens and scroll horizontally only when their
-     natural content is wider than the available viewport. */
-  .panel{overflow-x:auto; overflow-y:visible;}
-  .panel table{width:100%; min-width:max-content; white-space:nowrap;}
-  .panel table thead,.panel table tbody{width:auto;}
-  th{
-    text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em;
-    color:#fff; padding:8px 10px; border-bottom:1px solid var(--border);
-  }
-  td{padding:8px 10px; border-bottom:1px solid var(--border);}
-  tr:last-child td{border-bottom:none;}
-  td.num, th.num{text-align:right; font-family:var(--mono);}
-  .rank{color:var(--text-dim); font-family:var(--mono); width:26px;}
-  .pname{font-weight:600;}
-  .dealt{color:var(--amber);}
-  .taken{color:var(--red);}
-  .kills{color:var(--teal);}
-
-  select{
-    background:var(--panel-alt); border:1px solid var(--border); color:var(--text);
-    padding:8px 10px; border-radius:8px; font-family:var(--sans); font-size:13px;
-  }
-  .empty-state{color:var(--text-dim); font-size:13px; padding:20px 0; text-align:center;}
-  .foot-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
   .note{font-size:12px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
-  .map-row{display:flex; gap:10px; align-items:center; margin-bottom:8px;}
-  .map-row input{flex:1;}
-  .badge{
-    display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px;
-    background:var(--panel-alt); border:1px solid var(--border); color:var(--text-dim); margin-left:6px;
-  }
+  .note.danger{color:var(--red);}
+  .note.ok{color:var(--teal);}
+  .empty-state{color:var(--text-dim); font-size:13px; padding:20px 0; text-align:center;}
+  .badge{display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px; background:var(--panel-alt); border:1px solid var(--border); color:var(--text-dim); margin-left:6px;}
+  .foot-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
 
-  /* sprites */
-  .sprite{
-    width:48px; height:48px; object-fit:contain; vertical-align:middle;
-    image-rendering:pixelated; background:var(--panel-alt); border-radius:8px; margin-right:10px;
-  }
-  .pokemon-click{
-    display:inline-flex; align-items:center; gap:8px; color:inherit; text-decoration:none;
-    cursor:pointer; border-radius:8px; padding:2px 4px; margin:-2px -4px; transition:background .12s, transform .12s;
-  }
-  .pokemon-click:hover{background:var(--panel-alt); color:var(--amber); transform:translateY(-1px);}
-  .pokemon-click:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
-  .pokemon-click .sprite,.pokemon-click .sprite-xl{margin-right:0;}
-  .pokemon-text-link{color:inherit; text-decoration:none; cursor:pointer;}
-  .pokemon-text-link:hover{color:var(--amber); text-decoration:underline;}
-  .sprite-xl{
-    width:64px; height:64px; object-fit:contain; vertical-align:middle;
-    image-rendering:pixelated; background:var(--panel-alt); border-radius:10px; margin-right:12px;
-  }
-  .pname-cell{display:flex; align-items:center;}
+  .status-pill{display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:.04em;}
+  .status-pill.pending{color:var(--amber); background:#3a2c12; border:1px solid #5a4620;}
+  .status-pill.approved{color:var(--teal); background:#0f2b27; border:1px solid #1c4a43;}
+  .status-pill.rejected{color:var(--red); background:#3a1414; border:1px solid #5a2020;}
+  .status-pill.accepted{color:var(--teal); background:#0f2b27; border:1px solid #1c4a43;}
+  .status-pill.withdrawn{color:var(--text-dim); background:var(--panel-alt); border:1px solid var(--border);}
 
-  /* wide layout (Leaderboards / Golden Fist / Franchise Stats) */
-  #app.wide{width:min(1600px,calc(100% - 32px));}
-  .wide .panel{padding:26px;}
-  .wide table{font-size:15px;}
-  .wide th{font-size:11px; padding:10px 12px;}
-  .wide td{padding:12px;}
+  .sprite{width:32px; height:32px; object-fit:contain; vertical-align:middle; image-rendering:pixelated; background:var(--panel-alt); border-radius:6px;}
+  .mon-pill{display:inline-flex; align-items:center; gap:6px; background:var(--panel-alt); border:1px solid var(--border); border-radius:20px; padding:3px 10px 3px 3px; font-size:12px; margin:3px 4px 3px 0;}
+  .mon-list{display:flex; flex-wrap:wrap; margin-top:4px;}
+  .mon-pick{display:flex; align-items:center; gap:8px; background:var(--panel-alt); border:1px solid var(--border); border-radius:8px; padding:6px 10px; margin:4px 4px 4px 0; cursor:pointer; font-size:12px;}
+  .mon-pick input{margin:0;}
+  .mon-pick.checked{border-color:var(--amber);}
+  .mon-pick-grid{display:flex; flex-wrap:wrap;}
+  .pts{color:var(--text-dim); font-family:var(--mono); font-size:11px;}
 
-  .nav-link{
-    display:inline-block; color:var(--teal); text-decoration:none; font-size:13px;
-    font-weight:600; cursor:pointer; margin-top:4px;
-  }
-  .nav-link:hover{text-decoration:underline;}
-  .section-divider{height:1px; background:var(--border); margin:18px 0;}
+  .budget-bar{height:8px; border-radius:6px; background:var(--panel-alt); border:1px solid var(--border); overflow:hidden; margin-top:8px;}
+  .budget-fill{height:100%; background:var(--amber);}
+  .budget-fill.over{background:var(--red);}
 
-  #globalTable{overflow-x:auto;}
-  #globalTable table{min-width:620px;}
+  .trade-card{border:1px solid var(--border); border-radius:10px; background:var(--panel-alt); padding:14px; margin-bottom:10px;}
+  .trade-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
+  .trade-teams{font-weight:700; font-size:13px;}
+  .trade-teams .arrow{color:var(--text-dim); margin:0 6px; font-weight:400;}
+  .trade-sub{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .trade-cols{display:flex; gap:16px; flex-wrap:wrap; margin-top:6px;}
+  .trade-col{flex:1; min-width:180px;}
+  .trade-col h4{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin:0 0 4px;}
 
-  /* pokemon search */
-  /* Search controls: keep the fields aligned at their labels, not at the bottom of helper text. */
-  .pokemon-search-box{display:grid;grid-template-columns:minmax(240px,1fr) minmax(180px,220px);gap:14px;align-items:start;margin-top:18px;margin-bottom:18px;}
-  .pokemon-search-box .search-input-wrap,.pokemon-search-box .pokemon-type-filter{min-width:0;}
-  .pokemon-search-box input[type=text],.pokemon-search-box .pokemon-type-filter select{font-family:var(--sans);font-size:14px;width:100%;box-sizing:border-box;}
-  .pokemon-search-hint{font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.45;}
+  .roster-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px;}
+  .roster-card{border:1px solid var(--border); background:var(--panel-alt); border-radius:10px; padding:12px;}
+  .roster-card.mine{border-color:var(--amber);}
+  .roster-card h3{margin:0 0 4px; font-size:14px;}
 
-  /* Consistent breathing room: heading -> description -> controls/content. */
-  .panel > h2 + .note{display:block;margin-top:8px;margin-bottom:18px;}
-  .panel > h2 + .note + .row,
-  .panel > h2 + .note + .pokemon-search-box,
-  .panel > h2 + .note + .section-divider{margin-top:0;}
-  .panel > h2 + .note + #replayBrowserBody,
-  .panel > h2 + .note + #pokemonSearchTable{margin-top:18px;}
-  .panel > h2 + .note + .row + #replayBrowserBody,
-  .panel > h2 + .note + .row + #pokemonSearchTable{margin-top:18px;}
-  .panel > h2 + .note + .row{margin-bottom:18px;}
-  .panel > h2 + .note + .row + .note{margin-top:0;}
-  @media(max-width:700px){.pokemon-search-box{grid-template-columns:1fr;}}
-  #pokemonSearchTable{overflow-x:auto;}
-  #pokemonSearchTable table{min-width:700px;}
-  .search-match{background:var(--panel-alt); border-radius:8px;}
+  .gate{max-width:480px; margin:60px auto; text-align:center;}
+  .gate .panel{text-align:left;}
 
-  .type-badges{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:7px;vertical-align:middle;}
-  .type-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.12);font:600 9px/1.1 var(--sans);letter-spacing:.03em;color:#fff;text-transform:uppercase;background:#555;}
-  .type-normal{background:#777;} .type-fire{background:#b84b3e;} .type-water{background:#3f78a8;} .type-electric{background:#9a7a18;} .type-grass{background:#4f7f4d;} .type-ice{background:#5f9aa2;} .type-fighting{background:#8d4b42;} .type-poison{background:#744c83;} .type-ground{background:#8b6a43;} .type-flying{background:#687eaa;} .type-psychic{background:#a14f75;} .type-bug{background:#66843c;} .type-rock{background:#78684d;} .type-ghost{background:#62527f;} .type-dragon{background:#6651a0;} .type-dark{background:#4f4b50;} .type-steel{background:#66717b;} .type-fairy{background:#a96c88;}
-  .summary-mon-main .type-badges,.gf-name .type-badges{display:flex;margin:4px 0 0;}
-  .team-card-top-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
-  .team-card-top-type .type-badges{margin:0;}
-  /* golden fist */
-  .cause-subheading{font-size:14px;font-weight:600;color:var(--text);margin:4px 0 14px;}
-  .gf-list{display:flex; flex-direction:column; gap:8px;}
-  .gf-row{
-    position:relative; display:grid; grid-template-columns:36px 72px minmax(0,1fr) 110px; align-items:center; gap:14px; padding:12px 16px; border-radius:12px;
-    background:var(--panel-alt); border:1px solid var(--border); min-width:0;
-  }
-  .gf-row.top1{border-color:#ffd166; box-shadow:0 0 0 1px #ffd16655 inset;}
-  .gf-row.top2{border-color:#c9c9c9;}
-  .gf-row.top3{border-color:#cd7f32;}
-  .gf-row.auditable-row{cursor:pointer;}
-  .gf-row.auditable-row:hover{border-color:var(--amber);}
-  .gf-rank{font-family:var(--mono); font-size:16px; width:28px; color:var(--text-dim); text-align:center;}
-  .gf-row.top1 .gf-rank{color:#ffd166;}
-  .gf-row.top2 .gf-rank{color:#c9c9c9;}
-  .gf-row.top3 .gf-rank{color:#cd7f32;}
-  .gf-sprite{width:64px; height:64px; object-fit:contain; image-rendering:pixelated; background:var(--panel); border-radius:10px;}
-  .gf-info{min-width:0;}
-  .gf-name{font-weight:750; font-size:18px; line-height:1.2;}
-  .gf-sub{font-size:12px; color:var(--text-dim); margin-top:5px;}
-  .gf-coach{position:absolute; left:50%; transform:translateX(-50%); width:min(30%,320px); font-size:15px; color:var(--teal); text-align:center; line-height:1.35; overflow-wrap:anywhere;}
-  .gf-diff{font-family:var(--mono); font-size:22px; color:var(--teal); min-width:0; text-align:right; font-weight:700;}
-  .gf-diff.neg{color:var(--red);}
-  @media (max-width: 900px){
-    .gf-row{grid-template-columns:32px 60px minmax(0,1fr) 90px; gap:10px; padding:10px 12px;}
-    .gf-sprite{width:56px;height:56px;}
-    .gf-name{font-size:16px;}
-    .gf-coach{font-size:13px;}
-    .gf-diff{font-size:19px;}
-  }
-  @media (max-width: 640px){
-    .gf-row{grid-template-columns:30px 52px minmax(0,1fr) 72px; gap:8px; padding:9px 10px;}
-    .gf-sprite{width:48px;height:48px;}
-    .gf-name{font-size:15px;}
-    .gf-sub{font-size:11px;}
-    .gf-coach{font-size:12px;}
-    .gf-diff{font-size:17px;}
-  }
-
-
-  .profile-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;}
-  .profile-grid>div{background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:11px 12px;}
-  .profile-grid span{display:block;font-size:10px;text-transform:uppercase;color:var(--text-dim);letter-spacing:.05em;margin-bottom:4px;}
-  .profile-grid strong{font-family:var(--mono);font-size:17px;}
-  .profile-two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-  .mini-heading{font-size:12px;text-transform:uppercase;color:var(--text-dim);letter-spacing:.06em;margin:0 0 8px;}
-  .selected-row{outline:1px solid var(--amber);outline-offset:-1px;background:var(--panel-alt);}
-  .record-grid{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;}
-  .record-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:15px;min-height:92px;}
-  .record-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
-  .record-value{font-family:var(--mono);font-size:19px;margin-top:8px;line-height:1.25;}
-  .record-sub{font-size:11px;margin-top:7px;}
-  @media(max-width:850px){
-    #app{padding:16px 12px 44px;}
-    .profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .profile-two-col{grid-template-columns:1fr}
-    .record-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .wide .panel{padding:16px;}
-    nav.tabs{gap:2px;}
-    nav.tabs button{padding:9px 10px;font-size:12px;}
-    .ticker{margin-right:-2px;}
-    .tick{flex-basis:132px;min-width:132px;padding:10px 12px;}
-  }
-  @media(max-width:520px){
-    h1{font-size:19px;}
-    .sub{font-size:12px;}
-    .panel{padding:14px;}
-    .profile-grid{grid-template-columns:1fr 1fr;gap:7px;}
-    .profile-grid>div{padding:9px;}
-    .profile-grid strong{font-size:15px;}
-    .record-grid{grid-template-columns:1fr;}
-    .gf-row{grid-template-columns:28px 56px minmax(0,1fr) 60px;gap:9px;padding:10px;}
-    .gf-sprite{width:56px;height:56px;}
-    .gf-name{font-size:15px;}
-    .gf-coach{font-size:12px;}
-    .gf-diff{font-size:18px;min-width:0;}
-    .summary-header h3{font-size:18px;}
-    .summary-side{padding:10px;}
-  }
-
-
-  @media(max-width:700px){
-    #app,#app.wide{width:calc(100% - 20px);padding-top:22px;}
-    header{margin-bottom:22px;}
-    nav.tabs{margin:22px 0 20px;}
-    .gf-row{grid-template-columns:24px 50px minmax(0,1fr) 60px;}
-    .gf-coach{position:absolute; left:50%; transform:translateX(-50%); width:34%; font-size:11px;}
-    .gf-diff{grid-column:4;text-align:right;margin-top:0;}
-  }
-
-  .banner-controls{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 10px;}
-  .banner-controls>div{min-width:180px;}
-  .banner-controls select{width:100%;}
-  .team-logo{width:58px;height:58px;object-fit:contain;border-radius:12px;background:var(--panel-alt);border:1px solid var(--border);padding:5px;}
-  .team-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
-  .team-card{background:linear-gradient(145deg,var(--panel-alt),#11151c);border:1px solid var(--border);border-radius:14px;padding:18px 20px;cursor:pointer;transition:transform .14s,border-color .14s,box-shadow .14s;min-height:120px;}
-  .team-card:hover{transform:translateY(-3px);border-color:var(--amber);box-shadow:0 14px 36px rgba(0,0,0,.28);}
-  .team-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:82px;}
-  .team-card-copy{flex:1;text-align:center;min-width:0;}
-  .team-card-name{font-weight:800;font-size:clamp(19px,1.7vw,25px);line-height:1.15;overflow-wrap:anywhere;}
-  .team-card-sub{font-size:clamp(15px,1.2vw,18px);font-family:var(--mono);color:var(--text);margin-top:8px;}
-  .team-card-top-sprite{width:82px;height:82px;object-fit:contain;image-rendering:pixelated;background:transparent;flex:none;}
-  .team-card-stats,.team-card-stat{display:none;}
-  .banner-team-card{flex:1 0 230px;min-width:230px;padding:14px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:12px;}
-  .banner-team-card:last-child{border-right:none;}
-  .banner-team-card .team-logo{width:46px;height:46px;flex:none;}
-  .banner-team-card .banner-stat{font-family:var(--mono);font-size:18px;color:var(--amber);}
-  .overview-modal{max-width:760px; width:min(760px,calc(100vw - 32px)); margin:0 auto;}
-  .banner-pokemon{flex:1 0 210px;min-width:210px;padding:12px 16px;border-right:1px solid var(--border);display:flex;align-items:center;gap:10px;}
-  .banner-pokemon:last-child{border-right:none;}
-
-  /* Pokémon profile modal */
-  .pokemon-overlay{
-    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
-    padding:24px; overflow:auto; background:rgba(4,7,12,.62);
-    backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
-    animation:pokemonOverlayIn .16s ease-out;
-  }
-  .pokemon-modal{
-    width:min(1100px,100%); max-height:calc(100vh - 48px); overflow:auto;
-    background:var(--panel); border:1px solid var(--border); border-radius:16px;
-    box-shadow:0 24px 80px rgba(0,0,0,.55); transform-origin:center;
-    animation:pokemonModalIn .18s cubic-bezier(.2,.8,.2,1);
-  }
-  .pokemon-modal-head{
-    position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; align-items:center;
-    gap:12px; padding:12px 16px; background:rgba(22,28,38,.94); border-bottom:1px solid var(--border);
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-  }
-  .pokemon-modal-head strong{font-size:13px;}
-  .pokemon-modal-body{padding:16px;}
-  .pokemon-modal-body>.pokemon-profile{margin:0; border:none; padding:0; background:transparent;}
-  @keyframes pokemonOverlayIn{from{opacity:0}to{opacity:1}}
-  @keyframes pokemonModalIn{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
-  @media(max-width:700px){
-    .pokemon-overlay{padding:8px;}
-    .pokemon-modal{max-height:calc(100vh - 16px);border-radius:12px;}
-    .pokemon-modal-body{padding:12px;}
-    .pokemon-modal-head{padding:10px 12px;}
-  }
-
-  /* audit modal */
-  td.auditable{cursor:pointer; text-decoration:underline dotted var(--text-dim); text-underline-offset:3px;}
-  td.auditable:hover{color:var(--amber);}
-  .audit-overlay{
-    position:fixed; inset:0; background:rgba(6,9,14,.7); display:flex; align-items:flex-start;
-    justify-content:center; padding:40px 16px; z-index:50; overflow-y:auto;
-  }
-  .audit-box{
-    background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:18px;
-    max-width:560px; width:100%;
-  }
-  .audit-box h3{margin:0 0 2px; font-size:15px;}
-  .audit-box .audit-sub{font-size:12px; color:var(--text-dim); margin-bottom:12px;}
-  .audit-list{list-style:none; margin:0; padding:0; max-height:50vh; overflow-y:auto;}
-  .audit-list li{
-    padding:8px 0; border-bottom:1px solid var(--border); font-size:12px; display:flex;
-    justify-content:space-between; gap:10px;
-  }
-  .audit-list li:last-child{border-bottom:none;}
-  .audit-list a{color:var(--teal); text-decoration:none;}
-  .audit-list a:hover{text-decoration:underline;}
-  .audit-cause{color:var(--text-dim);}
-
-  .death-cause-list{display:flex;flex-direction:column;gap:10px;width:100%;}
-  .death-cause-entry{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:12px;width:100%;min-width:0;padding:12px 14px;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;}
-  .death-cause-rank{font-family:var(--mono);color:var(--text-dim);text-align:center;font-size:12px;}
-  .death-cause-title{display:flex;align-items:center;gap:8px;font-weight:650;color:#fff;font-size:14px;margin-bottom:9px;}
-  .death-cause-mons{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;}
-  .death-cause-mon{display:inline-flex;align-items:center;gap:6px;min-width:145px;padding:5px 8px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:7px;}
-  .death-cause-sprite{width:36px;height:36px;object-fit:contain;image-rendering:pixelated;background:transparent;border-radius:4px;margin-right:0;}
-  .death-cause-mon .pokemon-click{gap:4px;padding:0;}
-  .death-cause-mon .pokemon-click .sprite{display:none;}
-  @media(max-width:700px){.death-cause-entry{grid-template-columns:26px minmax(0,1fr);padding:10px;gap:8px}.death-cause-mon{min-width:125px}.death-cause-sprite{width:32px;height:32px;}}
-
-  /* replays by player */
-  .player-group{
-    border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden;
-  }
-  .player-group summary{
-    cursor:pointer; padding:10px 14px; background:var(--panel-alt);
-    display:flex; align-items:center; gap:8px; list-style:none; font-size:13px;
-  }
-  .player-group summary::-webkit-details-marker{display:none;}
-  .player-group summary::before{content:'▸'; color:var(--text-dim); font-size:11px; transition:transform .1s;}
-  .player-group[open] summary::before{transform:rotate(90deg);}
-  .player-group summary .pg-name{font-weight:700;}
-  .player-group summary .pg-team{color:var(--text-dim); font-weight:400; font-size:12px;}
-  .player-group .player-table-wrap{padding:4px 14px 12px;}
-  .player-group table{margin-top:6px;}
-  .player-filter{max-width:320px; margin-bottom:14px;}
-
-  #adminAuth{max-width:420px;margin:90px auto;padding:24px 20px;}
-  .auth-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;}
-  .auth-box h1{margin-bottom:4px;}
-  .auth-box input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:13px;}
-  .auth-error{display:none;color:var(--red);font-size:12px;margin-top:12px;line-height:1.4;}
-
-  .replay-summary-box{max-width:1080px; width:min(1080px,calc(100vw - 32px)); margin:0 auto;}
-  .summary-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:14px;}
-  .summary-kicker{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.08em;}
-  .summary-header h3{font-size:21px;margin:5px 0 3px;}
-  .summary-vs{color:var(--text-dim);font-weight:400;}
-  .summary-result{font-weight:700;color:var(--teal);font-size:13px;}
-  .summary-meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;color:var(--text-dim);font-size:11px;text-align:right;}
-  .summary-cause{padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel-alt);font-size:12px;margin-bottom:14px;}
-  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .summary-side{border:1px solid var(--border);border-radius:10px;background:var(--panel-alt);padding:12px;}
-  .summary-side-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
-  .summary-team{font-size:11px;color:var(--text-dim);margin-top:2px;}
-  .summary-score{font-size:11px;color:var(--text-dim);}
-  .summary-line{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;font-size:11px;color:var(--text-dim);}
-  .summary-mons{display:grid;gap:6px;}
-  .summary-mon{display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:7px;}
-  .summary-mon-main{min-width:0;flex:1;}
-  .summary-mon-stats{font-size:10px;color:var(--text-dim);margin-top:2px;}
-  .summary-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
-  .danger-badge{color:var(--red);}
-  @media(max-width:700px){.summary-grid{grid-template-columns:1fr}.summary-header{flex-direction:column}.summary-meta{align-items:flex-start;text-align:left}.replay-summary-box,.overview-modal{width:calc(100vw - 20px);max-width:none}.overview-modal{padding:16px}.replay-summary-box{padding:14px}}
-
-
-  /* compact league overview cards */
-  .overview-grid{gap:12px;}
-  .overview-card{min-height:118px !important; padding:14px 16px !important; border-radius:10px !important;}
-  .overview-card .team-name{font-weight:500 !important; font-size:17px !important;}
-  .overview-card .team-record{font-weight:400 !important; font-size:15px !important;}
-  .overview-card img{width:72px !important; height:72px !important;}
-  .overview-card *{font-weight:400;}
-  .overview-card .team-name{font-weight:500 !important;}
-
-
-  /* Larger, centered summary/profile overlay */
-  .modal, .modal-card, .profile-modal, .summary-modal {
-    margin-left:auto !important;
-    margin-right:auto !important;
-  }
-.profile-two-col .type-badge{display:none!important;}
-.pokemon-type-filter{min-width:150px; display:flex; flex-direction:column;}
-.pokemon-type-filter label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
-.pokemon-type-filter select{width:100%;height:38px;box-sizing:border-box;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px;font:inherit;}
-.roster-inactive{opacity:.42;filter:grayscale(.75)} .roster-badge{margin-left:6px;font-size:9px} </style>
-</head>
-<body data-admin="false">
-<style>
-.page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
-.page-nav label{font-size:11px;color:var(--text-dim,#777);font-weight:700}
-.page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--panel,#fff);color:var(--text,#222);box-shadow:0 2px 8px rgba(0,0,0,.08)}
-@media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+  .page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
+  .page-nav label{font-size:11px;color:var(--text-dim);font-weight:700}
+  .page-nav select{font-size:12px;padding:7px 30px 7px 10px;box-shadow:0 2px 8px rgba(0,0,0,.25); width:auto;}
+  @media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
 </style>
+</head>
+<body>
 
 <div class="page-nav">
   <label for="pageNavSelect">Page</label>
   <select id="pageNavSelect" aria-label="Choose page">
-    <option value="index.html">Stats Dashboard</option>
+    <option value="stats.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
+    <option value="index.html" selected>My Team</option>
   </select>
 </div>
 
 <div id="app">
   <header>
-    <br>
-    <h1>SBL Season 15: National Dex Draft</h1>
-    <br>
-    <div id="bannerMount"></div>
+    <h1>My Team</h1>
+    <div class="sub">Manage your roster, propose trades, and browse free agency</div>
   </header>
-
-  <nav class="tabs" id="tabs">
-    <button data-tab="overview" class="active">League Overview</button>
-    <button data-tab="pokemonsearch">Pokémon Search</button>
-    <button data-tab="global">Damage Board</button>
-    <button data-tab="goldenfist">Golden Fist</button>
-    <button data-tab="causes">Death Stats</button>
-    <button data-tab="teamcompare">Standings</button>
-    <button data-tab="teams">Franchise Stats</button>
-    <button data-tab="replays">Replay Browser</button>
-  </nav>
-
-  <div id="content"></div>
+  <div id="content"><div class="empty-state">Loading…</div></div>
 </div>
-<div id="auditModal"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
-  const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
-  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'' } };
-  let loaded = false;
-
-  // ---------- shared Supabase storage ----------
-  // Public dashboard: read-only. Admin page: authenticated writes.
   const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
   const SUPABASE_STATE_ID = '__dashboard_state__';
+  const ROSTER_BUDGET = 120; // keep in sync with the `budget` constant in accept_trade()
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  const IS_ADMIN_PAGE = document.body.dataset.admin === 'true';
-  const POLL_MS = 10000;
-  let adminUser = null;
-  let loadingFromRemote = false;
 
-  function requireAdmin(){
-    if(!IS_ADMIN_PAGE || !adminUser) throw new Error('Admin login required to change shared data.');
-  }
+  const appEl = document.getElementById('app');
+  const contentEl = document.getElementById('content');
 
-  async function loadState(){
-    loadingFromRemote = true;
-    try{
-      const {data, error} = await supabase.from('replays').select('replay_id,replay_data');
-      if(error) throw error;
-      const replays = {};
-      let sharedState = null;
-      for(const row of (data || [])){
-        if(row.replay_id === SUPABASE_STATE_ID) sharedState = row.replay_data || {};
-        else if(row.replay_id === '__rosters__') { /* metadata only; never a replay */ }
-        else if(row.replay_id === '__rosters__' || row.replay_id === '__free_agency__'){
-          // Published metadata records are not replays.
-          continue;
-        } else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
-      }
-      // Some older shared-state backups stored replays inside __dashboard_state__;
-      // the current schema stores them as individual rows. Support both so a state
-      // migration can never blank the public dashboard.
-      if(sharedState && sharedState.replays && typeof sharedState.replays === 'object') {
-        for(const [id, replay] of Object.entries(sharedState.replays)) {
-          if(id && replay && typeof replay === 'object') replays[id] = replay;
-        }
-      }
-      STATE.replays = replays;
-      STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}}, (sharedState && sharedState.settings) || {});
-      STATE.settings.teamLogos = STATE.settings.teamLogos || {};
-      const bp=JSON.parse(localStorage.getItem('sbl-banner-preferences')||'null'); if(bp){ STATE.settings.bannerMode=bp.bannerMode||STATE.settings.bannerMode; STATE.settings.bannerTeam=bp.bannerTeam||STATE.settings.bannerTeam; }
-      loaded = true;
-    }catch(e){
-      console.error('Supabase load failed:', e);
-      if(!loaded){
-        STATE.replays = {};
-        STATE.teamMap = {};
-        STATE.settings = {caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}};
-        loaded = true;
-      }
-      if(IS_ADMIN_PAGE) showAdminError('Could not load shared data: ' + e.message);
-      else {
-        const el=document.getElementById('content');
-        if(el) el.innerHTML=`<div class="panel"><div class="empty-state"><strong>Could not load shared dashboard data.</strong><br>${escapeHtml(e.message||e)}</div></div>`;
-      }
-    }finally{
-      loadingFromRemote = false;
-    }
-  }
+  document.getElementById('pageNavSelect').addEventListener('change', e=>{
+    if(e.target.value) location.href = e.target.value;
+  });
 
-  async function saveReplays(){
-    requireAdmin();
-    const rows = Object.values(STATE.replays).map(r => ({
-      replay_id: r.id,
-      replay_data: r,
-      updated_at: new Date().toISOString()
-    }));
-    const {data: existing, error: readErr} = await supabase.from('replays').select('replay_id');
-    if(readErr) throw readErr;
-    const stale = (existing || []).map(r=>r.replay_id).filter(id => id !== SUPABASE_STATE_ID && !STATE.replays[id]);
-    if(stale.length){
-      const {error} = await supabase.from('replays').delete().in('replay_id', stale);
-      if(error) throw error;
-    }
-    if(rows.length){
-      const {error} = await supabase.from('replays').upsert(rows, {onConflict:'replay_id'});
-      if(error) throw error;
-    }
-    await saveSharedState();
-  }
-
-  async function saveSharedState(){
-    requireAdmin();
-    const {error} = await supabase.from('replays').upsert([{
-      replay_id: SUPABASE_STATE_ID,
-      replay_data: {teamMap: STATE.teamMap, settings: STATE.settings},
-      updated_at: new Date().toISOString()
-    }], {onConflict:'replay_id'});
-    if(error) throw error;
-  }
-  async function saveTeamMap(){ await saveSharedState(); }
-  async function saveSettings(){ await saveSharedState(); }
-
-  async function deleteAllRemote(){
-    requireAdmin();
-    const {error} = await supabase.from('replays').delete().neq('replay_id', SUPABASE_STATE_ID);
-    if(error) throw error;
-  }
-
-  async function migrateLocalData(){
-    requireAdmin();
-    const rawR = localStorage.getItem('league-dash:replays-data');
-    const rawM = localStorage.getItem('league-dash:player-team-map');
-    const rawS = localStorage.getItem('league-dash:settings');
-    if(!rawR && !rawM && !rawS) throw new Error('No old local dashboard data was found in this browser.');
-    if(rawR) STATE.replays = JSON.parse(rawR);
-    if(rawM) STATE.teamMap = JSON.parse(rawM);
-    if(rawS) STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:''}, JSON.parse(rawS));
-    STATE.settings.teamLogos = STATE.settings.teamLogos || {};
-    await saveReplays();
-    await saveSharedState();
-  }
-
-  async function refreshSharedState(){
-    if(loadingFromRemote) return;
-    const before = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
-    await loadState();
-    const after = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
-    if(before !== after){
-      renderTicker();
-      render();
-    }
-  }
-
-  function showAdminError(msg){
-    const el = document.getElementById('adminError');
-    if(el){ el.textContent = msg; el.style.display = 'block'; }
-  }
-
-  function showAdminLogin(){
-    if(!IS_ADMIN_PAGE) return;
-    const app = document.getElementById('app');
-    app.style.display = 'none';
-    const existing = document.getElementById('adminAuth');
-    if(existing) existing.remove();
-    const wrap = document.createElement('div');
-    wrap.id = 'adminAuth';
-    wrap.innerHTML = `
-      <div class="auth-box">
-        <h1>SBL Dashboard Admin</h1>
-        <div class="sub">Sign in to add replays and change shared league data.</div>
-        <label>Email</label><input id="adminEmail" type="email" autocomplete="username" placeholder="you@example.com">
-        <label style="margin-top:12px;">Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password">
-        <button class="primary" id="adminLoginBtn" style="margin-top:14px;width:100%;">Log in</button>
-        <div id="adminError" class="auth-error"></div>
-      </div>`;
-    document.body.prepend(wrap);
-    document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
-    document.getElementById('adminPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') adminLogin(); });
-  }
-
-  async function adminLogin(){
-    const email = document.getElementById('adminEmail').value.trim();
-    const password = document.getElementById('adminPassword').value;
-    if(!email || !password){ showAdminError('Enter your email and password.'); return; }
-    const btn = document.getElementById('adminLoginBtn');
-    btn.disabled = true; btn.textContent = 'Logging in…';
-    const {data, error} = await supabase.auth.signInWithPassword({email, password});
-    btn.disabled = false; btn.textContent = 'Log in';
-    if(error){ showAdminError(error.message); return; }
-    adminUser = data.user;
-    document.getElementById('adminAuth')?.remove();
-    document.getElementById('app').style.display = '';
-    await loadState();
-    renderTicker(); render();
-  }
-
-  async function initAdminAuth(){
-    if(!IS_ADMIN_PAGE) return true;
-    const {data} = await supabase.auth.getSession();
-    if(data.session){
-      adminUser = data.session.user;
-      document.getElementById('app').style.display = '';
-      return true;
-    }
-    showAdminLogin();
-    return false;
-  }
+  let session = null;
+  let profile = null;
+  let DASH = { teamMap:{}, settings:{ rosters:{}, freeAgency:{ mons:[] } } };
+  let trades = [];
+  let activeTab = 'myteam';
+  let draft = { target:'', offered:new Set(), requested:new Set() };
+  let statusMsg = '';
 
   // ---------- helpers ----------
-  function normName(n){
-    const raw=String(n??'').trim().toLowerCase().replace(/-/g,' ').replace(/_/g,' ').replace(/\s+/g,' ');
-    if(raw.replace(/\s+/g,'')==='yefmoc') return 'comfey';
-    return raw;
-  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function toShowdownId(species){
-    // Showdown's sprite filenames keep the hyphen as a forme separator
-    // (landorus-therian.png, ho-oh.png, porygon-z.png, necrozma-dusk-mane.png)
-    // but collapse everything else — so each hyphen-delimited segment gets
-    // lowercased and stripped of spaces/punctuation, then rejoined with '-'.
-    // Stripping hyphens outright (the old behavior) turned every forme name
-    // into a 404 (e.g. "landorustherian"), which just showed the mon's actual
-    // name faded out behind a broken-image icon.
-    return species.split('-').map(part => part.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-');
+    return String(species||'').split('-').map(part => part.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-');
   }
-  function spriteUrl(species){
-    return `https://play.pokemonshowdown.com/sprites/gen5/${toShowdownId(species)}.png`;
-  }
+  function spriteUrl(species){ return `https://play.pokemonshowdown.com/sprites/gen5/${toShowdownId(species)}.png`; }
   function spriteImg(species, cls){
     const safe = escapeHtml(species);
-    return `<img class="${cls}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
+    return `<img class="${cls||'sprite'}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
   }
-  // Pokémon typing is loaded from Showdown's public Pokédex and cached locally.
-  // This keeps the dashboard data-driven while avoiding a huge hard-coded type table.
-  let POKEDEX_TYPES = {};
-  function dexKey(species){
-    return String(species||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  }
-  function pokemonTypes(species){
-    const d = POKEDEX_TYPES[dexKey(species)];
-    return d?.types || [];
-  }
-  const TYPE_CLASS = {Normal:'normal',Fire:'fire',Water:'water',Electric:'electric',Grass:'grass',Ice:'ice',Fighting:'fighting',Poison:'poison',Ground:'ground',Flying:'flying',Psychic:'psychic',Bug:'bug',Rock:'rock',Ghost:'ghost',Dragon:'dragon',Dark:'dark',Steel:'steel',Fairy:'fairy'};
-  function typeBadges(species){
-    const types = pokemonTypes(species);
-    if(!types.length) return '';
-    return `<span class="type-badges">${types.map(t=>`<span class="type-badge type-${TYPE_CLASS[t]||'other'}">${escapeHtml(t)}</span>`).join('')}</span>`;
-  }
-  function pokemonLink(species, innerHtml, title, showType=true){
-    const safe = escapeHtml(species);
-    return `<span class="pokemon-click" role="button" tabindex="0" data-pokemon="${safe}" title="${escapeHtml(title || `Open ${species} profile`)}">${innerHtml}${showType ? typeBadges(species) : ''}</span>`;
-  }
-  function pokemonName(species, withSprite=true, spriteClass='sprite'){
-    return pokemonLink(species, withSprite ? `${spriteImg(species,spriteClass)}<span>${escapeHtml(species)}</span>` : `<span>${escapeHtml(species)}</span>`);
-  }
-  function teamFor(username){
-    const key = (username||'').trim().toLowerCase();
-    return STATE.teamMap[key] || (username||'').trim() || 'Unknown';
-  }
-  // groups values that only differ by case/whitespace under one canonical label
-  // (the first-seen casing) when "case-insensitive names" is on in Settings —
-  // this is what keeps e.g. "Team Fire" and "team fire" from splitting into
-  // two separate teams just because they were typed differently at different times.
-  function groupKey(value){
-    return STATE.settings.caseInsensitiveNames ? String(value||'').trim().toLowerCase() : String(value||'').trim();
-  }
-  function rosterTeamKey(value){ return String(value||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''); }
-  function sameRosterTeam(a,b){ return rosterTeamKey(a)===rosterTeamKey(b); }
-  function rosterMonName(mon){
-    if(typeof mon==='string') return mon.trim();
-    if(mon && typeof mon==='object') return String(mon.name ?? mon.species ?? mon.pokemon ?? '').trim();
-    return String(mon??'').trim();
-  }
-  function canonicalRosterSpecies(mon){ const s=rosterMonName(mon); return normName(s)==='comfey'?'Comfey':s; }
-  function extractReplayId(url){
-    url = url.trim();
-    if(!url) return null;
-    url = url.replace(/\.json$/,'').replace(/\/$/,'');
-    const m = url.match(/replay\.pokemonshowdown\.com\/([a-z0-9-]+)/i);
-    if(m) return m[1];
-    // allow bare id paste
-    if(/^[a-z0-9-]+$/i.test(url)) return url;
-    return null;
-  }
-  function parseHP(token){
-    if(!token) return 0;
-    token = token.split(' ')[0]; // strip status tags like "tox", "fnt"
-    if(token.includes('/')){
-      const [a,b] = token.split('/').map(Number);
-      if(!b) return 0;
-      return (a/b)*100;
-    }
-    const v = parseFloat(token);
-    return isNaN(v) ? 0 : v;
-  }
-  function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
-
-  // ---------- replay parsing ----------
-  function parseLog(json, replayId){
-    const lines = json.log.split('\n');
-    const players = {p1:'', p2:''};
-    const slots = {}; // slotId -> {species, hp, side}
-    const mons = {}; // "p1|species" -> stats
-    const appearedThisReplay = new Set();
-    let lastMove = null; // {source, target, move}
-    let currentTurn = 0;
-    let winner = null;
-    // NOTE: these three all store direct references to a mon's *stats object*
-    // (captured at the moment of the event via ensureMon), never a slot label.
-    // A slot label like "p1a" gets reused by a different mon later in the game,
-    // so resolving it lazily at credit-time would silently attribute damage/
-    // kills to whoever happens to be standing there now instead of whoever
-    // actually did it.
-    let lastAttacker = {}; // targetSlot -> attacker's stats object (for kill credit)
-    // Poison/burn (unlike confusion) persist through a switch — the same individual
-    // keeps ticking for the same status after it returns to the field. So this is
-    // keyed by the *individual mon* (monKey: side+species), not by slot, and is
-    // deliberately NOT cleared on switch — only when the status actually ends.
-    let statusSourceByMon = {}; // monKey -> stats object that inflicted brn/psn/tox on them
-    let hazardSetter = {}; // side -> {hazardName: setter's stats object}
-    // side (the side that GOT toxic-spiked) -> setter's stats object.
-    // Toxic Spikes are a side-wide condition, so this survives switches/faints
-    // and lets residual poison damage inherit kill credit from the setter.
-    let toxicSpikesSetter = {};
-    let delayedSetter = {}; // side -> {moveName: setter's stats object}, for Future Sight / Doom Desire
-    let pendingDelayedHit = {}; // targetSlot -> {stats, cause}; Showdown emits the delayed hit as -end, then an untagged -damage
-    const HAZARD_MOVES = ['Stealth Rock','Spikes'];
-    const DELAYED_MOVES = ['Future Sight','Doom Desire'];
-    const STATUS_TAGS = ['psn','tox','brn'];
-
-    function ofSlotFromTag(tag){
-      // tag like "[of] p2a: Ferrothorn" -> "p2a"
-      const m = tag.match(/p[1-4][a-f]/);
-      return m ? m[0] : null;
-    }
-
-    function monKey(slot){
-      const s = slots[slot];
-      if(!s) return null;
-      return s.side + '|' + normName(s.species);
-    }
-    function ensureMon(slot){
-      const s = slots[slot];
-      if(!s) return null;
-      const k = monKey(slot);
-      if(!mons[k]) mons[k] = {
-        side:s.side, species:s.species, damageDealt:0, damageTaken:0,
-        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[],      };
-      if(!appearedThisReplay.has(k)){
-        appearedThisReplay.add(k);
-        mons[k].appearances += 1;
-      }
-      return mons[k];
-    }
-
-    for(const raw of lines){
-      if(!raw.startsWith('|')) continue;
-      const parts = raw.split('|');
-      const cmd = parts[1];
-
-      if(cmd === 'poke' && parts[3]){
-        const side = parts[2];
-        const species = parts[3].split(',')[0].trim();
-        if((side==='p1'||side==='p2') && species && !teamRoster[side].some(x=>normName(x)===normName(species))) teamRoster[side].push(species);
-      } else if(cmd === 'player' && parts[3]){
-        const side = parts[2];
-        if(side === 'p1' || side === 'p2') players[side] = parts[3];
-      } else if(cmd === 'turn'){
-        const t = parseInt(parts[2], 10);
-        if(!isNaN(t)) currentTurn = t;
-      } else if(cmd === 'win'){
-        winner = (parts[2] || '').trim() || null;
-      } else if(cmd === 'switch' || cmd === 'drag'){
-        const slotFull = parts[2]; // "p1a: Nickname"
-        const slot = slotFull.split(':')[0].trim();
-        const side = sideOf(slot);
-        const species = parts[3].split(',')[0].trim();
-        const hp = parseHP(parts[4] || '100/100');
-        slots[slot] = {species, hp, side};
-        // A new mon now occupies this slot — any prior *direct-hit* attacker
-        // credit for this slot belonged to the mon that just left, so that must
-        // not carry over. Status-source credit (poison/burn) is intentionally
-        // NOT cleared here — it lives in statusSourceByMon, keyed to the
-        // individual mon rather than the slot, because poison/burn persist
-        // through a switch and must keep crediting the original inflictor
-        // when the same mon returns and the status keeps ticking.
-        delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
-        ensureMon(slot);
-      } else if(cmd === 'move'){
-        const source = parts[2] ? parts[2].split(':')[0].trim() : null;
-        const target = parts[4] ? parts[4].split(':')[0].trim() : null;
-        const moveName = parts[3] ? parts[3].trim() : '';
-        if(source) lastMove = {source, target, move: moveName};
-        if(source && HAZARD_MOVES.includes(moveName)){
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats){
-            if(!hazardSetter[oppSide]) hazardSetter[oppSide] = {};
-            hazardSetter[oppSide][moveName] = setterStats;
-          }
-        }
-        if(source && DELAYED_MOVES.includes(moveName)){
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats){
-            if(!delayedSetter[oppSide]) delayedSetter[oppSide] = {};
-            delayedSetter[oppSide][moveName] = setterStats;
-          }
-        }
-        if(source && moveName === 'Toxic Spikes'){
-          // Toxic Spikes are a side-wide condition. Keep the Pokémon that most
-          // recently established the Toxic Spikes on that side so a later
-          // switch-in, poison tick, and eventual faint can all inherit the
-          // setter's kill credit even if the setter has switched out or fainted.
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats) toxicSpikesSetter[oppSide] = setterStats;
-        }
-      } else if(cmd === '-end'){
-        // Future Sight / Doom Desire are represented by Showdown as:
-        //   |-end|target|move: Future Sight
-        //   |-damage|target|...
-        // The -damage line is deliberately untagged, so looking for
-        // 'Future Sight' in its tags will never work. Resolve the setter
-        // at the -end event and carry it into the following damage event.
-        const slotFull = parts[2];
-        const effect = parts.slice(3).join('|');
-        if(slotFull && (effect.includes('move: Future Sight') || effect.includes('move: Doom Desire'))){
-          const slot = slotFull.split(':')[0].trim();
-          const delayedHit = DELAYED_MOVES.find(m => effect.includes('move: ' + m));
-          if(delayedHit && delayedSetter[sideOf(slot)] && delayedSetter[sideOf(slot)][delayedHit]){
-            pendingDelayedHit[slot] = {
-              stats: delayedSetter[sideOf(slot)][delayedHit],
-              cause: delayedHit
-            };
-          }
-        }
-      } else if(cmd === '-status'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        const mk = monKey(slot);
-        if(!mk) continue;
-        const statusTags = parts.slice(3).join('|');
-        let inflictorStats = null;
-        if(statusTags.includes('Toxic Spikes') && toxicSpikesSetter[sideOf(slot)]){
-          // Poisoned on switch-in by Toxic Spikes. There is no attacker's move
-          // line for the later residual damage, so permanently associate this
-          // individual Pokémon with the Toxic Spikes setter until its status
-          // is cured. This is keyed by mon identity rather than slot because
-          // the poisoned Pokémon can switch out and back in.
-          inflictorStats = toxicSpikesSetter[sideOf(slot)];
-        } else if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
-          inflictorStats = ensureMon(lastMove.source);
-        }
-        if(inflictorStats) {
-          statusSourceByMon[mk] = inflictorStats;
-        }
-      } else if(cmd === '-curestatus'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        const mk = monKey(slot);
-        // status is gone — clear credit so it can't be reused if this individual
-        // is somehow attributed residual status damage again later
-        if(mk) delete statusSourceByMon[mk];
-      } else if(cmd === '-damage'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        const newHp = parseHP(parts[3]);
-        const oldHp = slots[slot].hp;
-        const dmg = Math.max(0, oldHp - newHp);
-        slots[slot].hp = newHp;
-        const targetStats = ensureMon(slot);
-        if(targetStats) targetStats.damageTaken += dmg;
-        if(dmg <= 0) continue;
-
-        const tags = parts.slice(4).join('|');
-        let attackerStats = null;
-        let cause = null;
-
-        // 1) explicit [of] source (Leech Seed, Rocky Helmet, Rough Skin, Iron Barbs, etc.)
-        //    resolved immediately off the current battle state, so it's always accurate
-        if(tags.includes('[of]')){
-          const ofSlot = ofSlotFromTag(tags);
-          if(ofSlot && slots[ofSlot]){
-            attackerStats = ensureMon(ofSlot);
-            const effectM = tags.match(/\[from\]\s*([^\|\[]+)/);
-            cause = effectM ? effectM[1].trim() : 'contact/held-item effect';
-          }
-        }
-        // 2) entry hazard chip (Stealth Rock / Spikes) -> credit whoever set it
-        if(!attackerStats){
-          const hazardHit = HAZARD_MOVES.find(h => tags.includes(h));
-          if(hazardHit && hazardSetter[sideOf(slot)] && hazardSetter[sideOf(slot)][hazardHit]){
-            attackerStats = hazardSetter[sideOf(slot)][hazardHit];
-            cause = hazardHit;
-          }
-        }
-        // 3) residual status damage (burn/poison/toxic) -> credit whoever inflicted the status.
-        // Looked up by the mon's own identity (monKey), not the slot, since poison/burn
-        // persist through a switch and must keep crediting the original inflictor even
-        // after this individual left and came back to the same or a different slot.
-        // This is also what gives a Toxic Spikes setter the kill when poison damage
-        // is the final damage instance before fainting.
-        if(!attackerStats){
-          const statusHit = STATUS_TAGS.find(s => tags.includes('[from] ' + s));
-          const mk = monKey(slot);
-          if(statusHit && mk && statusSourceByMon[mk]){
-            attackerStats = statusSourceByMon[mk];
-            const sourceWasToxicSpikes = (
-              toxicSpikesSetter[sideOf(slot)] &&
-              toxicSpikesSetter[sideOf(slot)] === attackerStats
-            );
-            cause = sourceWasToxicSpikes
-              ? 'Toxic Spikes'
-              : 'residual ' + statusHit;
-          }
-        }
-        // 3b) delayed hits (Future Sight / Doom Desire).
-        // Showdown puts the move name on a preceding -end event, NOT on the
-        // subsequent -damage line, so use the pending source captured there.
-        if(!attackerStats && pendingDelayedHit[slot]){
-          attackerStats = pendingDelayedHit[slot].stats;
-          cause = pendingDelayedHit[slot].cause;
-          delete pendingDelayedHit[slot];
-        }
-        // 4) fallback: direct hit from the most recent move, if it targeted this slot.
-        //    Showdown only omits [from]/[of] entirely on a -damage line for a genuine
-        //    direct move hit — weather chip, confusion self-hits, recoil, etc. always
-        //    carry a tag (just not one of the specific ones matched above). So this
-        //    fallback must only fire on a completely untagged line, or it ends up
-        //    crediting stale "last real attacker" info to indirect damage it never dealt.
-        if(!attackerStats && tags === '' && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
-          attackerStats = ensureMon(lastMove.source);
-          cause = lastMove.move || 'direct hit';
-        }
-
-        if(attackerStats && attackerStats.side !== slots[slot].side){
-          attackerStats.damageDealt += dmg;
-          lastAttacker[slot] = {stats: attackerStats, cause, turn: currentTurn};
-        } else {
-          // This damage instance landed but couldn't be attributed to an opposing
-          // mon (environmental chip we couldn't trace, self-inflicted damage, etc.).
-          // Clear any earlier attacker on file for this slot — otherwise a mon that
-          // survives a real hit and later dies to something untraceable still has
-          // the kill wrongly credited to whoever landed that earlier real hit.
-          lastAttacker[slot] = {stats:null, cause:'Other', turn:currentTurn};
-        }
-      } else if(cmd === '-heal' || cmd === '-sethp'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        slots[slot].hp = parseHP(parts[3]);
-      } else if(cmd === 'faint'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        const deadStats = ensureMon(slot);
-        const killerInfo = lastAttacker[slot];
-        const killerStats = killerInfo ? killerInfo.stats : null;
-        const credited = !!(killerStats && killerStats.side !== slots[slot].side);
-        if(deadStats){
-          deadStats.deaths += 1;
-          deadStats.deathLog.push({
-            replayId, turn: currentTurn,
-            killer: credited ? killerStats.species : null,
-            cause: credited ? killerInfo.cause : (killerInfo?.cause || 'Other')
-          });
-        }
-        if(credited){
-          killerStats.kills += 1;
-          killerStats.killLog.push({
-            replayId, turn: currentTurn,
-            victim: deadStats ? deadStats.species : slots[slot].species,
-            cause: killerInfo.cause
-          });
-        }
-        delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
-      }
-    }
-
-    return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner, teamRoster,
-      };
-  }
-
-  // ---------- automatic Monday-Sunday season weeks ----------
-  function replayTimestampMs(replay){
-    const n=Number(replay?.uploadtime||0);
-    if(!n) return 0;
-    return n < 1e12 ? n*1000 : n;
-  }
-  function mondayStartMs(ms){
-    const d=new Date(ms);
-    const day=d.getDay();
-    const diff=(day===0?-6:1-day);
-    d.setHours(0,0,0,0); d.setDate(d.getDate()+diff);
-    return d.getTime();
-  }
-  function ensureSeasonStart(){
-    if(STATE.settings.seasonStartMonday) return Number(STATE.settings.seasonStartMonday);
-    const times=Object.values(STATE.replays).map(replayTimestampMs).filter(Boolean);
-    if(!times.length) return null;
-    const start=mondayStartMs(Math.min(...times));
-    STATE.settings.seasonStartMonday=start;
-    return start;
-  }
-  function autoWeekForReplay(replay){
-    const ts=replayTimestampMs(replay);
-    if(!ts) return 'Unassigned';
-    let start=ensureSeasonStart();
-    if(!start || mondayStartMs(ts)<start){ start=mondayStartMs(ts); STATE.settings.seasonStartMonday=start; }
-    const n=Math.floor((mondayStartMs(ts)-start)/604800000)+1;
-    return `Week ${n}`;
-  }
-  function recalculateAllWeeks(){
-    const times=Object.values(STATE.replays).map(replayTimestampMs).filter(Boolean);
-    if(!times.length) return;
-    STATE.settings.seasonStartMonday=mondayStartMs(Math.min(...times));
-    for(const r of Object.values(STATE.replays)) r.week=autoWeekForReplay(r);
-  }
-
-  async function processUrls(urlsRaw, week, logEl){
-    const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
-    if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
-    let added = 0, skipped = 0, failed = 0;
-    for(const url of urls){
-      const id = extractReplayId(url);
-      if(!id){ appendLog(logEl, `Could not read a replay id from: ${url}`, true); failed++; continue; }
-      if(STATE.replays[id]){ appendLog(logEl, `Already processed: ${id} — skipped`, false); skipped++; continue; }
-      try{
-        const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
-        if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
-        const json = await resp.json();
-        const parsed = parseLog(json, id);
-        parsed.week = autoWeekForReplay(parsed);
-        parsed.processedAt = Date.now();
-        STATE.replays[id] = parsed;
-        appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
-        added++;
-      }catch(e){
-        appendLog(logEl, `✗ ${id} — ${e.message}`, true);
-        failed++;
-      }
-    }
-    if(added > 0){ recalculateAllWeeks(); await saveReplays(); }
-    appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${failed} failed.`, false);
-    renderTicker();
-    render(); // refresh whatever tab is open
-  }
-  function appendLog(el, text, isErr, isOk){
-    const line = document.createElement('div');
-    line.className = isErr ? 'err' : (isOk ? 'ok' : '');
-    line.textContent = text;
-    el.appendChild(line);
-    el.scrollTop = el.scrollHeight;
-  }
-
-  // ---------- aggregation ----------
-  function allReplays(weekFilter){
-    return Object.values(STATE.replays).filter(r => !weekFilter || weekFilter === 'ALL' || r.week === weekFilter);
-  }
-  function weeksList(){
-    const set = new Set(Object.values(STATE.replays).map(r=>r.week || 'Unassigned'));
-    return Array.from(set).sort((a,b)=>{ if(a==='Unassigned') return 1; if(b==='Unassigned') return -1; const na=parseInt(String(a).replace(/\D/g,''),10), nb=parseInt(String(b).replace(/\D/g,''),10); return (na||999999)-(nb||999999); });
-  }
-  function globalPokemonStats(weekFilter){
-    const out = {}; // normSpecies -> {species, dealt, taken, kills, deaths, games, coaches}
-    for(const r of allReplays(weekFilter)){
-      for(const k in r.mons){
-        const m = r.mons[k];
-        const displaySpecies = normName(m.species)==='comfey' ? 'Comfey' : m.species;
-        const nk = normName(displaySpecies);
-        if(!out[nk]) out[nk] = {species:displaySpecies, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[], coaches:new Set()};
-        out[nk].dealt += m.damageDealt;
-        out[nk].taken += m.damageTaken;
-        out[nk].kills += m.kills;
-        out[nk].deaths += m.deaths;
-        out[nk].games += m.appearances;
-        if(m.killLog) out[nk].killLog.push(...m.killLog);
-        if(m.deathLog) out[nk].deathLog.push(...m.deathLog);
-        out[nk].coaches.add(teamFor(r.players[m.side]));
-      }
-    }
-    return Object.values(out).sort((a,b)=>b.dealt-a.dealt);
-  }
-
-  function rosterForTeam(team){
-    const rosters=STATE.settings?.rosters||{};
-    const key=Object.keys(rosters).find(k=>sameRosterTeam(k,team));
-    return key ? (Array.isArray(rosters[key]) ? rosters[key] : []) : [];
-  }
-  function rosterMonName(mon){
-    if(typeof mon==='string') return mon.trim();
-    if(mon && typeof mon==='object') return String(mon.name ?? mon.species ?? mon.pokemon ?? '').trim();
-    return String(mon ?? '').trim();
-  }
-  function isCurrentRosterPokemon(team,species){
-    const r=rosterForTeam(team);
-    return !r.length || r.some(x=>normName(canonicalRosterSpecies(x))===normName(species));
-  }
-
-  function teamPokemonStats(weekFilter){
-    const groups = {}; // groupKey -> { label, species: {normSpecies -> stats} }
-
-    // Seed every current roster team, even if it has no processed replay yet.
-    for(const [rosterTeam, roster] of Object.entries(STATE.settings?.rosters || {})){
-      const team = rosterTeam;
-      const gk = groupKey(team);
-      if(!groups[gk]) groups[gk] = { label: team, species: {} };
-      for(const mon of (roster || [])){
-        const species = canonicalRosterSpecies(mon), nk = normName(species);
-        if(species && !groups[gk].species[nk]) groups[gk].species[nk] = {species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
-      }
-    }
-
-    for(const r of allReplays(weekFilter)){
-      for(const side of ['p1','p2']){
-        const team = teamFor(r.players?.[side]);
-        if(!team || team==='Unknown') continue;
-        const gk = groupKey(team);
-        if(!groups[gk]) groups[gk] = { label: team, species: {} };
-        const bucket = groups[gk].species;
-        const currentRoster = rosterForTeam(team);
-        for(const mon of currentRoster){
-          const species = canonicalRosterSpecies(mon), nk = normName(species);
-          if(species && !bucket[nk]) bucket[nk] = {species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
-        }
-        for(const k in (r.mons || {})){
-          const m = r.mons[k];
-          if(!m || m.side !== side || !m.species) continue;
-          const displaySpecies = normName(m.species)==='comfey' ? 'Comfey' : m.species;
-          const nk = normName(displaySpecies);
-          if(!bucket[nk]) bucket[nk] = {species:displaySpecies, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
-          bucket[nk].dealt += Number(m.damageDealt)||0;
-          bucket[nk].taken += Number(m.damageTaken)||0;
-          bucket[nk].kills += Number(m.kills)||0;
-          bucket[nk].deaths += Number(m.deaths)||0;
-          bucket[nk].games += Number(m.appearances)||0;
-          if(m.killLog) bucket[nk].killLog.push(...m.killLog);
-          if(m.deathLog) bucket[nk].deathLog.push(...m.deathLog);
-        }
-      }
-    }
+  function normalizeStoredRosters(rosters){
     const out = {};
-    for(const gk in groups) out[groups[gk].label] = groups[gk].species;
+    for(const [team, list] of Object.entries(rosters || {})){
+      out[team] = (Array.isArray(list) ? list : []).map(mon => {
+        if(typeof mon === 'string') return {name:mon, points:null};
+        return {name:String(mon?.name ?? ''), points:mon?.points ?? null};
+      }).filter(mon => mon.name);
+    }
     return out;
   }
-  // ---------- duplicate detection (Settings) ----------
-  // Normalizes a username so that things like "dossa37"/"dossa_37" (punctuation
-  // difference) and "podraa"/"podrrraaa" (repeated-letter typo) collapse to the
-  // same key: strip anything that isn't a letter/digit, then collapse any run of
-  // the same character down to one (so "rrr"/"aaa" runs match a single r/a).
-  function fuzzyKey(u){
-    return (u||'').toLowerCase().replace(/[^a-z0-9]/g,'').replace(/(.)\1+/g,'$1');
-  }
-  function usernameGameCounts(){
-    const counts = {};
-    for(const r of Object.values(STATE.replays)){
-      for(const side of ['p1','p2']){
-        const u = (r.players[side]||'').trim();
-        if(!u) continue;
-        const key = u.toLowerCase();
-        counts[key] = (counts[key]||0) + 1;
-      }
-    }
-    return counts;
-  }
-  // returns groups of raw usernames that look like the same person typed differently
-  function findDuplicatePlayerGroups(){
-    const seen = {}; // lowercase username -> raw display username (first seen casing)
-    for(const r of Object.values(STATE.replays)){
-      for(const side of ['p1','p2']){
-        const u = (r.players[side]||'').trim();
-        if(!u) continue;
-        const key = u.toLowerCase();
-        if(!seen[key]) seen[key] = u;
-      }
-    }
-    const counts = usernameGameCounts();
-    const byFuzzy = {};
-    for(const key in seen){
-      const fk = fuzzyKey(key);
-      if(!fk) continue;
-      if(!byFuzzy[fk]) byFuzzy[fk] = [];
-      byFuzzy[fk].push(seen[key]);
-    }
-    const groups = [];
-    for(const fk in byFuzzy){
-      const usernames = byFuzzy[fk];
-      if(usernames.length < 2) continue;
-      // skip groups that are already fully merged (all mapped to the same team)
-      const teams = new Set(usernames.map(u=>teamFor(u)));
-      if(teams.size <= 1) continue;
-      const sorted = usernames.slice().sort((a,b)=> (counts[b.toLowerCase()]||0) - (counts[a.toLowerCase()]||0) || a.localeCompare(b));
-      groups.push({ usernames: sorted, canonical: sorted[0], counts });
-    }
-    return groups.sort((a,b)=> a.canonical.localeCompare(b.canonical));
-  }
-  function mergePlayerGroup(usernames, canonicalLabel){
-    for(const u of usernames){
-      STATE.teamMap[u.trim().toLowerCase()] = canonicalLabel;
-    }
-  }
-  // returns pairs of current team labels whose Pokémon rosters overlap heavily —
-  // in a draft league each team's roster is fixed, so two "different" team tags
-  // sharing most of the same mons are almost certainly the same team typed two ways
-  function findDuplicateTeamPairs(){
-    const teams = teamPokemonStats('ALL');
-    const labels = Object.keys(teams);
-    const rosterOf = {}; // label -> Set(normSpecies)
-    const gamesOf = {}; // label -> total appearances (for picking the canonical tag)
-    for(const label of labels){
-      rosterOf[label] = new Set(Object.keys(teams[label]));
-      gamesOf[label] = Object.values(teams[label]).reduce((sum,s)=>sum+s.games,0);
-    }
-    const pairs = [];
-    for(let i=0;i<labels.length;i++){
-      for(let j=i+1;j<labels.length;j++){
-        const a = labels[i], b = labels[j];
-        const ra = rosterOf[a], rb = rosterOf[b];
-        if(ra.size < 2 || rb.size < 2) continue;
-        let overlap = 0;
-        for(const sp of ra) if(rb.has(sp)) overlap++;
-        const ratio = overlap / Math.min(ra.size, rb.size);
-        if(ratio >= 0.5 && overlap >= 2){
-          const [bigger, smaller] = gamesOf[a] >= gamesOf[b] ? [a,b] : [b,a];
-          pairs.push({ bigger, smaller, overlap, ratio, biggerGames: gamesOf[bigger], smallerGames: gamesOf[smaller] });
-        }
-      }
-    }
-    return pairs.sort((x,y)=> y.ratio - x.ratio);
-  }
-  // maps every raw username currently resolving to `label` back to that username,
-  // so a team-roster merge can point all of them at the canonical label too
-  function usernamesForTeamLabel(label){
-    const out = new Set();
-    for(const r of Object.values(STATE.replays)){
-      for(const side of ['p1','p2']){
-        const u = (r.players[side]||'').trim();
-        if(u && teamFor(u) === label) out.add(u);
-      }
-    }
-    return Array.from(out);
+  function teamsList(){ return Object.keys(DASH.settings.rosters||{}).sort(); }
+  function myRoster(){ return (profile && profile.team_name && DASH.settings.rosters[profile.team_name]) || []; }
+  function rosterPoints(list){ return (list||[]).reduce((s,m)=> s + (Number(m.points)||0), 0); }
+  function freeAgencyMons(){ return Array.isArray(DASH.settings?.freeAgency?.mons) ? DASH.settings.freeAgency.mons : []; }
+
+  // ---------- data loading ----------
+  async function loadDashboardState(){
+    const {data, error} = await supabase.from('replays').select('replay_id,replay_data').eq('replay_id', SUPABASE_STATE_ID);
+    if(error) throw error;
+    const row = (data||[])[0];
+    const shared = row ? (row.replay_data||{}) : {};
+    DASH.teamMap = shared.teamMap || {};
+    DASH.settings = Object.assign({ rosters:{}, freeAgency:{mons:[]} }, shared.settings || {});
+    DASH.settings.rosters = normalizeStoredRosters(DASH.settings.rosters||{});
   }
 
-  // ---------- CSV export ----------
-  function download(filename, text){
-    const blob = new Blob([text], {type:'text/csv;charset=utf-8;'});
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-  }
-  function toCSV(rows){
-    return rows.map(r => r.map(v=>{
-      const s = String(v);
-      return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
-    }).join(',')).join('\n');
-  }
-  function exportGlobalCSV(weekFilter, label){
-    const stats = globalPokemonStats(weekFilter);
-    const rows = [['Pokemon','Total Damage Dealt','Avg Damage Dealt per Game','Games Played']];
-    stats.forEach(s => rows.push([s.species, s.dealt.toFixed(2), (s.games? (s.dealt/s.games):0).toFixed(2), s.games]));
-    download(`Damage Leaderboard - ${label}.csv`, toCSV(rows));
-  }
-  function exportTeamCSVs(weekFilter, label){
-    const teams = teamPokemonStats(weekFilter);
-    for(const team in teams){
-      const rows = [['Pokemon','Total Damage Dealt','Total Damage Taken','Total Kills','Total Deaths','Appearances']];
-      const list = Object.values(teams[team]).sort((a,b)=>b.dealt-a.dealt);
-      list.forEach(s => rows.push([s.species, s.dealt.toFixed(2), s.taken.toFixed(2), s.kills, s.deaths, s.games]));
-      download(`${team} - ${label}.csv`, toCSV(rows));
+  async function loadProfile(){
+    const uid = session.user.id;
+    let {data, error} = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
+    if(error) throw error;
+    if(!data){
+      const {data: created, error: insErr} = await supabase.from('profiles')
+        .insert({ id: uid, email: session.user.email })
+        .select('*').single();
+      if(insErr) throw insErr;
+      data = created;
     }
+    profile = data;
   }
-  // ---------- rendering ----------
-  const contentEl = document.getElementById('content');
-  const tabsEl = document.getElementById('tabs');
-  let activeTab = IS_ADMIN_PAGE ? 'process' : 'overview';
 
-  tabsEl.addEventListener('click', (e)=>{
-    if(e.target.tagName !== 'BUTTON') return;
-    activeTab = e.target.dataset.tab;
-    [...tabsEl.children].forEach(b=>b.classList.toggle('active', b.dataset.tab===activeTab));
-    render();
-  });
+  async function loadTrades(){
+    const {data, error} = await supabase.from('trade_requests').select('*').order('created_at', {ascending:false});
+    if(error) throw error;
+    trades = data || [];
+  }
 
-  // Bind Pokémon profile clicks directly as well as through the document delegate.
-  // This makes dynamically-rendered rows/cards clickable even after a section redraw.
-  function bindPokemonClicks(root=document){
-    root.querySelectorAll?.('.pokemon-click, .search-match[data-pokemon]').forEach(el=>{
-      if(el.dataset.pokemonBound === '1') return;
-      el.dataset.pokemonBound = '1';
-      el.addEventListener('click', (e)=>{
-        // Audit cells own their click behavior.
-        if(e.target.closest('[data-audit]')) return;
-        e.preventDefault();
-        e.stopPropagation();
-        openPokemonProfile(el.dataset.pokemon);
+  async function refreshAll(){
+    await Promise.all([loadDashboardState(), loadProfile(), loadTrades()]);
+  }
+
+  // ---------- auth screens ----------
+  function renderAuthGate(){
+    appEl.querySelector('header .sub').textContent = 'Sign in to manage your team';
+    contentEl.innerHTML = `
+      <div class="gate">
+        <div class="panel">
+          <h2>Sign In</h2>
+          <label>Email</label>
+          <input id="authEmail" type="email" autocomplete="username" placeholder="you@example.com" style="margin-bottom:12px;">
+          <label>Password</label>
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="Password" style="margin-bottom:14px;">
+          <div class="foot-actions">
+            <button class="primary" id="loginBtn" style="flex:1;">Log in</button>
+            <button class="ghost" id="signupBtn" style="flex:1;">Sign up</button>
+          </div>
+          <div id="authMsg" class="note"></div>
+        </div>
+      </div>`;
+    const msgEl = document.getElementById('authMsg');
+    const setMsg = (text, danger)=>{ msgEl.className = 'note' + (danger?' danger':' ok'); msgEl.textContent = text; };
+
+    document.getElementById('loginBtn').onclick = async ()=>{
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if(!email || !password){ setMsg('Enter your email and password.', true); return; }
+      const btn = document.getElementById('loginBtn'); btn.disabled = true;
+      const {data, error} = await supabase.auth.signInWithPassword({email, password});
+      btn.disabled = false;
+      if(error){ setMsg(error.message, true); return; }
+      session = data.session;
+      await boot();
+    };
+
+    document.getElementById('signupBtn').onclick = async ()=>{
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if(!email || !password){ setMsg('Enter an email and password.', true); return; }
+      if(password.length < 6){ setMsg('Password should be at least 6 characters.', true); return; }
+      const btn = document.getElementById('signupBtn'); btn.disabled = true;
+      const {data, error} = await supabase.auth.signUp({email, password});
+      btn.disabled = false;
+      if(error){ setMsg(error.message, true); return; }
+      if(data.session){ session = data.session; await boot(); }
+      else{ setMsg('Account created — check your email to confirm, then log in.', false); }
+    };
+  }
+
+  // ---------- team claim / status gate ----------
+  function renderTeamClaim(){
+    const teams = teamsList();
+    const taken = new Set(); // we can't see other users' claims, so just list all published teams
+    const current = profile.team_name || '';
+    contentEl.innerHTML = `
+      <div class="gate">
+        <div class="panel">
+          <h2>${current ? 'Change your team' : 'Claim your team'}</h2>
+          <div class="note">Pick the franchise you own. A commissioner needs to approve your claim before you can trade.</div>
+          ${teams.length ? `
+            <label style="margin-top:12px;">Team</label>
+            <select id="teamPick">
+              <option value="">— Select a team —</option>
+              ${teams.map(t=>`<option value="${escapeHtml(t)}" ${t===current?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+            </select>` : `
+            <label style="margin-top:12px;">Team name</label>
+            <input id="teamPickText" type="text" value="${escapeHtml(current)}" placeholder="Type your team's exact name">
+            <div class="note">Rosters haven't been published yet, so type the exact franchise name — a commissioner will match it up.</div>`}
+          <div class="foot-actions">
+            <button class="primary" id="claimBtn">${current ? 'Update claim' : 'Submit claim'}</button>
+          </div>
+          <div id="claimMsg" class="note"></div>
+        </div>
+      </div>`;
+    document.getElementById('claimBtn').onclick = async ()=>{
+      const val = teams.length ? document.getElementById('teamPick').value.trim() : document.getElementById('teamPickText').value.trim();
+      const msgEl = document.getElementById('claimMsg');
+      if(!val){ msgEl.className='note danger'; msgEl.textContent='Pick or type a team name.'; return; }
+      const btn = document.getElementById('claimBtn'); btn.disabled = true;
+      try{
+        const {error} = await supabase.from('profiles').update({ team_name: val }).eq('id', session.user.id);
+        if(error) throw error;
+        await loadProfile();
+        render();
+      }catch(e){
+        msgEl.className='note danger'; msgEl.textContent = e.message;
+        btn.disabled = false;
+      }
+    };
+  }
+
+  function renderPendingOrRejected(){
+    const rejected = profile.status === 'rejected';
+    contentEl.innerHTML = `
+      <div class="gate">
+        <div class="panel">
+          <h2>${rejected ? 'Claim rejected' : 'Waiting for approval'}</h2>
+          <div class="note">
+            ${rejected
+              ? `Your claim for <strong>${escapeHtml(profile.team_name)}</strong> was rejected. Pick a different team below, or reach out to your commissioner if you think this is a mistake.`
+              : `Your claim for <strong>${escapeHtml(profile.team_name)}</strong> is <span class="status-pill pending">pending</span>. A commissioner needs to approve it before you can manage your roster or propose trades. You can still browse Free Agency and Rosters below.`}
+          </div>
+          <div class="foot-actions">
+            <button class="ghost" id="changeTeamBtn">${rejected ? 'Pick a different team' : 'Change team pick'}</button>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('changeTeamBtn').onclick = ()=>{ renderTeamClaim(); };
+  }
+
+  // ---------- My Team tab ----------
+  function renderMyTeam(){
+    if(profile.status !== 'approved'){
+      contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can manage your roster.</div></div>`;
+      return;
+    }
+    const roster = myRoster();
+    const pts = rosterPoints(roster);
+    const pct = Math.min(100, Math.round((pts / ROSTER_BUDGET) * 100));
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>${escapeHtml(profile.team_name)} <span class="badge">${roster.length} Pokémon</span></h2>
+        <div class="note">${pts} / ${ROSTER_BUDGET} points used</div>
+        <div class="budget-bar"><div class="budget-fill${pts>ROSTER_BUDGET?' over':''}" style="width:${pct}%"></div></div>
+        ${roster.length ? `<div class="mon-list" style="margin-top:14px;">${roster.map(m=>`
+          <span class="mon-pill">${spriteImg(m.name)} ${escapeHtml(m.name)} ${m.points!=null?`<span class="pts">${escapeHtml(m.points)}pt</span>`:''}</span>`).join('')}</div>`
+          : `<div class="empty-state">No roster published for your team yet.</div>`}
+      </div>
+      <div class="panel" id="proposePanel"></div>`;
+    renderProposeTrade();
+  }
+
+  function renderProposeTrade(){
+    const el = document.getElementById('proposePanel');
+    const roster = myRoster();
+    const otherTeams = teamsList().filter(t=>t!==profile.team_name);
+    const targetIsFA = draft.target === '';
+    const targetRoster = targetIsFA ? null : (DASH.settings.rosters[draft.target] || []);
+    const requestPool = targetIsFA ? freeAgencyMons() : targetRoster;
+
+    el.innerHTML = `
+      <h2>Propose a Trade</h2>
+      <div class="row">
+        <div>
+          <label>Trade with</label>
+          <select id="targetSelect">
+            <option value="" ${targetIsFA?'selected':''}>— Free Agency —</option>
+            ${otherTeams.map(t=>`<option value="${escapeHtml(t)}" ${t===draft.target?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="trade-cols">
+        <div class="trade-col">
+          <h4>You give ${targetIsFA?'(optional for a free-agency pickup)':''}</h4>
+          <div class="mon-pick-grid" id="offeredPicks">
+            ${roster.length ? roster.map(m=>`
+              <label class="mon-pick${draft.offered.has(m.name)?' checked':''}" data-name="${escapeHtml(m.name)}">
+                <input type="checkbox" data-role="offered" value="${escapeHtml(m.name)}" ${draft.offered.has(m.name)?'checked':''}>
+                ${spriteImg(m.name,'sprite')} ${escapeHtml(m.name)} ${m.points!=null?`<span class="pts">${escapeHtml(m.points)}pt</span>`:''}
+              </label>`).join('') : '<div class="empty-state">Your roster is empty.</div>'}
+          </div>
+        </div>
+        <div class="trade-col">
+          <h4>You get</h4>
+          <div class="mon-pick-grid" id="requestedPicks">
+            ${requestPool && requestPool.length ? requestPool.map(m=>`
+              <label class="mon-pick${draft.requested.has(m.name)?' checked':''}" data-name="${escapeHtml(m.name)}">
+                <input type="checkbox" data-role="requested" value="${escapeHtml(m.name)}" ${draft.requested.has(m.name)?'checked':''}>
+                ${spriteImg(m.name,'sprite')} ${escapeHtml(m.name)} ${m.points!=null?`<span class="pts">${escapeHtml(m.points)}pt</span>`:''}
+              </label>`).join('') : `<div class="empty-state">${targetIsFA?'Free agency pool is empty.':'That team has no published roster.'}</div>`}
+          </div>
+        </div>
+      </div>
+      <div class="foot-actions">
+        <button class="primary" id="submitTradeBtn">Send trade proposal</button>
+      </div>
+      <div id="tradeMsg" class="note"></div>`;
+
+    document.getElementById('targetSelect').onchange = (e)=>{
+      draft.target = e.target.value;
+      draft.requested = new Set();
+      renderProposeTrade();
+    };
+
+    el.querySelectorAll('input[data-role]').forEach(cb=>{
+      cb.addEventListener('change', ()=>{
+        const set = cb.dataset.role === 'offered' ? draft.offered : draft.requested;
+        if(cb.checked) set.add(cb.value); else set.delete(cb.value);
+        cb.closest('.mon-pick').classList.toggle('checked', cb.checked);
       });
-      el.addEventListener('keydown', (e)=>{
-        if((e.key==='Enter'||e.key===' ') && !e.target.closest('[data-audit]')){
-          e.preventDefault();
-          e.stopPropagation();
-          openPokemonProfile(el.dataset.pokemon);
+    });
+
+    document.getElementById('submitTradeBtn').onclick = async ()=>{
+      const msgEl = document.getElementById('tradeMsg');
+      if(draft.requested.size === 0){ msgEl.className='note danger'; msgEl.textContent='Pick at least one Pokémon you want to receive.'; return; }
+      const btn = document.getElementById('submitTradeBtn'); btn.disabled = true;
+      msgEl.className='note'; msgEl.textContent='Sending…';
+      try{
+        const {error} = await supabase.from('trade_requests').insert({
+          proposer_team: profile.team_name,
+          target_team: targetIsFA ? null : draft.target,
+          mons_offered: Array.from(draft.offered),
+          mons_requested: Array.from(draft.requested)
+        });
+        if(error) throw error;
+        draft = { target:'', offered:new Set(), requested:new Set() };
+        await loadTrades();
+        activeTab = 'trades';
+        setStatus('Trade proposal sent.', false);
+        renderTabs(); render();
+      }catch(e){
+        msgEl.className='note danger'; msgEl.textContent = e.message;
+        btn.disabled = false;
+      }
+    };
+  }
+
+  // ---------- Trades tab ----------
+  function tradeCard(t, role){
+    const canRespond = role === 'incoming' && t.status === 'pending';
+    const canWithdraw = role === 'outgoing' && t.status === 'pending';
+    return `<div class="trade-card" data-id="${t.id}">
+      <div class="trade-head">
+        <div>
+          <div class="trade-teams">${escapeHtml(t.proposer_team)}<span class="arrow">→</span>${t.target_team ? escapeHtml(t.target_team) : 'Free Agency'}</div>
+          <div class="trade-sub">${new Date(t.created_at).toLocaleString()}</div>
+        </div>
+        <span class="status-pill ${t.status}">${t.status}</span>
+      </div>
+      <div class="trade-cols">
+        <div class="trade-col"><h4>Offered</h4><div class="mon-list">${(t.mons_offered||[]).length ? t.mons_offered.map(n=>`<span class="mon-pill">${spriteImg(n)} ${escapeHtml(n)}</span>`).join('') : '<span class="note">Nothing</span>'}</div></div>
+        <div class="trade-col"><h4>Requested</h4><div class="mon-list">${(t.mons_requested||[]).length ? t.mons_requested.map(n=>`<span class="mon-pill">${spriteImg(n)} ${escapeHtml(n)}</span>`).join('') : '<span class="note">Nothing</span>'}</div></div>
+      </div>
+      ${canRespond ? `<div class="foot-actions">
+          <button class="teal small" data-action="accept" data-id="${t.id}">Accept</button>
+          <button class="danger small" data-action="reject" data-id="${t.id}">Reject</button>
+        </div>` : ''}
+      ${canWithdraw ? `<div class="foot-actions">
+          <button class="ghost small" data-action="withdraw" data-id="${t.id}">Withdraw</button>
+        </div>` : ''}
+      <div class="note trade-err" id="tradeErr-${t.id}"></div>
+    </div>`;
+  }
+
+  function renderTrades(){
+    if(profile.status !== 'approved'){
+      contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can send or receive trades.</div></div>`;
+      return;
+    }
+    const myTeam = profile.team_name;
+    const incoming = trades.filter(t=>t.target_team===myTeam && t.status==='pending');
+    const outgoing = trades.filter(t=>t.proposer_team===myTeam && t.status==='pending');
+    const history = trades.filter(t=> t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam));
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Incoming <span class="badge">${incoming.length}</span></h2>
+        ${incoming.length ? incoming.map(t=>tradeCard(t,'incoming')).join('') : '<div class="empty-state">No incoming trade offers.</div>'}
+      </div>
+      <div class="panel">
+        <h2>Sent by you <span class="badge">${outgoing.length}</span></h2>
+        ${outgoing.length ? outgoing.map(t=>tradeCard(t,'outgoing')).join('') : '<div class="empty-state">You have no pending sent trades.</div>'}
+      </div>
+      <div class="panel">
+        <h2>History <span class="badge">${history.length}</span></h2>
+        ${history.length ? history.map(t=>tradeCard(t,'history')).join('') : '<div class="empty-state">No resolved trades yet.</div>'}
+      </div>`;
+
+    contentEl.querySelectorAll('button[data-action]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = Number(btn.dataset.id);
+        const action = btn.dataset.action;
+        const errEl = document.getElementById(`tradeErr-${id}`);
+        errEl.className = 'note';
+        errEl.textContent = '';
+        btn.disabled = true;
+        try{
+          if(action === 'accept'){
+            const {error} = await supabase.rpc('accept_trade', { trade_id: id });
+            if(error) throw error;
+          } else if(action === 'reject'){
+            const {error} = await supabase.from('trade_requests')
+              .update({ status:'rejected', responded_at:new Date().toISOString(), responded_by:session.user.id })
+              .eq('id', id);
+            if(error) throw error;
+          } else if(action === 'withdraw'){
+            const {error} = await supabase.from('trade_requests')
+              .update({ status:'withdrawn', responded_at:new Date().toISOString(), responded_by:session.user.id })
+              .eq('id', id);
+            if(error) throw error;
+          }
+          await refreshAll();
+          render();
+        }catch(e){
+          errEl.className = 'note danger';
+          errEl.textContent = e.message;
+          btn.disabled = false;
         }
       });
     });
   }
 
-  function renderTicker(){
-    const mount=document.getElementById('bannerMount'); if(!mount) return;
-    mount.innerHTML=renderBanner();
-    const mode=document.getElementById('bannerMode'); const team=document.getElementById('bannerTeam');
-    mode?.addEventListener('change',async e=>{STATE.settings.bannerMode=e.target.value; await saveSettingsIfPossible(); renderTicker();});
-    team?.addEventListener('change',async e=>{STATE.settings.bannerTeam=e.target.value; await saveSettingsIfPossible(); renderTicker();});
-  }
-  async function saveSettingsIfPossible(){
-    if(IS_ADMIN_PAGE && adminUser){ try{ await saveSharedState(); }catch(e){ console.warn(e); } }
-    localStorage.setItem('sbl-banner-preferences', JSON.stringify({bannerMode:STATE.settings.bannerMode,bannerTeam:STATE.settings.bannerTeam}));
-  }
-
-  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-
-  function closePokemonProfile(){
-    const el=document.getElementById('pokemonProfileModal');
-    if(el) el.remove();
-    document.body.style.overflow='';
-  }
-  function openPokemonProfile(species){
-    const modalId='pokemonProfileModal';
-    closePokemonProfile();
-    const root=document.createElement('div');
-    root.innerHTML=`<div class="pokemon-overlay" id="${modalId}">
-      <div class="pokemon-modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(species)} profile">
-        <div class="pokemon-modal-head">
-          <strong>Pokémon Profile</strong>
-          <button class="ghost small" id="pokemonProfileClose" type="button">Close ✕</button>
-        </div>
-        <div class="pokemon-modal-body">${renderPokemonProfile(species,'ALL')}</div>
-      </div>
-    </div>`;
-    document.body.appendChild(root.firstElementChild);
-    document.body.style.overflow='hidden';
-    const overlay=document.getElementById(modalId);
-    document.getElementById('pokemonProfileClose').addEventListener('click',closePokemonProfile);
-    overlay.addEventListener('click',e=>{ if(e.target===overlay) closePokemonProfile(); });
-    requestAnimationFrame(()=>document.getElementById('pokemonProfileClose')?.focus());
-  }
-
-  function openReplaySummary(replayId){
-    const r = STATE.replays[replayId];
-    if(!r){ return; }
-    const p1 = (r.players?.p1 || '?').trim() || '?';
-    const p2 = (r.players?.p2 || '?').trim() || '?';
-    const winner = (r.winner || '').trim();
-    const resultText = winner ? `${winner} won` : 'Result unavailable';
-    const mons = Object.values(r.mons || {});
-    const sideMons = side => { const seen={}; (r.teamRoster?.[side]||[]).forEach(sp=>seen[normName(sp)]={side,species:sp,kills:0,deaths:0,damageDealt:0,damageTaken:0,appearances:0}); mons.filter(m=>m.side===side).forEach(m=>seen[normName(m.species)]=m); return Object.values(seen).sort((a,b)=>
-      (b.kills-a.kills) || (a.deaths-b.deaths) || (b.damageDealt-a.damageDealt)); };
-    const sideCard = (side, player) => {
-      const list = sideMons(side);
-      const team = teamFor(player);
-      const kills = list.reduce((n,m)=>n+m.kills,0);
-      const deaths = list.reduce((n,m)=>n+m.deaths,0);
-      const dealt = list.reduce((n,m)=>n+m.damageDealt,0);
-      const taken = list.reduce((n,m)=>n+m.damageTaken,0);
-      return `<div class="summary-side">
-        <div class="summary-side-head"><div><strong>${escapeHtml(player)}</strong><div class="summary-team">${escapeHtml(team)}</div></div><div class="summary-score">${deaths} fainted</div></div>
-        <div class="summary-line"><span>${kills} kills</span><span>${dealt.toFixed(1)}% damage dealt</span><span>${taken.toFixed(1)}% taken</span></div>
-        <div class="summary-mons">${list.map(m=>`<div class="summary-mon">
-          ${pokemonLink(m.species, `${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><div class="pname-cell"><strong>${escapeHtml(m.species)}</strong></div><div class="summary-mon-stats">${m.kills} K · ${m.deaths} D · ${m.damageDealt.toFixed(1)}% dmg</div></div>`)}
-          ${m.appearances ? (m.deaths ? '<span class="badge danger-badge">Fainted</span>' : '<span class="badge">Survived</span>') : '<span class="badge">Not sent</span>'}
-        </div>`).join('') || '<div class="empty-state">No Pokémon recorded.</div>'}</div>
+  // ---------- Free Agency tab ----------
+  function renderFreeAgency(){
+    const mons = freeAgencyMons();
+    const groups = {};
+    mons.forEach(m=>{ const p = Number(m.points)||0; (groups[p] ??= []).push(m); });
+    const tiers = Object.keys(groups).sort((a,b)=>Number(b)-Number(a));
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Free Agency Pool <span class="badge">${mons.length} Pokémon</span></h2>
+        ${DASH.settings?.freeAgency?.source ? `<div class="note">Source: ${escapeHtml(DASH.settings.freeAgency.source)}</div>` : ''}
+        ${!mons.length ? '<div class="empty-state">No Free Agency pool published yet.</div>' : tiers.map(tier=>`
+          <div style="margin-top:14px;">
+            <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">${tier} pts</h4>
+            <div class="mon-list">${groups[tier].map(m=>`<span class="mon-pill">${spriteImg(m.name)} ${escapeHtml(m.name)}</span>`).join('')}</div>
+          </div>`).join('')}
       </div>`;
+  }
+
+  // ---------- All Rosters tab ----------
+  function renderRosters(){
+    const rosters = DASH.settings.rosters || {};
+    const teams = Object.keys(rosters).sort();
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>League Rosters</h2>
+        ${teams.length ? `<div class="roster-grid">${teams.map(t=>{
+          const list = rosters[t];
+          const pts = rosterPoints(list);
+          const mine = profile && t === profile.team_name;
+          return `<div class="roster-card${mine?' mine':''}">
+            <h3>${escapeHtml(t)} ${mine?'<span class="badge">You</span>':''}</h3>
+            <div class="note">${list.length} Pokémon · ${pts}/${ROSTER_BUDGET} pts</div>
+            <div class="mon-list">${list.map(m=>`<span class="mon-pill">${spriteImg(m.name)} ${escapeHtml(m.name)}</span>`).join('')}</div>
+          </div>`;
+        }).join('')}</div>` : '<div class="empty-state">No rosters published yet.</div>'}
+      </div>`;
+  }
+
+  // ---------- Account tab ----------
+  function renderAccount(){
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Account</h2>
+        <div class="row">
+          <div><label>Email</label><div>${escapeHtml(session.user.email||'')}</div></div>
+          <div><label>Team</label><div>${escapeHtml(profile.team_name||'—')} <span class="status-pill ${profile.status}">${profile.status}</span></div></div>
+        </div>
+        <div class="foot-actions">
+          <button class="ghost" id="changeTeamBtn2">Change team pick</button>
+          <button class="danger" id="logoutBtn">Log out</button>
+        </div>
+      </div>`;
+    document.getElementById('changeTeamBtn2').onclick = renderTeamClaim;
+    document.getElementById('logoutBtn').onclick = async ()=>{
+      await supabase.auth.signOut();
+      session = null; profile = null; trades = [];
+      renderAuthGate();
     };
-    document.getElementById('auditModal').innerHTML = `
-      <div class="audit-overlay" id="replaySummaryOverlay">
-        <div class="audit-box replay-summary-box">
-          <div class="summary-header">
-            <div><div class="summary-kicker">${escapeHtml(r.week || 'Unassigned')} · ${escapeHtml(r.format || 'Replay')}</div><h3>${escapeHtml(p1)} <span class="summary-vs">vs</span> ${escapeHtml(p2)}</h3><div class="summary-result">${escapeHtml(resultText)}</div></div>
-            <div class="summary-meta"><span>${mons.length} Pokémon recorded</span><span>Replay ${escapeHtml(r.id)}</span></div>
-          </div>
-          <div class="summary-grid">${sideCard('p1',p1)}${sideCard('p2',p2)}</div>
-          <div class="summary-actions"><a class="primary nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(r.id)}" target="_blank" rel="noopener">Open Showdown replay</a><button class="ghost" id="summaryClose">Close</button></div>
-        </div>
-      </div>`;
-    document.getElementById('summaryClose').addEventListener('click', closeAudit);
-    document.getElementById('replaySummaryOverlay').addEventListener('click', e=>{ if(e.target.id==='replaySummaryOverlay') closeAudit(); });
   }
 
-  // ---------- kill/death audit trail ----------
-  // Encodes a mon's kill or death log onto a table cell so it can be clicked open
-  // to see exactly which replay/turn/cause each credited kill or death came from —
-  // lets you trace a count against a hand-kept tally without me having to guess.
-  function auditAttr(species, type, list, showLink){
-    const payload = JSON.stringify({species, type, list: list || [], showLink: showLink !== false});
-    return `class="num ${type==='kills'?'kills ':''}auditable" data-audit="${escapeHtml(payload)}"`;
-  }
-  // same payload as auditAttr but without the class="" — for elements (like the
-  // Golden Fist row) that already carry their own class list
-  function auditDataAttr(species, type, list, showLink){
-    const payload = JSON.stringify({species, type, list: list || [], showLink: showLink !== false});
-    return `data-audit="${escapeHtml(payload)}"`;
-  }
-  function closeAudit(){
-    const el = document.getElementById('auditModal');
-    if(el) el.innerHTML = '';
-  }
-  function openAudit(species, type, list, showLink){
-    showLink = showLink !== false;
-    const label = type === 'kills' ? 'Kills' : 'Deaths';
-    const rows = (list || []).slice().sort((a,b)=> (a.replayId||'').localeCompare(b.replayId||'') || (a.turn-b.turn));
-    document.getElementById('auditModal').innerHTML = `
-      <div class="audit-overlay" id="auditOverlay">
-        <div class="audit-box">
-          <h3>${pokemonLink(species, escapeHtml(species))} — ${label} (${rows.length})</h3>
-          <div class="audit-sub">Every ${type==='kills'?'kill':'death'} credited to this Pokémon this scope, with the turn${showLink?', replay,':''} and why it was credited.</div>
-          ${rows.length===0 ? `<div class="empty-state">No entries.</div>` : `<ul class="audit-list">
-            ${rows.map(r=>`<li>
-              <span>Turn ${r.turn} — ${type==='kills' ? 'vs ' + (r.victim ? pokemonLink(r.victim, escapeHtml(r.victim), '', false) : '?') : (r.killer ? 'by ' + pokemonLink(r.killer, escapeHtml(r.killer), '', false) : 'unattributed')} <span class="audit-cause">(${escapeHtml(r.cause||'—')})</span></span>
-              ${showLink ? `<a href="https://replay.pokemonshowdown.com/${escapeHtml(r.replayId)}" target="_blank" rel="noopener">${escapeHtml(r.replayId)}</a>` : ''}
-            </li>`).join('')}
-          </ul>`}
-          <div class="foot-actions"><button class="ghost" id="auditClose">Close</button></div>
-        </div>
-      </div>`;
-    document.getElementById('auditClose').addEventListener('click', closeAudit);
-    document.getElementById('auditOverlay').addEventListener('click', (e)=>{ if(e.target.id === 'auditOverlay') closeAudit(); });
-  }
+  // ---------- shell ----------
+  function setStatus(msg, danger){ statusMsg = msg; }
 
+  function renderTabs(){
+    let nav = document.getElementById('tabs');
+    if(!nav){
+      nav = document.createElement('nav');
+      nav.className = 'tabs';
+      nav.id = 'tabs';
+      contentEl.before(nav);
+    }
+    const tabs = [
+      ['myteam','My Team'],
+      ['trades','Trades'],
+      ['freeagency','Free Agency'],
+      ['rosters','All Rosters'],
+      ['account','Account']
+    ];
+    nav.innerHTML = tabs.map(([id,label])=>`<button data-tab="${id}" class="${activeTab===id?'active':''}">${label}</button>`).join('');
+    nav.querySelectorAll('button').forEach(b=>{
+      b.onclick = ()=>{ activeTab = b.dataset.tab; renderTabs(); render(); };
+    });
+  }
 
   function render(){
-    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'replays' || activeTab === 'overview');
-    if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
-    if(activeTab === 'overview') return renderLeagueOverview();
-    if(activeTab === 'process') return renderProcess();
-    if(activeTab === 'global') return renderLeaderboards();
-    if(activeTab === 'pokemonsearch') return renderPokemonSearch();
-    if(activeTab === 'goldenfist') return renderGoldenFist();
-    if(activeTab === 'causes') return renderDeathCauses();
-    if(activeTab === 'teams') return renderTeams();
-    if(activeTab === 'teamcompare') return renderTeamComparison();
-    if(activeTab === 'replays') return renderReplayBrowser();
-    if(activeTab === 'settings') return renderSettings();
-  }
-  // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
-  function goToTab(tab){
-    activeTab = tab;
-    [...tabsEl.children].forEach(b=>b.classList.toggle('active', b.dataset.tab===activeTab));
-    render();
-  }
+    if(!session){ document.getElementById('tabs')?.remove(); renderAuthGate(); return; }
+    if(!profile){ document.getElementById('tabs')?.remove(); contentEl.innerHTML = '<div class="empty-state">Loading…</div>'; return; }
 
-  function teamStandings(weekFilter='ALL'){ return teamComparisonData(weekFilter); }
-  function teamLogo(team){ return STATE.settings.teamLogos?.[groupKey(team)] || STATE.settings.teamLogos?.[team] || ''; }
-  function renderBanner(){
-    const mode=STATE.settings.bannerMode||'top';
-    const teams=teamStandings('ALL');
-    const teamOptions=teams.map(t=>`<option value="${escapeHtml(t.team)}" ${STATE.settings.bannerTeam===t.team?'selected':''}>${escapeHtml(t.team)}</option>`).join('');
-    const controls=`<div class="banner-controls"><div><label>Banner</label><select id="bannerMode"><option value="top" ${mode==='top'?'selected':''}>Top Pokémon</option><option value="team" ${mode==='team'?'selected':''}>Team Stats</option><option value="golden" ${mode==='golden'?'selected':''}>Golden Fist</option></select></div><div id="bannerTeamWrap" style="display:${mode==='top'||mode==='golden'?'none':'block'}"><label>Team</label><select id="bannerTeam">${teamOptions}</select></div></div>`;
-    let cards='';
-    if(mode==='golden'){
-      cards=globalPokemonStats('ALL').map(s=>({...s,diff:s.kills-s.deaths})).sort((a,b)=>b.diff-a.diff||b.kills-a.kills).slice(0,5).map((s,i)=>`<div class="banner-pokemon"><div style="font-family:var(--mono);color:var(--text-dim);width:24px">${i+1}</div>${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.diff>0?'+':''}${s.diff}</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
-    } else if(mode==='top'){
-      cards=globalPokemonStats('ALL').slice(0,5).map(s=>`<div class="banner-pokemon">${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.dealt.toFixed(0)} ⚔</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
-    } else {
-      const selected=teams.find(t=>t.team===STATE.settings.bannerTeam)||teams[0];
-      if(selected){
-        const list=Object.values(teamPokemonStats('ALL')[selected.team]||{}).sort((a,b)=>b.games-a.games||b.dealt-a.dealt).slice(0,5);
-        cards=`<div class="banner-team-card"><img class="team-logo" src="${escapeHtml(teamLogo(selected.team))}" onerror="this.style.display='none'" alt=""><div><div class="name">${escapeHtml(selected.team)}</div><div class="banner-stat">${selected.wins}-${selected.losses}</div><div class="note" style="margin:2px 0 0">${selected.games?((100*selected.wins/selected.games).toFixed(1)+'% win rate'): 'No games'}</div></div></div>`+list.map(s=>`<div class="banner-pokemon">${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.games} games</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.deaths} D</div></div></div>`).join('');
-      }
-    }
-    return controls+`<div class="ticker" id="ticker">${cards||'<div class="tick empty"><div class="val">No banner data yet</div></div>'}</div>`;
-  }
-  function renderLeagueOverview(){
-    const data=teamStandings('ALL').slice().sort((a,b)=>a.team.localeCompare(b.team,undefined,{sensitivity:'base'}));
-    contentEl.innerHTML=`<div class="panel"><h2>League Overview</h2><div class="note">Click a franchise for a quick league summary.</div><div id="overviewTeams" style="margin-top:18px"></div></div>`;
-    const el=document.getElementById('overviewTeams');
-    if(!data.length){el.innerHTML='<div class="empty-state">No team data yet.</div>';return;}
-    el.innerHTML=`<div class="team-card-grid">${data.map(t=>{const mons=Object.values(teamPokemonStats('ALL')[t.team]||{}).sort((a,b)=>b.games-a.games||b.dealt-a.dealt); const top=mons[0]?.species; const logo=teamLogo(t.team); const sprite=top?`<div class="team-card-top-wrap">${spriteImg(top,'team-card-top-sprite')}</div>`:''; return `<div class="team-card" data-team-card="${escapeHtml(t.team)}"><div class="team-card-head"><div class="team-card-copy">${logo?`<img class="team-logo" src="${escapeHtml(logo)}" alt="" style="display:none">`:''}<div class="team-card-name">${escapeHtml(t.team)}</div><div class="team-card-sub">${t.wins}-${t.losses}</div></div>${sprite}</div></div>`}).join('')}</div>`;
-    el.querySelectorAll('[data-team-card]').forEach(card=>card.addEventListener('click',()=>openTeamOverview(card.dataset.teamCard)));
-  }
-  function openTeamOverview(team){
-    const data=teamStandings('ALL'); const t=data.find(x=>x.team===team); if(!t)return;
-    const i=data.indexOf(t); const mons=Object.values(teamPokemonStats('ALL')[team]||{}).sort((a,b)=>b.games-a.games||b.dealt-a.dealt).slice(0,5);
-    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">League Position</div><h3>${i+1}${i===0?'st':i===1?'nd':i===2?'rd':'th'} — ${escapeHtml(team)}</h3></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${t.kills-t.deaths>0?'+':''}${t.kills-t.deaths}</strong></div></div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.games} games · ${m.kills} K · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
-    document.getElementById('teamOverviewClose').addEventListener('click',closeAudit); document.getElementById('teamOverviewOverlay').addEventListener('click',e=>{if(e.target.id==='teamOverviewOverlay')closeAudit();});
-  }
-  function renderProcess(){
-    const count = Object.keys(STATE.replays).length;
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Add replays</h2>
-        <label>Showdown replay links (one per line)</label>
-        <textarea id="urlsInput" placeholder="https://replay.pokemonshowdown.com/gen9natdexdraft-xxxxxxxx"></textarea>
-        <button class="primary" id="processBtn">Process replays</button>
-        <div class="log" id="processLog"></div>
-      </div>
-      <div class="panel">
-        <h2>Processed this season <span class="badge">${count} replays</span></h2>
-        ${count===0 ? `<div class="empty-state">Nothing processed yet — paste some replay links above.</div>` : `
-          <div class="foot-actions" style="margin-top:0; margin-bottom:12px;">
-            <button class="ghost" id="reprocessAll">Reprocess all replays (re-fetches &amp; re-parses everything)</button>
-          </div>
-          ${renderReplayTable()}`}
-      </div>
-    `;
-    document.getElementById('processBtn').addEventListener('click', async ()=>{
-      const btn = document.getElementById('processBtn');
-      const urls = document.getElementById('urlsInput').value;
-      const logEl = document.getElementById('processLog');
-      logEl.innerHTML = '';
-      btn.disabled = true;
-      await processUrls(urls, '', logEl);
-      btn.disabled = false;
-    });
-    const reBtn = document.getElementById('reprocessAll');
-    if(reBtn) reBtn.addEventListener('click', async ()=>{
-      reBtn.disabled = true;
-      const logEl = document.getElementById('processLog');
-      await reprocessAll(logEl);
-      reBtn.disabled = false;
-    });
-  }
-
-  async function reprocessAll(logEl){
-    const ids = Object.keys(STATE.replays);
-    let ok=0, failed=0;
-    for(const id of ids){
-      
-      try{
-        const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
-        if(!resp.ok) throw new Error('not found (' + resp.status + ')');
-        const json = await resp.json();
-        const oldReplay = STATE.replays[id];
-        const parsed = parseLog(json, id);
-        parsed.uploadtime = json.uploadtime;
-        parsed.weekOverride = !!oldReplay.weekOverride;
-        parsed.week = oldReplay.weekOverride
-          ? (oldReplay.week || 'Unassigned')
-          : autoWeekForReplay(parsed);
-        parsed.processedAt = oldReplay.processedAt;
-        STATE.replays[id] = parsed;
-        appendLog(logEl, `✓ reprocessed ${id}`, false, true);
-        ok++;
-      }catch(e){
-        appendLog(logEl, `✗ ${id} — ${e.message}`, true);
-        failed++;
-      }
-    }
-    recalculateAllWeeks();
-    await saveReplays();
-    appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
-    renderTicker();
-    render();
-  }
-
-  function renderReplayTable(){
-    const list = Object.values(STATE.replays).sort((a,b)=>b.processedAt-a.processedAt);
-    const rows = list.map(r => `
-      <tr>
-        <td>${escapeHtml(r.week||'Unassigned')}</td>
-        <td>${escapeHtml(r.players.p1||'?')} <span style="color:var(--text-dim)">vs</span> ${escapeHtml(r.players.p2||'?')}</td>
-        <td style="color:var(--text-dim)">${escapeHtml(r.format||'')}</td>
-        <td class="num"><button class="ghost small danger-btn" data-remove="${r.id}">Remove</button></td>
-      </tr>`).join('');
-    setTimeout(()=>{
-      document.querySelectorAll('[data-remove]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          delete STATE.replays[btn.dataset.remove];
-          await saveReplays();
-          renderTicker();
-          render();
-        });
-      });
-    }, 0);
-    return `<table><thead><tr><th>Week</th><th>Matchup</th><th>Format</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
-  }
-
-  function weekSelectorHtml(id){
-    const weeks = weeksList();
-    return `<select id="${id}">
-      <option value="ALL">All season</option>
-      ${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}
-    </select>`;
-  }
-
-  function renderLeaderboards(){
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Damage Leaderboard</h2>
-        <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('globalWeek')}</div>
-          <div style="flex:0;"><button class="ghost" id="exportGlobal">Export CSV</button></div>
-        </div>
-        <div id="globalTable"></div>
-        <a class="nav-link" id="toTeamsLink">Want per-team breakdowns? → View Franchise Stats</a>
-      </div>`;
-
-    document.getElementById('toTeamsLink').addEventListener('click', ()=> goToTab('teams'));
-
-    const sel = document.getElementById('globalWeek');
-    function drawGlobal(){
-      const stats = globalPokemonStats(sel.value);
-      document.getElementById('globalTable').innerHTML = stats.length===0 ? `<div class="empty-state">No data for this scope yet.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
-        ${stats.map((s,i)=>`<tr>
-          <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
-          <td class="num dealt">${s.dealt.toFixed(1)}</td>
-          <td class="num taken">${s.taken.toFixed(1)}</td>
-          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
-          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
-          <td class="num">${s.games}</td>
-          <td class="num">${(s.games? s.dealt/s.games:0).toFixed(1)}</td>
-        </tr>`).join('')}</tbody></table>`;
-    }
-    sel.addEventListener('change', drawGlobal);
-    document.getElementById('exportGlobal').addEventListener('click', ()=> exportGlobalCSV(sel.value, sel.value==='ALL'?'Season':sel.value));
-    drawGlobal();
-  }
-
-  function renderPokemonSearch(){
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Pokémon Search</h2>
-        <div class="pokemon-search-box">
-          <div class="search-input-wrap">
-            <label>Search by Pokémon name</label>
-            <input type="text" id="pokemonSearchInput" placeholder="e.g. Slowking-Galar, Haxorus, Cinderace…" autocomplete="off">
-            <div class="pokemon-search-hint">Search is live as you type. Press <strong>/</strong> anywhere on the dashboard to jump here.</div>
-          </div>
-          <div class="pokemon-type-filter">
-            <label>Search by type</label>
-            <select id="pokemonTypeFilter">
-              <option value="all">All types</option>
-              ${Object.keys(TYPE_CLASS).map(t=>`<option value="${t}">${t}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-        <div id="pokemonSearchTable"></div>
-      </div>`;
-
-    const input = document.getElementById('pokemonSearchInput');
-    const typeFilter = document.getElementById('pokemonTypeFilter');
-    const table = document.getElementById('pokemonSearchTable');
-
-    function draw(){
-      const q = input.value.trim().toLowerCase();
-      const wantedType = typeFilter.value;
-      const stats = globalPokemonStats('ALL').filter(s => (!q || s.species.toLowerCase().includes(q)) && (wantedType==='all' || pokemonTypes(s.species).includes(wantedType))).sort((a,b)=>a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
-      if(!stats.length){
-        table.innerHTML = `<div class="empty-state">${q ? `No Pokémon matching <strong>${escapeHtml(input.value.trim())}</strong> in this scope.` : 'No Pokémon data for this scope yet.'}</div>`;
-        return;
-      }
-      table.innerHTML = `<table><thead><tr>
-        <th>Pokémon</th><th>Coach / Team</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th>
-      </tr></thead><tbody>
-        ${stats.map(s=>`<tr class="search-match" data-pokemon="${escapeHtml(s.species)}" tabindex="0" role="button" title="Open ${escapeHtml(s.species)} profile" style="cursor:pointer;">
-          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
-          <td>${escapeHtml(Array.from(s.coaches).sort().join(', ') || 'Unknown')}</td>
-          <td class="num dealt">${s.dealt.toFixed(1)}</td>
-          <td class="num taken">${s.taken.toFixed(1)}</td>
-          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
-          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
-          <td class="num">${s.games}</td>
-          <td class="num">${(s.games ? s.dealt/s.games : 0).toFixed(1)}</td>
-        </tr>`).join('')}
-      </tbody></table>`;
-      bindPokemonClicks(table);
+    if(!profile.team_name){ document.getElementById('tabs')?.remove(); renderTeamClaim(); return; }
+    if(profile.status === 'pending' || profile.status === 'rejected'){
+      // still show tabs so people can browse Free Agency / Rosters
+      renderTabs();
+      if(activeTab === 'freeagency') return renderFreeAgency();
+      if(activeTab === 'rosters') return renderRosters();
+      if(activeTab === 'account') return renderAccount();
+      return renderPendingOrRejected();
     }
 
-    input.addEventListener('input', draw);
-    typeFilter.addEventListener('change', draw);
-    setTimeout(()=>input.focus(), 0);
-    draw();
+    renderTabs();
+    if(activeTab === 'myteam') return renderMyTeam();
+    if(activeTab === 'trades') return renderTrades();
+    if(activeTab === 'freeagency') return renderFreeAgency();
+    if(activeTab === 'rosters') return renderRosters();
+    if(activeTab === 'account') return renderAccount();
   }
 
-
-  // ---------- Pokémon profile / death causes / team comparison ----------
-  function pokemonProfileData(species, weekFilter){
-    const target = normName(species);
-    const rows = [];
-    const coaches = new Set();
-    for(const r of allReplays(weekFilter)){
-      for(const k in r.mons){
-        const m = r.mons[k];
-        if(normName(m.species) !== target) continue;
-        coaches.add(teamFor(r.players[m.side]));
-        rows.push({replay:r, mon:m});
-      }
-    }
-    const weeksBrought = new Map();
-    const agg = {species: rows[0]?.mon?.species || species, dealt:0,taken:0,kills:0,deaths:0,games:0,killLog:[],deathLog:[],coaches,weeksBrought};
-    // Record every week in which the Pokémon was on the six-mon team preview,
-    // including games where it was never sent into battle.
-    for(const replay of allReplays(weekFilter)){
-      const week = replay.week;
-      for(const k in (replay.mons||{})){
-        const mon = replay.mons[k];
-        if(normName(mon.species) === target){
-          const key = String(week || '');
-          if(key) weeksBrought.set(key, (weeksBrought.get(key)||0) + 1);
-          break;
-        }
-      }
-    }
-    rows.forEach(({replay,mon})=>{
-      agg.dealt += mon.damageDealt||0; agg.taken += mon.damageTaken||0;
-      agg.kills += mon.kills||0; agg.deaths += mon.deaths||0; agg.games += mon.appearances||0;
-      // Keep the replay timestamp with each event so profile history can be
-      // ordered by when the battle was played/uploaded rather than by turn.
-      const replayDate = Number(replay.uploadtime || replay.processedAt || 0);
-      agg.killLog.push(...(mon.killLog||[]).map(x=>({...x, replayDate})));
-      agg.deathLog.push(...(mon.deathLog||[]).map(x=>({...x, replayDate})));
-    });
-    return agg;
-  }
-
-  function renderPokemonProfile(species, weekFilter){
-    const s = pokemonProfileData(species, weekFilter);
-    if(!s.games) return `<div class="empty-state">No data for ${escapeHtml(species)} in this scope.</div>`;
-    const kd = s.deaths ? (s.kills/s.deaths).toFixed(2) : (s.kills ? '∞' : '0');
-    const avg = s.games ? (s.dealt/s.games).toFixed(1) : '0';
-    return `<div class="panel pokemon-profile">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
-        ${spriteImg(s.species,'sprite-xl')}
-        <div><h2 style="margin:0;color:var(--text);text-transform:none;letter-spacing:0;font-size:20px;">${pokemonLink(s.species, escapeHtml(s.species))}</h2>
-        <div class="note" style="margin-top:3px;">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div></div>
-      </div>
-      <div class="profile-grid">
-        <div><span>Games</span><strong>${s.games}</strong></div><div><span>Kills</span><strong class="kills">${s.kills}</strong></div>
-        <div><span>Deaths</span><strong class="taken">${s.deaths}</strong></div><div><span>K/D</span><strong>${kd}</strong></div>
-        <div><span>Damage dealt</span><strong class="dealt">${s.dealt.toFixed(1)}</strong></div><div><span>Damage taken</span><strong class="taken">${s.taken.toFixed(1)}</strong></div>
-        <div><span>Avg dmg/game</span><strong>${avg}</strong></div><div><span>Kill rate/game</span><strong>${s.games?(s.kills/s.games).toFixed(2):'0'}</strong></div>
-      </div>
-      <div class="profile-weeks" style="margin-top:14px;padding:12px 14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;">
-        <div class="mini-heading" style="margin-bottom:8px;">Weeks Brought</div>
-        <div style="display:flex;flex-wrap:wrap;gap:7px;">${Array.from(s.weeksBrought.keys()).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(w=>`<span class="badge">${escapeHtml(w)}</span>`).join('') || '<span class="note">No roster data recorded.</span>'}</div>
-      </div>
-      <div class="section-divider"></div>
-      <div class="profile-two-col">
-        <div><h3 class="mini-heading">Kill record</h3>${s.killLog.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${s.killLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim), '', false) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No kills.</div>`}</div>
-        <div><h3 class="mini-heading">Death record</h3>${s.deathLog.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${s.deathLog.slice().sort((a,b)=>(a.replayDate-b.replayDate) || (a.turn-b.turn)).map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer), '', false) : 'Unattributed'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">No deaths.</div>`}</div>
-      </div>
-    </div>`;
-  }
-
-  function renderDeathCauses(){
-    contentEl.innerHTML=`<div class="panel"><h2>Death Causes</h2><div class="cause-subheading">Top victims</div><div id="causeBody"></div></div>`;
-    const sel={value:'ALL'};
-    function draw(){
-      const counts={}; const pokemon={}; const causeLogs={};
-      for(const r of allReplays(sel.value)) for(const k in r.mons){
-        const m=r.mons[k];
-        for(const d of (m.deathLog||[])){
-          const raw=(d.cause||'Other'); const cleanCause=String(raw).replace(/^(item|ability):\s*/i,'').trim(); const c=/^(unattributed)$/i.test(cleanCause)?'Other':(/stealth rock|spikes|toxic spikes|sticky web/i.test(cleanCause)?'Hazard':(/recoil/i.test(cleanCause)?'Recoil':(/psn|tox|brn|poison|burn/i.test(cleanCause)?'Status':cleanCause))); counts[c]=(counts[c]||0)+1;
-          if(!pokemon[c]) pokemon[c]={}; const sp=m.species; pokemon[c][sp]=(pokemon[c][sp]||0)+1;
-          if(!causeLogs[c]) causeLogs[c]=[]; causeLogs[c].push({pokemon:sp,...d});
-        }
-      }
-      const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-      document.getElementById('causeBody').innerHTML=!rows.length?`<div class="empty-state">No deaths recorded.</div>`:`<div class="death-cause-list">${rows.map(([c,n],i)=>{const top=Object.entries(pokemon[c]).sort((a,b)=>b[1]-a[1]).slice(0,6);return `<div class="death-cause-entry"><div class="death-cause-rank">${i+1}</div><div class="death-cause-main"><div class="death-cause-title">${escapeHtml(c)} <span class="badge">${n}</span></div><div class="death-cause-mons">${top.map(([sp,v])=>`<span class="death-cause-mon">${spriteImg(sp,'death-cause-sprite')}${pokemonLink(sp, escapeHtml(sp), '', false)}<span class="badge">${v}</span></span>`).join('')}</div></div></div>`}).join('')}</div>`;
-    }
-    draw();
-  }
-
-  function teamComparisonData(weekFilter){
-    const out={};
-    // Current roster teams must remain visible even before they have replay data.
-    for(const rosterTeam of Object.keys(STATE.settings?.rosters||{})){
-      const key=groupKey(rosterTeam);
-      if(!out[key]) out[key]={team:rosterTeam,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0};
-    }
-    for(const r of allReplays(weekFilter)){
-      if(!r || !r.players) continue;
-      const sides=['p1','p2'];
-      for(const side of sides){
-        const team=teamFor(r.players[side]); const key=groupKey(team);
-        if(!out[key]) out[key]={team,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0};
-        const t=out[key]; t.games++; t.players.add(r.players[side]||'?');
-        const result = r.results && r.results[side] ? r.results[side] : (r.winner && r.winner.toLowerCase()===(r.players[side]||'').toLowerCase() ? 'W' : (r.winner ? 'L' : null));
-        if(result==='W') t.wins++;
-        else if(result==='L') t.losses++;
-        for(const k in r.mons){ const m=r.mons[k]; if(m.side===side){t.kills+=m.kills||0;t.deaths+=m.deaths||0;t.dealt+=m.damageDealt||0;t.taken+=m.damageTaken||0;} }
-      }
-    }
-    return Object.values(out).sort((a,b)=>b.wins-a.wins || (b.kills-b.deaths)-(a.kills-a.deaths) || b.dealt-a.dealt);
-  }
-
-  function renderTeamComparison(){
-    contentEl.innerHTML=`<div class="panel"><h2>Team / Coach Comparison</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('compareWeek')}</div></div><div class="note" id="compareNote"></div><div id="compareBody"></div></div>`;
-    const sel=document.getElementById('compareWeek');
-    function draw(){
-      const data=teamComparisonData(sel.value); const anyWins=data.some(x=>x.wins>0); document.getElementById('compareNote').textContent=anyWins?'Win/loss records are saved with each parsed replay. Reprocess older replays once to populate them.':'Win/loss data is not present in the stored replay parses yet; reprocess the season from the Admin page to populate it.';
-      document.getElementById('compareBody').innerHTML=!data.length?`<div class="empty-state">No team data.</div>`:`<table><thead><tr><th class="rank">#</th><th>Team / Coach</th><th class="num">Games</th><th class="num">Wins</th><th class="num">Losses</th><th class="num">Win %</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Differential</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th></tr></thead><tbody>${data.map((x,i)=>{return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(x.team)}</td><td class="num">${x.games}</td><td class="num kills">${x.wins}</td><td class="num taken">${x.losses}</td><td class="num">${x.games?(100*x.wins/x.games).toFixed(1)+'%':'—'}</td><td class="num kills">${x.kills}</td><td class="num taken">${x.deaths}</td><td class="num ${x.kills-x.deaths>=0?'kills':'taken'}">${x.kills-x.deaths>0?'+':''}${x.kills-x.deaths}</td><td class="num dealt">${x.dealt.toFixed(1)}</td><td class="num taken">${x.taken.toFixed(1)}</td></tr>`}).join('')}</tbody></table>`;
-    }
-    sel.addEventListener('change',draw); draw();
-  }
-
-  function renderGoldenFist(){
-    contentEl.innerHTML = `
-      <div class="panel gf-panel">
-        <h2>🥇 Golden Fist</h2>
-        <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('gfWeek')}</div>
-          <div style="flex:0;"><button class="ghost" id="exportGF">Export CSV</button></div>
-        </div>
-        <div class="note" style="margin-bottom:12px;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
-        <div id="gfList"></div>
-      </div>`;
-
-    const gfSel = document.getElementById('gfWeek');
-    function drawGF(){
-      const stats = globalPokemonStats(gfSel.value)
-        .map(s => ({...s, diff: s.kills - s.deaths}))
-        .sort((a,b)=> b.diff - a.diff || b.kills - a.kills);
-      const el = document.getElementById('gfList');
-      if(stats.length === 0){ el.innerHTML = `<div class="empty-state">No data for this scope yet.</div>`; return; }
-      const medals = ['🥇','🥈','🥉'];
-      el.innerHTML = `<div class="gf-list">${stats.map((s,i)=>`
-        <div class="gf-row ${i<3?'top'+(i+1):''} auditable-row" ${auditDataAttr(s.species,'kills',s.killLog,false)}>
-          <div class="gf-rank">${medals[i] || (i+1)}</div>
-          ${spriteImg(s.species,'gf-sprite')}
-          <div class="gf-info">
-            <div class="gf-name"><span class="pokemon-click" role="button" tabindex="0" data-pokemon="${escapeHtml(s.species)}" title="Open ${escapeHtml(s.species)} profile">${escapeHtml(s.species)}</span></div>
-            <div class="gf-sub">${s.kills} kills · ${s.deaths} deaths · ${s.games} games</div>
-          </div>
-          <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
-          <div class="gf-diff ${s.diff<0?'neg':''}">${s.diff>0?'+':''}${s.diff}</div>
-        </div>`).join('')}</div>`;
-    }
-    gfSel.addEventListener('change', drawGF);
-    document.getElementById('exportGF').addEventListener('click', ()=>{
-      const stats = globalPokemonStats(gfSel.value).map(s=>({...s, diff:s.kills-s.deaths})).sort((a,b)=>b.diff-a.diff || b.kills-a.kills);
-      const rows = [['Rank','Pokemon','Kills','Deaths','Differential','Games Played','Coach(es)']];
-      stats.forEach((s,i)=> rows.push([i+1, s.species, s.kills, s.deaths, s.diff, s.games, Array.from(s.coaches).sort().join('; ')]));
-      download(`Golden Fist - ${gfSel.value==='ALL'?'Season':gfSel.value}.csv`, toCSV(rows));
-    });
-    drawGF();
-  }
-
-  function renderTeams(){
-    const statTeams = Object.keys(teamPokemonStats('ALL'));
-    const rosterTeams = Object.keys(STATE.settings?.rosters||{});
-    const teams = [...new Set([...statTeams, ...rosterTeams])].sort();
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Franchise Stats</h2>
-        <div class="note" style="margin-bottom:18px;">Full-season franchise Pokémon statistics across all processed replays.</div>
-        <div class="row franchise-controls" style="align-items:flex-end;margin-top:4px;margin-bottom:18px;">
-          <div><label>Team</label><select id="teamSelect">${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
-          <div style="flex:0;"><button class="ghost" id="exportTeams">Export all teams (CSV)</button></div>
-        </div>
-        ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-6px 0 14px;"></div><div id="teamTable"></div>`}
-      </div>`;
-    if(teams.length===0) return;
-    const teamSel = document.getElementById('teamSelect');
-    function draw(){
-      const coaches = usernamesForTeamLabel(teamSel.value);
-      document.getElementById('coachLine').innerHTML = coaches.length===0 ? '' :
-        `Coached by <strong>${coaches.map(escapeHtml).join(', ')}</strong>`;
-      const data = teamPokemonStats('ALL');
-      const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>{
-        const ac=isCurrentRosterPokemon(teamSel.value,a.species), bc=isCurrentRosterPokemon(teamSel.value,b.species);
-        if(ac!==bc) return ac ? -1 : 1;
-        return b.dealt-a.dealt || b.games-a.games || a.species.localeCompare(b.species);
-      });
-      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
-        ${list.map((s,i)=>{
-          const current=isCurrentRosterPokemon(teamSel.value,s.species);
-          return `<tr class="${current?'':'roster-inactive'}">
-          <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}${current?'':' <span class="badge roster-badge">Off roster</span>'}</div></td>
-          <td class="num dealt">${s.dealt.toFixed(1)}</td>
-          <td class="num taken">${s.taken.toFixed(1)}</td>
-          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
-          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
-          <td class="num">${s.games}</td>
-        </tr>`;
-        }).join('')}</tbody></table>`;
-    }
-    teamSel.addEventListener('change', draw);
-    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs('ALL', 'Season'));
-    draw();
-  }
-
-  // ---------- replay browser ----------
-  function replayBrowserData(){
-    return Object.values(STATE.replays).map(r=>{
-      const p1=(r.players?.p1||'?').trim()||'?';
-      const p2=(r.players?.p2||'?').trim()||'?';
-      const winner=(r.winner||'').trim();
-      let result='Unknown';
-      if(winner){
-        if(winner.toLowerCase()===p1.toLowerCase()) result=`${p1} won`;
-        else if(winner.toLowerCase()===p2.toLowerCase()) result=`${p2} won`;
-        else result=`${winner} won`;
-      }
-      const mons=Object.values(r.mons||{});
-      const pokemon=[...new Set(mons.map(m=>m.species).filter(Boolean))];
-      const teams=[teamFor(p1),teamFor(p2)];
-      return {r,p1,p2,winner,result,pokemon,teams,week:r.week||'Unassigned',format:r.format||'—'};
-    }).sort((a,b)=> (String(b.week).localeCompare(String(a.week),undefined,{numeric:true})) || ((b.r.processedAt||0)-(a.r.processedAt||0)));
-  }
-
-  function renderReplayBrowser(){
-    const data=replayBrowserData();
-    const weeks=[...new Set(data.map(x=>x.week))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
-    const players=[...new Set(data.flatMap(x=>[x.p1,x.p2]).filter(x=>x&&x!=='?'))].sort((a,b)=>a.localeCompare(b));
-    const teams=[...new Set(data.flatMap(x=>x.teams).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-    contentEl.innerHTML=`
-      <div class="panel">
-        <h2>Replay Browser</h2>
-        <div class="note">Search and filter every processed replay. Click <strong>View replay</strong> to open the original Pokémon Showdown battle.</div>
-        <div class="row" style="align-items:flex-end;margin-top:0;">
-          <div style="min-width:210px;flex:1"><label>Search</label><input id="replaySearch" type="text" placeholder="Player, franchise, Pokémon, replay ID…"></div>
-          <div><label>Week</label><select id="replayWeek"><option value="ALL">All weeks</option>${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}</select></div>
-          <div><label>Player</label><select id="replayPlayer"><option value="ALL">All players</option>${players.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
-          <div><label>Franchise</label><select id="replayTeam"><option value="ALL">All franchises</option>${teams.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('')}</select></div>
-          <div><label>Result</label><select id="replayResult"><option value="ALL">All results</option><option value="KNOWN">Completed</option><option value="UNKNOWN">Unknown result</option></select></div>
-        </div>
-        <div id="replayCount" class="note" style="margin-top:12px;"></div>
-        <div id="replayBrowserBody" style="margin-top:10px;"></div>
-      </div>`;
-
-    const search=document.getElementById('replaySearch');
-    const controls=['replayWeek','replayPlayer','replayTeam','replayResult'].map(id=>document.getElementById(id));
-    function draw(){
-      const q=search.value.trim().toLowerCase();
-      const [week,player,team,result]=controls.map(x=>x.value);
-      const filtered=data.filter(x=>{
-        if(week!=='ALL' && x.week!==week) return false;
-        if(player!=='ALL' && x.p1!==player && x.p2!==player) return false;
-        if(team!=='ALL' && !x.teams.includes(team)) return false;
-        if(result==='KNOWN' && !x.winner) return false;
-        if(result==='UNKNOWN' && x.winner) return false;
-        if(q){
-          const hay=[x.r.id,x.week,x.p1,x.p2,x.result,x.format,...x.teams,...x.pokemon].join(' ').toLowerCase();
-          if(!hay.includes(q)) return false;
-        }
-        return true;
-      });
-      document.getElementById('replayCount').textContent=`Showing ${filtered.length} of ${data.length} replay${data.length===1?'':'s'}.`;
-      document.getElementById('replayBrowserBody').innerHTML=!filtered.length?`<div class="empty-state">No replays match those filters.</div>`:`<table><thead><tr><th class="rank">#</th><th>Week</th><th>Matchup</th><th>Franchises</th><th>Format</th><th>Result</th><th></th><th></th></tr></thead><tbody>${filtered.map((x,i)=>`<tr>
-        <td class="rank">${i+1}</td>
-        <td>${escapeHtml(x.week)}</td>
-        <td class="pname">${escapeHtml(x.p1)} <span style="color:var(--text-dim)">vs</span> ${escapeHtml(x.p2)}</td>
-        <td><span class="badge">${escapeHtml(x.teams[0]||'?')}</span> <span style="color:var(--text-dim)">vs</span> <span class="badge">${escapeHtml(x.teams[1]||'?')}</span></td>
-        <td style="color:var(--text-dim)">${escapeHtml(x.format)}</td>
-        <td>${x.winner ? `<span class="kills">${escapeHtml(x.result)}</span>` : `<span class="badge">Unknown</span>`}</td>
-        <td class="num"><button class="ghost small" data-replay-summary="${escapeHtml(x.r.id)}">Summary</button></td>
-        <td class="num"><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.r.id)}" target="_blank" rel="noopener">View replay</a></td>
-      </tr>`).join('')}</tbody></table>`;
-    }
-    search.addEventListener('input',draw);
-    controls.forEach(c=>c.addEventListener('change',draw));
-    draw();
-  }
-
-  function renderSettings(){
-    const entries = Object.entries(STATE.teamMap);
-    contentEl.invisible;
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Player → Team name mapping</h2>
-        <div class="note">Map each Showdown username to your league's team/trainer name, so stats group correctly. Unmapped usernames just show as-is.</div>
-        <div class="row" style="margin-top:12px; align-items:center;">
-          <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
-            <input type="checkbox" id="caseInsensitiveToggle" ${STATE.settings.caseInsensitiveNames ? 'checked' : ''}>
-            Ignore case when grouping team names (e.g. "Team Fire" and "team fire" count as the same team)
-          </label>
-        </div>
-        <div id="mapRows" style="margin-top:12px;"></div>
-        <div class="map-row">
-          <input type="text" id="newUser" placeholder="showdown username">
-          <input type="text" id="newTeam" placeholder="team name">
-          <button class="ghost small" id="addMap">Add</button>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>Possible duplicate players</h2>
-        <div class="note">Usernames that look like the same person typed differently (e.g. <code>dossa37</code> / <code>dossa_37</code>, or <code>podraa</code> / <code>podrrraaa</code>). Merging points every variant at whichever one has played the most games.</div>
-        <div id="dupPlayers" style="margin-top:12px;"></div>
-      </div>
-      <div class="panel">
-        <h2>Possible duplicate teams (shared roster)</h2>
-        <div class="note">Since this is a draft league each team's roster is fixed — two team tags whose Pokémon overlap heavily are probably the same team under two different names. Merging groups everything under the tag with the most total appearances.</div>
-        <div id="dupTeams" style="margin-top:12px;"></div>
-      </div>
-      <div class="panel">
-        <h2>Shared data</h2>
-        <div class="note">Shared database: <strong>Supabase</strong>. You are signed in as the league administrator.</div>
-        <div class="foot-actions">
-          <button class="ghost" id="migrateLocal">Migrate old browser data to shared database</button>
-          <button class="ghost" id="refreshShared">Reload shared data</button>
-          <button class="ghost" id="adminLogout">Log out</button>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>Data</h2>
-        <div class="note">Removing a replay updates every leaderboard immediately. Back up regularly.</div>
-        <div class="note">Removing a replay updates every leaderboard immediately. Back up regularly if you're on local storage.</div>
-        <div class="foot-actions">
-          <button class="ghost" id="exportBackup">Download backup (.json)</button>
-          <button class="ghost" id="importBackupBtn">Restore from backup</button>
-          <input type="file" id="importBackupFile" accept="application/json" style="display:none;">
-          <button class="ghost danger-btn" id="resetAll">Clear all season data</button>
-        </div>
-      </div>`;
-    const mapRows = document.getElementById('mapRows');
-    function drawMap(){
-      const entries = Object.entries(STATE.teamMap);
-      mapRows.innerHTML = entries.length===0 ? `<div class="empty-state">No mappings yet.</div>` :
-        entries.map(([u,t])=>`
-        <div class="map-row">
-          <input type="text" value="${escapeHtml(u)}" disabled>
-          <input type="text" value="${escapeHtml(t)}" disabled>
-          <button class="ghost small danger-btn" data-del="${escapeHtml(u)}">Remove</button>
-        </div>`).join('');
-      mapRows.querySelectorAll('[data-del]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          delete STATE.teamMap[btn.dataset.del];
-          await saveTeamMap();
-          drawMap();
-          render();
-        });
-      });
-    }
-    drawMap();
-
-    const dupPlayersEl = document.getElementById('dupPlayers');
-    function drawDupPlayers(){
-      const groups = findDuplicatePlayerGroups();
-      dupPlayersEl.innerHTML = groups.length===0 ? `<div class="empty-state">No likely duplicates found.</div>` :
-        groups.map((g,i)=>{
-          const canonicalTeam = STATE.teamMap[g.canonical.toLowerCase()] || g.canonical;
-          return `<div class="map-row" style="align-items:center;">
-            <div style="flex:1;">
-              ${g.usernames.map(u=>escapeHtml(u)).join(' <span style="color:var(--text-dim)">≈</span> ')}
-              <span class="badge">keep "${escapeHtml(canonicalTeam)}"</span>
-            </div>
-            <button class="ghost small" data-merge-players="${i}">Merge</button>
-          </div>`;
-        }).join('');
-      dupPlayersEl.querySelectorAll('[data-merge-players]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          const g = groups[parseInt(btn.dataset.mergePlayers,10)];
-          const canonicalTeam = STATE.teamMap[g.canonical.toLowerCase()] || g.canonical;
-          mergePlayerGroup(g.usernames, canonicalTeam);
-          await saveTeamMap();
-          drawMap();
-          drawDupPlayers();
-          render();
-        });
-      });
-    }
-    drawDupPlayers();
-
-    const dupTeamsEl = document.getElementById('dupTeams');
-    function drawDupTeams(){
-      const pairs = findDuplicateTeamPairs();
-      dupTeamsEl.innerHTML = pairs.length===0 ? `<div class="empty-state">No likely duplicates found.</div>` :
-        pairs.map((p,i)=>`<div class="map-row" style="align-items:center;">
-            <div style="flex:1;">
-              ${escapeHtml(p.smaller)} <span style="color:var(--text-dim)">≈</span> ${escapeHtml(p.bigger)}
-              <span class="badge">${p.overlap} shared mons</span>
-              <span class="badge">keep "${escapeHtml(p.bigger)}" (${p.biggerGames} appearances vs ${p.smallerGames})</span>
-            </div>
-            <button class="ghost small" data-merge-teams="${i}">Merge</button>
-          </div>`).join('');
-      dupTeamsEl.querySelectorAll('[data-merge-teams]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          const p = pairs[parseInt(btn.dataset.mergeTeams,10)];
-          const usernames = [...usernamesForTeamLabel(p.bigger), ...usernamesForTeamLabel(p.smaller)];
-          mergePlayerGroup(usernames, p.bigger);
-          await saveTeamMap();
-          drawMap();
-          drawDupPlayers();
-          drawDupTeams();
-          render();
-        });
-      });
-    }
-    drawDupTeams();
-
-    document.getElementById('caseInsensitiveToggle').addEventListener('change', async (e)=>{
-      STATE.settings.caseInsensitiveNames = e.target.checked;
-      await saveSettings();
-      render();
-    });
-    document.getElementById('addMap').addEventListener('click', async ()=>{
-      const u = document.getElementById('newUser').value.trim().toLowerCase();
-      const t = document.getElementById('newTeam').value.trim();
-      if(!u || !t) return;
-      STATE.teamMap[u] = t;
-      await saveTeamMap();
-      document.getElementById('newUser').value='';
-      document.getElementById('newTeam').value='';
-      drawMap();
-    });
-    document.getElementById('migrateLocal').addEventListener('click', async ()=>{
-      try{
-        if(!confirm('Upload this browser\'s old local dashboard data to the shared database? Existing shared data will be merged/replaced by the local state.')) return;
-        await migrateLocalData();
-        alert('Migration complete. The shared database now contains this browser\'s dashboard data.');
-        renderTicker(); render();
-      }catch(err){ alert('Migration failed: ' + err.message); }
-    });
-    document.getElementById('refreshShared').addEventListener('click', async ()=>{
-      await loadState(); renderTicker(); render();
-    });
-    document.getElementById('adminLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
-      adminUser = null;
-      showAdminLogin();
-    });
-    document.getElementById('resetAll').addEventListener('click', async ()=>{
-      if(!confirm('This clears every processed replay for the whole league. Continue?')) return;
-      STATE.replays = {};
-      await deleteAllRemote();
-      await saveSharedState();
-      renderTicker();
-      render();
-    });
-    document.getElementById('exportBackup').addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify(STATE, null, 2)], {type:'application/json'});
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `league-dashboard-backup-${new Date().toISOString().slice(0,10)}.json`;
-      link.click();
-    });
-    document.getElementById('importBackupBtn').addEventListener('click', ()=>{
-      document.getElementById('importBackupFile').click();
-    });
-    document.getElementById('importBackupFile').addEventListener('change', async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      try{
-        const text = await file.text();
-        const data = JSON.parse(text);
-        if(!data.replays) throw new Error('not a valid backup file');
-        if(!confirm(`This will replace your current data with the backup (${Object.keys(data.replays).length} replays). Continue?`)) return;
-        STATE.replays = data.replays || {};
-        STATE.teamMap = data.teamMap || {};
-        STATE.settings = Object.assign({caseInsensitiveNames:true}, data.settings || {});
-        await saveReplays();
-        await saveSharedState();
-        renderTicker();
-        render();
-      }catch(err){
-        alert('Could not read that backup file: ' + err.message);
-      }
-      e.target.value = '';
-    });
-  }
-
-  async function loadPokemonTypes(){
+  async function boot(){
+    contentEl.innerHTML = '<div class="empty-state">Loading…</div>';
     try{
-      const cached = localStorage.getItem('sbl_pokedex_types_v1');
-      if(cached) POKEDEX_TYPES = JSON.parse(cached);
-      const res = await fetch('https://play.pokemonshowdown.com/data/pokedex.json',{cache:'force-cache'});
-      if(!res.ok) throw new Error('Pokédex request failed');
-      const dex = await res.json();
-      const out = {};
-      for(const [key,val] of Object.entries(dex)){
-        if(Array.isArray(val.types)) out[key.toLowerCase().replace(/[^a-z0-9]/g,'')] = {types:val.types};
-      }
-      POKEDEX_TYPES = out;
-      localStorage.setItem('sbl_pokedex_types_v1',JSON.stringify(out));
+      await refreshAll();
+      render();
     }catch(e){
-      console.warn('Could not load Pokémon typing data; cached data will be used.',e);
+      contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load your dashboard: ${escapeHtml(e.message)}</div></div>`;
     }
   }
-
-  // ---------- init ----------
-  document.addEventListener('keydown', (e)=>{
-    if(e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
-    const tag = document.activeElement?.tagName;
-    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-    e.preventDefault();
-    goToTab('pokemonsearch');
-  });
-  document.addEventListener('keydown', (e)=>{
-    if((e.key==='Enter' || e.key===' ') && e.target.closest('[data-pokemon]')){
-      e.preventDefault();
-      e.target.closest('[data-pokemon]').click();
-    }
-    if(e.key==='Escape') closePokemonProfile();
-  });
-  document.addEventListener('click', (e)=>{
-    const auditCell = e.target.closest('[data-audit]');
-    const pokemon = e.target.closest('[data-pokemon]');
-    if(pokemon && !auditCell){
-      e.preventDefault();
-      e.stopPropagation();
-      openPokemonProfile(pokemon.dataset.pokemon);
-      return;
-    }
-    const summaryBtn = e.target.closest('[data-replay-summary]');
-    if(summaryBtn){
-      e.preventDefault();
-      openReplaySummary(summaryBtn.dataset.replaySummary);
-      return;
-    }
-    const cell = auditCell;
-    if(!cell) return;
-    try{
-      const {species, type, list, showLink} = JSON.parse(cell.dataset.audit);
-      openAudit(species, type, list, showLink);
-    }catch(err){ /* malformed payload, ignore */ }
-  });
-  // Catch Pokémon links inserted by any tab renderer. This complements the delegated click handler.
-  const pokemonObserver = new MutationObserver(mutations=>{
-    for(const m of mutations){
-      for(const node of m.addedNodes){
-        if(node.nodeType===1) bindPokemonClicks(node);
-      }
-    }
-  });
-  pokemonObserver.observe(document.body,{childList:true,subtree:true});
 
   (async function init(){
-    const ok = await initAdminAuth();
-    if(IS_ADMIN_PAGE && !ok) return;
-    await loadState();
-    renderTicker();
-    render();
-    await loadPokemonTypes();
-    renderTicker();
-    render();
-    // Public dashboard polls the shared database every 10 seconds. This keeps the
-    // viewer page read-only while still making new replay data appear automatically.
-    if(!IS_ADMIN_PAGE){
-      setInterval(async ()=>{ try{ await refreshSharedState(); }catch(e){ console.warn('Shared refresh failed', e); } }, POLL_MS);
-    }
-  })();
-})();
-</script>
+    const {data} = await supabase.auth.getSession();
+    session = data.session;
+    if(session){ await boot(); }
+    else{ renderAuthGate(); }
 
-<script>
-(function(){
-  const select=document.getElementById('pageNavSelect');
-  if(!select)return;
-  const current=location.pathname.split('/').pop()||'index.html';
-  select.value=['index.html','rosters.html','team-analysis.html','free-agency.html'].includes(current)?current:'index.html';
-  select.addEventListener('change',function(){
-    if(this.value) location.href=this.value;
-  });
+    supabase.auth.onAuthStateChange((event, newSession)=>{
+      if(event === 'SIGNED_OUT'){ session=null; profile=null; trades=[]; render(); }
+    });
+  })();
 })();
 </script>
 </body>
