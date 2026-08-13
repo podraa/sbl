@@ -239,32 +239,33 @@
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
     <button data-tab="settings">Settings</button>
-<div class="section-divider"></div>
 
-<h3>Import from Excel</h3>
-<p class="note">
-  Upload the season workbook. Each sheet becomes a franchise,
-  Column A is treated as the point value, and Column C is treated
-  as the Pokémon name. Existing replay, leaderboard, and franchise
-  functionality is not modified.
-</p>
-
-<div class="row">
-  <div>
-    <label for="rosterFile">Roster workbook (.xlsx)</label>
-    <input type="file" id="rosterFile" accept=".xlsx,.xls,.csv">
-  </div>
-</div>
-
-<button class="primary" id="uploadRosterBtn">
-  Upload Excel Rosters
-</button>
-
-<div id="rosterUploadLog" class="log"></div>
 
   </nav>
 
-  <div id="content"></div>
+  
+<div class="panel" id="rosterImportPanel">
+  <h2>Import Rosters from Excel</h2>
+  <p class="note">
+    Upload your season workbook. Each sheet becomes a franchise,
+    Column A is the point value, and Column C is the Pokémon name.
+  </p>
+
+  <div class="row">
+    <div>
+      <label for="rosterFile">Roster workbook (.xlsx)</label>
+      <input type="file" id="rosterFile" accept=".xlsx,.xls,.csv">
+    </div>
+  </div>
+
+  <button class="primary" id="uploadRosterBtn">
+    Upload Excel Rosters
+  </button>
+
+  <div id="rosterUploadLog" class="log"></div>
+</div>
+
+<div id="content"></div>
 </div>
 <div id="auditModal"></div>
 
@@ -1757,7 +1758,6 @@ function normalizeRosterName(name){
 if(uploadRosterBtn){
   uploadRosterBtn.addEventListener('click', async () => {
     try{
-      requireAdmin();
 
       const file = rosterFileInput?.files?.[0];
       if(!file){
@@ -1864,7 +1864,6 @@ function normalizeRosterName(name){
 if(uploadRosterBtn){
   uploadRosterBtn.addEventListener('click', async () => {
     try{
-      requireAdmin();
 
       const file = rosterFileInput?.files?.[0];
       if(!file){
