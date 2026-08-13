@@ -1860,6 +1860,7 @@
   let COMM_TRADE_FILTER = 'pending';
 
   let COMM_TRADE_LIMITS = [];
+  let COMM_ACTIVE_SEASON = null;
 
   async function loadCommissionerData(){
     const [{data:profilesData, error:profErr}, {data:tradesData, error:tradeErr}, {data:limitsData, error:limitErr}] = await Promise.all([
@@ -1870,9 +1871,14 @@
     if(profErr) throw profErr;
     if(tradeErr) throw tradeErr;
     if(limitErr) throw limitErr;
+    const {data:seasonRow, error:seasonErr} = await supabase.from('trade_season_settings').select('active_season').eq('id',1).maybeSingle();
+    if(seasonErr) throw seasonErr;
+    COMM_ACTIVE_SEASON = Number(seasonRow?.active_season) || new Date().getFullYear();
+    const {data:activeLimits, error:activeLimitErr} = await supabase.from('franchise_trade_limits').select('*').eq('season', COMM_ACTIVE_SEASON).order('team_name');
+    if(activeLimitErr) throw activeLimitErr;
     COMM_PROFILES = profilesData || [];
     COMM_TRADES = tradesData || [];
-    COMM_TRADE_LIMITS = limitsData || [];
+    COMM_TRADE_LIMITS = activeLimits || limitsData || [];
   }
 
   function renderCommissioner(){
@@ -2002,13 +2008,22 @@
       </div>`;
   }
 
+  function drawTradeSeasonReset(){
+    return `<div class="panel" style="border:1px solid var(--border)">
+      <h2>End-of-Season Trade Reset</h2>
+      <div class="note">Current trade season: <strong>${COMM_ACTIVE_SEASON || new Date().getFullYear()}</strong>. Resetting starts a new season with <strong>8 team-to-team + 8 Free Agency trades</strong> for every approved franchise and clears manual player trade credits. Previous-season trades remain in history.</div>
+      <div class="foot-actions" style="margin-top:12px"><button class="danger" id="resetTradeSeason">Reset Trades for New Season</button></div>
+      <div id="tradeSeasonResetStatus" class="note"></div>
+    </div>`;
+  }
+
   function tradeManagerRows(){
-    const season = new Date().getFullYear();
+    const season = COMM_ACTIVE_SEASON || new Date().getFullYear();
     const teams = [...new Set((COMM_PROFILES||[]).filter(p=>p.status==='approved' && p.team_name).map(p=>p.team_name))].sort();
     const rows = teams.map(team=>{
       const row = COMM_TRADE_LIMITS.find(x=>x.team_name===team) || {team_name:team, team_trade_limit:8, free_agency_trade_limit:8};
-      const teamUsed = COMM_TRADES.filter(t=>t.status==='accepted' || t.status==='reverted').filter(t=>t.target_team!==null && (t.proposer_team===team || t.target_team===team) && new Date(t.created_at).getFullYear()===season).length;
-      const faUsed = COMM_TRADES.filter(t=>t.status==='accepted' || t.status==='reverted').filter(t=>t.target_team===null && t.proposer_team===team && new Date(t.created_at).getFullYear()===season).length;
+      const teamUsed = COMM_TRADES.filter(t=>t.status==='accepted' || t.status==='reverted').filter(t=>t.target_team!==null && (t.proposer_team===team || t.target_team===team) && Number(t.season || new Date(t.created_at).getFullYear())===season).length;
+      const faUsed = COMM_TRADES.filter(t=>t.status==='accepted' || t.status==='reverted').filter(t=>t.target_team===null && t.proposer_team===team && Number(t.season || new Date(t.created_at).getFullYear())===season).length;
       const teamLimit = Math.max(0, Number(row.team_trade_limit) || 0);
       const faLimit = Math.max(0, Number(row.free_agency_trade_limit) || 0);
       return `<tr>
@@ -2039,6 +2054,7 @@
     const pendingFA = COMM_TRADES.filter(t=>t.target_team === null && t.status === 'pending').length;
 
     contentEl.innerHTML = `
+      ${drawTradeSeasonReset()}
       ${drawManualTradeCredits()}
       ${tradeManagerRows()}
       <div class="panel">
@@ -2060,6 +2076,23 @@
           ${filteredTrades.length ? filteredTrades.map(commTradeRow).join('') : '<div class="empty-state">No trades in this view.</div>'}
         </div>
       </div>`;
+
+    document.getElementById('resetTradeSeason')?.addEventListener('click', async ()=>{
+      const statusEl=document.getElementById('tradeSeasonResetStatus');
+      if(!confirm(`Start a new trade season? This will reset every approved franchise to 8 team trades + 8 Free Agency trades and clear all manual player trade credits. Previous trade history will be preserved.`)) return;
+      const btn=document.getElementById('resetTradeSeason'); btn.disabled=true;
+      if(statusEl){statusEl.className='note';statusEl.textContent='Resetting trade season…';}
+      try{
+        const {data:newSeason,error}=await supabase.rpc('commissioner_reset_trade_season');
+        if(error) throw error;
+        await loadCommissionerData();
+        if(statusEl){statusEl.className='note';statusEl.textContent=`Trade season reset successfully. New season: ${newSeason}. All approved franchises are back to 8 team trades and 8 Free Agency trades.`;}
+        drawTrades();
+      }catch(e){
+        if(statusEl){statusEl.className='note danger';statusEl.textContent='Could not reset trade season: '+e.message;}
+        btn.disabled=false;
+      }
+    });
 
     document.getElementById('creditManualTrades')?.addEventListener('click', async ()=>{
       const playerId = document.getElementById('manualTradePlayer')?.value;
@@ -2098,13 +2131,13 @@
           (t.status==='accepted' || t.status==='reverted') &&
           t.target_team!==null &&
           (t.proposer_team===team || t.target_team===team) &&
-          new Date(t.created_at).getFullYear()===new Date().getFullYear()
+          Number(t.season || new Date(t.created_at).getFullYear())=== (COMM_ACTIVE_SEASON || new Date().getFullYear())
         ).length;
         const faUsed = COMM_TRADES.filter(t=>
           (t.status==='accepted' || t.status==='reverted') &&
           t.target_team===null &&
           t.proposer_team===team &&
-          new Date(t.created_at).getFullYear()===new Date().getFullYear()
+          Number(t.season || new Date(t.created_at).getFullYear())=== (COMM_ACTIVE_SEASON || new Date().getFullYear())
         ).length;
         const teamLimit = teamUsed + teamRemaining;
         const faLimit = faUsed + faRemaining;

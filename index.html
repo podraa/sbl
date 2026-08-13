@@ -192,6 +192,7 @@
   let DASH = { teamMap:{}, settings:{ rosters:{}, freeAgency:{ mons:[] } }, replays:{} };
   let trades = [];
   let tradeLimits = [];
+  let activeTradeSeason = null;
   let activeTab = 'myteam';
   let draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
   let statusMsg = '';
@@ -332,10 +333,10 @@
   }
 
   function completedTradeCount(team, kind='team'){
-    const season = currentSeason();
+    const season = activeTradeSeason || currentSeason();
     return trades.filter(t=>
       (t.status==='accepted' || t.status==='reverted') &&
-      new Date(t.created_at).getFullYear()===season &&
+      Number(t.season || new Date(t.created_at).getFullYear())===season &&
       (kind==='freeagency' ? t.target_team===null && t.proposer_team===team : t.target_team!==null && (t.proposer_team===team || t.target_team===team))
     ).length;
   }
