@@ -2727,7 +2727,7 @@
       <div class="trade-head">
         <div>
           <div class="trade-teams">${escapeHtml(p.team_name || '(no team picked yet)')}</div>
-          <div class="trade-sub"><strong>${escapeHtml(p.username || '(no username)')}</strong> · ${escapeHtml(p.email)} · joined ${new Date(p.created_at).toLocaleDateString()}</div>
+          <div class="trade-sub">${escapeHtml(p.email)} · joined ${new Date(p.created_at).toLocaleDateString()}</div>
         </div>
         <span class="status-pill ${p.status}">${p.status}</span>
       </div>
@@ -2745,7 +2745,6 @@
         ${p.is_commissioner
           ? `<button class="ghost small" data-comm-action="remove-commissioner" data-id="${p.id}">Remove commissioner</button>`
           : `<button class="ghost small" data-comm-action="make-commissioner" data-id="${p.id}">Make commissioner</button>`}
-        <button class="ghost small" data-comm-action="edit-profile" data-id="${p.id}">Edit profile</button>
       </div>
       <div class="note danger" id="commErr-${p.id}"></div>
     </div>`;
@@ -3011,9 +3010,17 @@
 
   async function logAdminAction(actionType, message, metadata={}){
     const user = adminUser || (await supabase.auth.getUser()).data?.user;
+    let adminUsername = null;
+    if(user?.id){
+      try{
+        const {data:adminProfile} = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle();
+        adminUsername = adminProfile?.username || null;
+      }catch(e){ console.warn('Could not load admin username:', e); }
+    }
     const entry = {
       admin_id: user?.id || null,
       admin_email: user?.email || null,
+      admin_username: adminUsername,
       action_type: actionType,
       message,
       metadata: Object.assign({
@@ -3094,7 +3101,7 @@
             <div class="admin-log-time">${escapeHtml(new Date(log.created_at).toLocaleString())}</div>
             <div class="admin-log-action"><strong>${escapeHtml(log.action_type || 'action')}</strong></div>
             <div class="admin-log-message">${escapeHtml(log.message || '')}</div>
-            <div class="admin-log-admin"><span class="admin-log-admin-label">Admin</span><strong>${escapeHtml(log.admin_email || log.admin_id || 'Unknown admin')}</strong></div>
+            <div class="admin-log-admin"><span class="admin-log-admin-label">Admin</span><strong>${escapeHtml(log.admin_username || log.admin_email || log.admin_id || 'Unknown admin')}</strong></div>
           </div>`).join('')}</div>` : ''}
       </div>`;
     document.getElementById('refreshAdminLogBtn')?.addEventListener('click', drawAdminLog);
@@ -3175,24 +3182,6 @@
         btn.disabled=true;
         try{
           let patch=null;
-          if(action==='edit-profile'){
-            const profile = (COMM_PROFILES || []).find(p => String(p.id) === String(id));
-            if(!profile) throw new Error('Profile not found.');
-            const username = prompt('Username:', profile.username || '');
-            if(username === null){ btn.disabled=false; return; }
-            const clean = username.trim();
-            if(!/^[A-Za-z0-9_-]{2,24}$/.test(clean)) throw new Error('Username must be 2–24 characters and use only letters, numbers, underscores or hyphens.');
-            const team = prompt('Franchise name:', profile.team_name || '');
-            if(team === null){ btn.disabled=false; return; }
-            const cleanTeam = team.trim();
-            if(!cleanTeam) throw new Error('Franchise name cannot be empty.');
-            const {error}=await supabase.from('profiles').update({username:clean, team_name:cleanTeam}).eq('id',id);
-            if(error) throw error;
-            await logAdminAction('edit_profile', `Edited profile ${profile.email || id}: username/franchise changed.`, {profileId:id, username:clean, team:cleanTeam});
-            await loadCommissionerData();
-            if(activeTab==='commissioner') drawCommissioner();
-            return;
-          }
           if(action==='approve') patch={status:'approved'};
           else if(action==='reject') patch={status:'rejected'};
           else if(action==='revoke') patch={status:'pending'};
