@@ -36,6 +36,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 .speed-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:10px}
 .speed-order{min-width:190px;display:flex;flex-direction:column;gap:5px}
 .speed-order select{width:100%}
+.speed-table{width:100%;table-layout:fixed}
+.speed-table th,.speed-table td{vertical-align:middle}
+.speed-table th:first-child,.speed-table td:first-child{width:40%;text-align:left}
+.speed-table th:nth-child(2),.speed-table td:nth-child(2){width:20%;text-align:center}
+.speed-table th:nth-child(3),.speed-table td:nth-child(3){width:20%;text-align:center}
+.speed-table th:nth-child(4),.speed-table td:nth-child(4){width:20%;text-align:center}
+.speed-table th.num{white-space:normal;line-height:1.25}
+.speed-table td.num{text-align:center}
 @media(max-width:700px){.speed-header{flex-direction:column}.speed-order{width:100%;min-width:0}}
 </style>
 <style>
@@ -141,7 +149,6 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
 
@@ -167,7 +174,7 @@ const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
 const SUPABASE_KEY='sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
 const STATE_ID='__dashboard_state__';
 const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let STATE={replays:{},teamMap:{},settings:{caseInsensitiveNames:true,rosters:{}},speedSort:'name'};
+let STATE={replays:{},teamMap:{},settings:{caseInsensitiveNames:true,rosters:{}},speedSort:'speed-desc',profileTeam:'',compareOpponent:'',comparePokemon:'',setPokemon:''};
 const $=id=>document.getElementById(id);
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function norm(s){
@@ -234,6 +241,10 @@ function aggregate(team){
   return {games,wins,losses:Math.max(0,games.length-wins),mons,pairCounts}
 }
 function formatGameDate(v){if(!v)return '—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString()}
+function minSpeedFromBase(base,level=100){
+  const raw=Math.floor((2*Number(base)*level)/100)+5;
+  return Math.floor(raw*0.9);
+}
 function maxSpeedFromBase(base,level=100){
   const raw=Math.floor(((2*Number(base)+31+63)*level)/100)+5;
   return Math.floor(raw*1.1);
@@ -450,6 +461,10 @@ async function fetchBaseSpeed(species){
   SPEED_CACHE.set(cacheKey,null); return null;
 }
 
+function minSpeedFromBase(base,level=100){
+  const raw=Math.floor((2*Number(base)*level)/100)+5;
+  return Math.floor(raw*0.9);
+}
 function maxSpeedFromBase(base,level=100){
   const raw=Math.floor(((2*Number(base)+31+63)*level)/100)+5;
   return Math.floor(raw*1.1);
@@ -459,28 +474,28 @@ function scarfSpeedFromMax(max){ return Math.floor(max*1.5); }
 async function speedTableForTeam(team){
   const a=aggregate(team);
   const list=Object.values(a.mons);
-  if(!list.length)return `<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">No Pokémon have been recorded for this franchise.</p></section>`;
+  if(!list.length)return `<section class="panel"><h2>Speed</h2><p class="panel-desc">No Pokémon have been recorded for this franchise.</p></section>`;
 
   const entries=await Promise.all(list.map(async m=>{
     const base=await fetchBaseSpeed(m.species);
-    if(base===null)return {...m,baseSpeed:null,maxSpeed:null,scarfSpeed:null,names:[m.species]};
+    if(base===null)return {...m,baseSpeed:null,minSpeed:null,maxSpeed:null,scarfSpeed:null,names:[m.species]};
+    const min=minSpeedFromBase(base,100);
     const max=maxSpeedFromBase(base,100);
-    return {...m,baseSpeed:base,maxSpeed:max,scarfSpeed:scarfSpeedFromMax(max),names:[m.species]};
+    return {...m,baseSpeed:base,minSpeed:min,maxSpeed:max,scarfSpeed:scarfSpeedFromMax(max),names:[m.species]};
   }));
   const grouped=groupEquivalentVariants(entries);
 
-  const sortMode=$('speedOrderSelect')?.value||'name';
+  const sortMode=$('speedOrderSelect')?.value||'speed-desc';
   const nameOf=x=>displaySpecies(x);
   if(sortMode==='speed-asc') grouped.sort((a,b)=>(a.maxSpeed??Infinity)-(b.maxSpeed??Infinity)||nameOf(a).localeCompare(nameOf(b)));
-  else if(sortMode==='speed-desc') grouped.sort((a,b)=>(b.maxSpeed??-Infinity)-(a.maxSpeed??-Infinity)||nameOf(a).localeCompare(nameOf(b)));
-  else grouped.sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
+  else if(sortMode==='name') grouped.sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
+  else grouped.sort((a,b)=>(b.maxSpeed??-Infinity)-(a.maxSpeed??-Infinity)||nameOf(a).localeCompare(nameOf(b)));
 
-  const renderRow=x=>`<tr><td>${esc(nameOf(x))}</td><td class="num">${x.baseSpeed===null?'Unavailable':x.baseSpeed}</td><td class="num">${x.maxSpeed===null?'—':x.maxSpeed}</td><td class="num">${x.scarfSpeed===null?'—':x.scarfSpeed}</td></tr>`;
+  const renderRow=x=>`<tr><td><div class="speed-tab-mon">${sprite(x.names?.[0]||x.species,'sprite-small')}<span>${esc(nameOf(x))}</span></div></td><td class="num">${x.minSpeed===null?'—':x.minSpeed}</td><td class="num">${x.maxSpeed===null?'—':x.maxSpeed}</td><td class="num">${x.scarfSpeed===null?'—':x.scarfSpeed}</td></tr>`;
 
   return `<section class="panel">
-    <div class="speed-header"><div><h2>Speed Tiers</h2><p class="panel-desc">All values are <strong>Level 100</strong>. Base Speed is the species' base stat. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial Speed nature. Choice Scarf is calculated at 1.5× the maximum Speed.</p></div><div class="speed-order"><label for="speedOrderSelect">Order by</label><select id="speedOrderSelect"><option value="name" ${sortMode==='name'?'selected':''}>Name</option><option value="speed-asc" ${sortMode==='speed-asc'?'selected':''}>Speed ascending</option><option value="speed-desc" ${sortMode==='speed-desc'?'selected':''}>Speed descending</option></select></div></div>
-    <div class="notice" style="margin-bottom:14px">Variants with identical relevant stats are grouped together; forms with different stats remain separate.</div>
-    <table><thead><tr><th>Pokémon</th><th class="num">Base Speed</th><th class="num">Max Speed</th><th class="num">Max + Choice Scarf</th></tr></thead>
+    <div class="speed-header"><div><h2>Speed</h2><p class="panel-desc">Level 100 Speed benchmarks. Min Speed assumes 0 IVs, 0 Speed EVs and a hindering nature. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial Speed nature. Choice Scarf is 1.5× maximum Speed.</p></div><div class="speed-order"><label for="speedOrderSelect">Order by</label><select id="speedOrderSelect"><option value="speed-desc" ${sortMode==='speed-desc'?'selected':''}>Speed descending</option><option value="speed-asc" ${sortMode==='speed-asc'?'selected':''}>Speed ascending</option><option value="name" ${sortMode==='name'?'selected':''}>Name</option></select></div></div>
+    <table class="speed-table"><thead><tr><th>Pokémon</th><th class="num">Min Speed</th><th class="num">Max Speed</th><th class="num">Max Speed with Scarf</th></tr></thead>
     <tbody>${grouped.map(renderRow).join('')}</tbody></table>
   </section>`;
 }
@@ -546,7 +561,7 @@ async function franchiseMons(team){
   const enriched=await Promise.all([...merged.values()].map(async m=>{
     const base=await fetchBaseSpeed(m.species);
     const max=base===null?null:maxSpeedFromBase(base,100);
-    return {...m,baseSpeed:base,maxSpeed:max,scarfSpeed:max===null?null:scarfSpeedFromMax(max),names:[m.species]};
+    return {...m,baseSpeed:base,minSpeed:base===null?null:minSpeedFromBase(base,100),maxSpeed:max,scarfSpeed:max===null?null:scarfSpeedFromMax(max),names:[m.species]};
   }));
   enriched.sort((a,b)=>b.appearances-a.appearances||a.species.localeCompare(b.species));
   return enriched;
@@ -695,17 +710,17 @@ async function comparisonTypes(species){
   }
 }
 
-async function renderComparison(team){
+async function renderComparison(yourTeam, selectedOpponent){
   const names=teamNames();
-  const opponentDefault=names.find(x=>!sameTeam(x,team))||'';
-  const currentOpponent=(STATE.compareOpponent && !sameTeam(STATE.compareOpponent,team)) ? STATE.compareOpponent : opponentDefault;
-  const your=await franchiseMons(team),opp=await franchiseMons(currentOpponent);
+  const opponentDefault=selectedOpponent && !sameTeam(selectedOpponent,yourTeam) ? selectedOpponent : (names.find(x=>!sameTeam(x,yourTeam))||'');
+  const currentOpponent=opponentDefault;
+  const your=await franchiseMons(yourTeam),opp=await franchiseMons(currentOpponent);
   const all=[...your,...opp];
   const typesArr=await Promise.all(all.map(async m=>[m.species,await comparisonTypes(m.species)]));
   const typeMap={};typesArr.forEach(([s,t])=>typeMap[s]=t);
   const yourTypes=Object.fromEntries(your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>[m.species,typeMap[m.species]||[]]));
   const oppTypes=Object.fromEntries(opp.map(m=>[m.species,typeMap[m.species]||[]]));
-  const controls=`<section class="panel"><div class="compare-hero"><div><h2>Team Comparison</h2><p class="panel-desc" style="margin-bottom:0">Scout the opponent through the parts that matter in a match: , typing, individual matchups, Speed and likely role-based sets.</p></div><div class="compare-team"><span class="compare-vs">MATCHUP</span><strong class="compare-team-name">${esc(team)}</strong><span class="compare-vs">vs</span><strong class="compare-team-name">${esc(currentOpponent||'—')}</strong></div></div><div class="comparison-grid" style="margin-top:18px"><div class="compare-select"><label>Your Team</label><select id="compareYour">${names.map(n=>`<option value="${esc(n)}" ${n===team?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>n!==team).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div></section>`;
+  const controls=`<section class="panel"><div class="compare-hero"><div><h2>Team Comparison</h2><p class="panel-desc" style="margin-bottom:0">Scout the opponent through the parts that matter in a match: typing, individual matchups, Speed and likely role-based sets.</p></div><div class="compare-team"><span class="compare-vs">MATCHUP</span><strong class="compare-team-name">${esc(yourTeam)}</strong><span class="compare-vs">vs</span><strong class="compare-team-name">${esc(currentOpponent||'—')}</strong></div></div><div class="comparison-grid" style="margin-top:18px"><div class="compare-select"><label>Your Team</label><select id="compareYourTeam">${names.map(n=>`<option value="${esc(n)}" ${sameTeam(n,yourTeam)?'selected':''}>${esc(n)}</option>`).join('')}</select><div class="small" style="margin-top:6px">Defaults to your franchise when you open Team Comparison, but you can change it.</div></div><div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>!sameTeam(n,yourTeam)).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div></section>`;
   if(!currentOpponent)return controls+`<section class="panel"><div class="empty">Select an opponent franchise to compare.</div></section>`;
 
   const speedRows=[];
@@ -749,7 +764,7 @@ async function renderComparison(team){
   
 
   const speedCard=(title,mons,typesMap,side)=>{const list=mons.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>{const row=side==='your'?speedRows.find(x=>x.y.species===m.species):speedRows.find(x=>x.o.species===m.species);return {m,max:side==='your'?row?.ymax:row?.omax,scarf:side==='your'?row?.scarf:row?.oscarf}}).sort((a,b)=>(b.max??-1)-(a.max??-1));return `<div class="speed-team"><h3>${esc(title)}</h3><div class="speed-row" style="border-bottom:1px solid var(--border);color:var(--text-dim);font-size:9px;text-transform:uppercase"><span></span><span>Pokémon</span><span class="speed-num">Max</span><span class="speed-num">Scarf</span></div>${list.map(x=>`<div class="speed-row">${sprite(x.m.species)}<div><div class="sname">${esc(x.m.species)}</div><div class="types">${typePills(typesMap[x.m.species]||[])}</div></div><div class="speed-num">${x.max??'—'}</div><div class="speed-num">${x.scarf??'—'}</div></div>`).join('')}</div>`};
-  const speedSection=`<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">Both rosters side by side, sorted by Level 100 maximum Speed. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial nature; Scarf is 1.5× that benchmark.</p><div class="speed-columns">${speedCard(team,your,yourTypes,'your')}${speedCard(currentOpponent,opp,oppTypes,'opp')}</div></section>`;
+  const speedSection=`<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">Both rosters side by side, sorted by Level 100 maximum Speed. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial nature; Scarf is 1.5× that benchmark.</p><div class="speed-columns">${speedCard(yourTeam,your,yourTypes,'your')}${speedCard(currentOpponent,opp,oppTypes,'opp')}</div></section>`;
 
   const setDefault=STATE.setPokemon&&opp.some(m=>m.species===STATE.setPokemon)?STATE.setPokemon:(opp[0]?.species||'');
   const setMon=opp.find(m=>m.species===setDefault)||opp[0];
@@ -770,23 +785,49 @@ async function render(){
     return;
   }
   if($('viewSelect') && $('viewSelect').value==='comparison'){
+    // When opening Team Comparison, default Your Team to the logged-in user's
+    // franchise. Once the user changes it, keep that selection until they leave
+    // the comparison view; it remains a normal, changeable selector.
+    if(!STATE.compareYourTeam || !teamNames().some(n=>sameTeam(n,STATE.compareYourTeam))){
+      STATE.compareYourTeam=STATE.profileTeam||team;
+    }
+    const yourTeam=STATE.compareYourTeam;
+    let selectedOpponent=STATE.compareOpponent||team;
+    if(!selectedOpponent || sameTeam(selectedOpponent,yourTeam)){
+      selectedOpponent=teamNames().find(n=>!sameTeam(n,yourTeam))||'';
+    }
+    STATE.compareOpponent=selectedOpponent;
     $('main').innerHTML='<div class="panel"><div class="empty">Loading Team Comparison…</div></div>';
     try{
-      $('main').innerHTML=await renderComparison(team);
+      $('main').innerHTML=await renderComparison(yourTeam,selectedOpponent);
     }catch(e){
       console.error('Team Comparison render failed:',e);
       $('main').innerHTML=`<section class="panel"><div class="empty">Team Comparison could not load: ${esc(e.message||e)}</div></section>`;
     }
-    $('compareYour')?.addEventListener('change',async(e)=>{
-      STATE.compareOpponent='';
+    $('compareYourTeam')?.addEventListener('change',async(e)=>{
+      const nextTeam=e.target.value;
+      STATE.compareYourTeam=nextTeam;
       STATE.comparePokemon='';
       STATE.setPokemon='';
-      $('teamSelect').value=e.target.value;
+      // Your Team is independent of the page-level Franchise selector.
+      // If the newly selected team is also the opponent, move the opponent to
+      // the first other franchise so the comparison can never compare a team
+      // against itself.
+      if(sameTeam(STATE.compareOpponent,nextTeam)){
+        STATE.compareOpponent=teamNames().find(n=>!sameTeam(n,nextTeam))||'';
+        if(STATE.compareOpponent && $('teamSelect'))$('teamSelect').value=STATE.compareOpponent;
+      }
       await render();
     });
     $('compareOpponent')?.addEventListener('change',async(e)=>{
       STATE.compareOpponent=e.target.value;
+      STATE.comparePokemon='';
       STATE.setPokemon='';
+      // Keep the page-level Franchise selector synchronized with the opponent.
+      if($('teamSelect'))$('teamSelect').value=e.target.value;
+      const u=new URL(location.href);
+      u.searchParams.set('team',e.target.value);
+      history.replaceState(null,'',u);
       await render();
     });
     $('offensePokemon')?.addEventListener('change',async(e)=>{
@@ -795,8 +836,8 @@ async function render(){
       const selected=e.target.options[e.target.selectedIndex];
       const label=$('offenseSelectedName');
       const selectedSprite=$('offenseSelectedSprite');
-      const targetTeam=$('teamSelect').value;
-      const opponentTeam=STATE.compareOpponent||teamNames().find(x=>!sameTeam(x,targetTeam))||'';
+      const targetTeam=STATE.profileTeam||$('teamSelect').value;
+      const opponentTeam=STATE.compareOpponent||$('teamSelect').value;
       const [y,oppMons]=await Promise.all([franchiseMons(targetTeam),franchiseMons(opponentTeam)]);
       const target=y.find(m=>m.species===species)||y[0];
       const results=$('offenseResults');
@@ -855,6 +896,12 @@ function openMon(team,key){
 }
 async function load(){
   try{
+    const {data:authData}=await supabase.auth.getUser();
+    const user=authData?.user||null;
+    if(user){
+      const {data:profile}=await supabase.from('profiles').select('team_name').eq('id',user.id).maybeSingle();
+      STATE.profileTeam=profile?.team_name||'';
+    }
     const {data,error}=await supabase.from('replays').select('replay_id,replay_data');
     if(error)throw error;
     for(const row of data||[]){
@@ -895,6 +942,10 @@ async function load(){
     : '<option value="">No teams found</option>';
 
   if(requested&&teams.includes(requested))$('teamSelect').value=requested;
+  else if(STATE.profileTeam){
+    const firstOpponent=teams.find(t=>!sameTeam(t,STATE.profileTeam));
+    if(firstOpponent)$('teamSelect').value=firstOpponent;
+  }
   await render();
 }
 
@@ -928,35 +979,12 @@ load();
 <script>
 (function(){
   const select=document.getElementById('pageNavSelect');
-  if(!select) return;
-  const ADMIN='admin.html';
-  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  if(current===ADMIN) select.value=ADMIN;
-  else if(Array.from(select.options).some(o=>o.value===current)) select.value=current;
-
-  async function setupCommissionerNav(){
-    try{
-      const client=window.supabase?.createClient(
-        'https://dfxdkkemltukxaklhcpo.supabase.co',
-        'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-      );
-      if(!client) return;
-      const {data:{session}}=await client.auth.getSession();
-      if(!session?.user) return;
-      const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
-      if(error) throw error;
-      if(profile?.is_commissioner){
-        const opt=select.querySelector('option[data-admin-only]');
-        if(opt) opt.hidden=false;
-      }
-      if(current===ADMIN) select.value=ADMIN;
-    }catch(err){ console.warn('Commissioner navigation check failed:',err); }
-  }
-
-  select.addEventListener('change',e=>{
-    if(e.target.value) location.href=e.target.value;
+  if(!select)return;
+  const current=location.pathname.split('/').pop()||'index.html';
+  select.value=['index.html','rosters.html','team-analysis.html','free-agency.html'].includes(current)?current:'index.html';
+  select.addEventListener('change',function(){
+    if(this.value) location.href=this.value;
   });
-  setupCommissionerNav();
 })();
 </script>
 </body>
