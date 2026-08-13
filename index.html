@@ -20,7 +20,11 @@
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased;}
+  body{margin:0; min-height:100vh; background:
+      radial-gradient(1100px 600px at 12% -10%, rgba(255,180,84,.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(94,234,212,.06), transparent 55%),
+      var(--bg);
+    color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased;}
   #app{max-width:1280px; margin:0 auto; padding:28px 24px 72px;}
 
   header{margin-bottom:20px;}
@@ -28,11 +32,11 @@
   .sub{color:var(--text-dim); font-size:13px; margin-bottom:16px;}
 
   nav.tabs{display:flex; gap:4px; margin:20px 0 16px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
-  nav.tabs button{background:none; border:none; color:var(--text-dim); padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; font-family:var(--sans);}
+  nav.tabs button{background:none; border:none; color:var(--text-dim); padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; font-family:var(--sans); transition:color .15s ease, border-color .15s ease;}
   nav.tabs button.active{color:var(--text); border-bottom-color:var(--amber);}
   nav.tabs button:hover{color:var(--text);}
 
-  .panel{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px;}
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.18);}
   .panel + .panel{margin-top:14px;}
   .panel h2{font-size:14px; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim);}
 
@@ -44,10 +48,11 @@
   .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
   .row > div{flex:1; min-width:160px;}
 
-  button.primary{background:var(--amber); color:var(--amber-text); border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans);}
+  button.primary{background:var(--amber); color:var(--amber-text); border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans); transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;}
+  button.primary:hover:not(:disabled){filter:brightness(1.06); box-shadow:0 6px 16px rgba(255,180,84,.25); transform:translateY(-1px);}
   button.primary:disabled{opacity:.5; cursor:default;}
-  button.ghost{background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer; font-family:var(--sans);}
-  button.ghost:hover{border-color:var(--amber);}
+  button.ghost{background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer; font-family:var(--sans); transition:border-color .12s ease, transform .12s ease;}
+  button.ghost:hover{border-color:var(--amber); transform:translateY(-1px);}
   button.small{padding:5px 10px; font-size:11px;}
   button.danger{border:1px solid var(--red); color:var(--red); background:none; border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer;}
   button.teal{background:var(--teal); color:#062521; border:none; border-radius:8px; padding:9px 14px; font-size:12px; font-weight:700; cursor:pointer;}
@@ -119,13 +124,32 @@
   .roster-card.mine{border-color:var(--amber);}
   .roster-card h3{margin:0 0 4px; font-size:14px;}
 
-  .gate{max-width:480px; margin:60px auto; text-align:center;}
-  .gate .panel{text-align:left;}
+  .gate{max-width:420px; width:100%; margin:0 auto; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:calc(100vh - 220px);}
+  .gate .panel{
+    text-align:left; width:100%; padding:32px 30px 28px;
+    background:linear-gradient(160deg, var(--panel), var(--panel-alt));
+    border:1px solid var(--border); border-radius:16px;
+    box-shadow:0 24px 60px rgba(0,0,0,.35), 0 0 0 1px rgba(255,180,84,.04);
+    position:relative; overflow:hidden;
+  }
+  .gate .panel::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg, var(--amber), var(--teal));
+  }
+  .gate .panel h2{font-size:20px; text-transform:none; letter-spacing:0; color:var(--text); margin:0 0 4px; text-align:center;}
+  .gate .panel .gate-sub{color:var(--text-dim); font-size:12.5px; text-align:center; margin:0 0 20px;}
+  .gate .panel label{font-size:11.5px;}
+  .gate .panel input{padding:11px 13px; font-size:14px; border-radius:9px; transition:border-color .12s ease, box-shadow .12s ease;}
+  .gate .panel input:focus{outline:none; border-color:var(--amber); box-shadow:0 0 0 3px rgba(255,180,84,.14);}
+  .gate .panel .foot-actions{margin-top:18px;}
+  .gate-mark{width:52px; height:52px; margin:0 auto 14px; border-radius:14px; background:linear-gradient(145deg, var(--amber), #ff9d4d); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; color:var(--amber-text); box-shadow:0 10px 24px rgba(255,180,84,.28);}
 
   .page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
   .page-nav label{font-size:11px;color:var(--text-dim);font-weight:700}
-  .page-nav select{font-size:12px;padding:7px 30px 7px 10px;box-shadow:0 2px 8px rgba(0,0,0,.25); width:auto;}
-  @media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+  .page-nav select{font-size:12px;padding:7px 30px 7px 10px;box-shadow:0 2px 8px rgba(0,0,0,.25); width:auto; transition:opacity .15s ease;}
+  .page-nav select:disabled{opacity:.45;cursor:not-allowed;}
+  .page-nav .lock-hint{font-size:10.5px;color:var(--text-dim);opacity:.85;}
+  @media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}.page-nav .lock-hint{display:none}}
 
   .hero{background:linear-gradient(135deg,#182338,#101827);border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:18px;}
   .hero-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;}
@@ -165,14 +189,14 @@
 <body>
 
 <div class="page-nav">
-  <label for="pageNavSelect">Page</label>
-  <select id="pageNavSelect" aria-label="Choose page">
+   <span class="lock-hint" id="pageNavLockHint" hidden>Log in to switch pages</span>
+  <select id="pageNavSelect" aria-label="Choose page" disabled>
     <option value="index.html">My Team</option>
     <option value="stats.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="draft.html" data-admin-only hidden>Draft Room</option>
+    <option value="draft.html" data-draft-live-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -442,7 +466,9 @@
     contentEl.innerHTML = `
       <div class="gate">
         <div class="panel">
-          <h2>Sign In</h2>
+          <div class="gate-mark">SBL</div>
+          <h2>Welcome back</h2>
+          <div class="gate-sub">Sign in to manage your team, or create an account to get started.</div>
           <label>Email</label>
           <input id="authEmail" type="email" autocomplete="username" placeholder="you@example.com" style="margin-bottom:12px;">
           <label>Password</label>
@@ -485,44 +511,65 @@
 
   // ---------- team claim / status gate ----------
   function renderTeamClaim(){
-    const teams = teamsList();
-    const taken = new Set(); // we can't see other users' claims, so just list all published teams
     const current = profile.team_name || '';
     contentEl.innerHTML = `
       <div class="gate">
         <div class="panel">
           <h2>${current ? 'Change your team' : 'Claim your team'}</h2>
           <div class="note">Pick the franchise you own. A commissioner needs to approve your claim before you can trade.</div>
-          ${teams.length ? `
-            <label style="margin-top:12px;">Team</label>
-            <select id="teamPick">
-              <option value="">— Select a team —</option>
-              ${teams.map(t=>`<option value="${escapeHtml(t)}" ${t===current?'selected':''}>${escapeHtml(t)}</option>`).join('')}
-            </select>` : `
-            <label style="margin-top:12px;">Team name</label>
-            <input id="teamPickText" type="text" value="${escapeHtml(current)}" placeholder="Type your team's exact name">
-            <div class="note">Rosters haven't been published yet, so type the exact franchise name — a commissioner will match it up.</div>`}
+          <div id="teamClaimFields"><div class="note">Loading available teams…</div></div>
           <div class="foot-actions">
-            <button class="primary" id="claimBtn">${current ? 'Update claim' : 'Submit claim'}</button>
+            <button class="primary" id="claimBtn" disabled>${current ? 'Update claim' : 'Submit claim'}</button>
           </div>
           <div id="claimMsg" class="note"></div>
         </div>
       </div>`;
-    document.getElementById('claimBtn').onclick = async ()=>{
-      const val = teams.length ? document.getElementById('teamPick').value.trim() : document.getElementById('teamPickText').value.trim();
-      const msgEl = document.getElementById('claimMsg');
-      if(!val){ msgEl.className='note danger'; msgEl.textContent='Pick or type a team name.'; return; }
-      const btn = document.getElementById('claimBtn'); btn.disabled = true;
+
+    (async ()=>{
+      const allTeams = teamsList();
+      let taken = new Set();
       try{
-        const {error} = await supabase.from('profiles').update({ team_name: val, status: 'pending' }).eq('id', session.user.id);
+        // Franchises already claimed by an approved owner shouldn't show up for
+        // anyone else to pick. We can't (and don't need to) see the full profile
+        // of other users — just which team names are already spoken for.
+        const {data, error} = await supabase.from('profiles').select('team_name').eq('status','approved').neq('id', session.user.id);
         if(error) throw error;
-        await loadProfile();
-        render();
+        taken = new Set((data||[]).map(p=>p.team_name).filter(Boolean));
       }catch(e){
-        msgEl.className='note danger'; msgEl.textContent = e.message;
-        btn.disabled = false;
+        console.warn('Could not check claimed teams:', e);
       }
-    };
+      const teams = allTeams.filter(t => t === current || !taken.has(t));
+
+      const fieldsEl = document.getElementById('teamClaimFields');
+      if(!fieldsEl) return; // user navigated away before this finished loading
+      fieldsEl.innerHTML = teams.length ? `
+        <label style="margin-top:12px;">Team</label>
+        <select id="teamPick">
+          <option value="">— Select a team —</option>
+          ${teams.map(t=>`<option value="${escapeHtml(t)}" ${t===current?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+        </select>` : `
+        <label style="margin-top:12px;">Team name</label>
+        <input id="teamPickText" type="text" value="${escapeHtml(current)}" placeholder="Type your team's exact name">
+        <div class="note">Rosters haven't been published yet, so type the exact franchise name — a commissioner will match it up.</div>`;
+
+      const btn = document.getElementById('claimBtn');
+      btn.disabled = false;
+      btn.onclick = async ()=>{
+        const val = teams.length ? document.getElementById('teamPick').value.trim() : document.getElementById('teamPickText').value.trim();
+        const msgEl = document.getElementById('claimMsg');
+        if(!val){ msgEl.className='note danger'; msgEl.textContent='Pick or type a team name.'; return; }
+        btn.disabled = true;
+        try{
+          const {error} = await supabase.from('profiles').update({ team_name: val, status: 'pending' }).eq('id', session.user.id);
+          if(error) throw error;
+          await loadProfile();
+          render();
+        }catch(e){
+          msgEl.className='note danger'; msgEl.textContent = e.message;
+          btn.disabled = false;
+        }
+      };
+    })();
   }
 
   function renderPendingOrRejected(){
@@ -1200,33 +1247,52 @@
 (function(){
   const select=document.getElementById('pageNavSelect');
   if(!select) return;
+  const lockHint=document.getElementById('pageNavLockHint');
   const ADMIN='admin.html';
   const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
   if(current===ADMIN) select.value=ADMIN;
   else if(Array.from(select.options).some(o=>o.value===current)) select.value=current;
 
+  function lockNav(locked){
+    select.disabled=locked;
+    select.title=locked ? 'Log in to switch pages' : '';
+    if(lockHint) lockHint.hidden=!locked;
+  }
+
+  const client=window.supabase?.createClient(
+    'https://dfxdkkemltukxaklhcpo.supabase.co',
+    'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
+  );
+
   async function setupCommissionerNav(){
     try{
-      const client=window.supabase?.createClient(
-        'https://dfxdkkemltukxaklhcpo.supabase.co',
-        'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-      );
-      if(!client) return;
+      if(!client){ lockNav(true); return; }
       const {data:{session}}=await client.auth.getSession();
+      lockNav(!session?.user);
       if(!session?.user) return;
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
         select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
       }
+      // "Draft Room" is shown to any logged-in team owner, but only while a
+      // draft is actually in progress -- independent of commissioner status.
+      try{
+        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
+        const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
+        if(draftStatus==='live'){
+          select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; });
+        }
+      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       if(current===ADMIN) select.value=ADMIN;
-    }catch(err){ console.warn('Commissioner navigation check failed:',err); }
+    }catch(err){ console.warn('Commissioner navigation check failed:',err); lockNav(true); }
   }
 
   select.addEventListener('change',e=>{
     if(e.target.value) location.href=e.target.value;
   });
   setupCommissionerNav();
+  client?.auth.onAuthStateChange((_event,session)=>{ lockNav(!session?.user); });
 })();
 </script>
 </body>

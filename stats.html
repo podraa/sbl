@@ -285,8 +285,8 @@
   .team-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
   .team-card{background:linear-gradient(145deg,var(--panel-alt),#11151c);border:1px solid var(--border);border-radius:14px;padding:18px 20px;cursor:pointer;transition:transform .14s,border-color .14s,box-shadow .14s;min-height:120px;}
   .team-card:hover{transform:translateY(-3px);border-color:var(--amber);box-shadow:0 14px 36px rgba(0,0,0,.28);}
-  .team-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:82px;}
-  .team-card-copy{flex:1;text-align:center;min-width:0;}
+  .team-card-head{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;min-height:82px;}
+  .team-card-copy{flex:none;width:100%;text-align:center;min-width:0;}
   .team-card-name{font-weight:800;font-size:clamp(19px,1.7vw,25px);line-height:1.15;overflow-wrap:anywhere;}
   .team-card-sub{font-size:clamp(15px,1.2vw,18px);font-family:var(--mono);color:var(--text);margin-top:8px;}
   .team-card-top-sprite{width:82px;height:82px;object-fit:contain;image-rendering:pixelated;background:transparent;flex:none;}
@@ -562,23 +562,24 @@
 .page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
 .page-nav label{font-size:11px;color:var(--text-dim,#777);font-weight:700}
 .page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--panel,#fff);color:var(--text,#222);box-shadow:0 2px 8px rgba(0,0,0,.08)}
-@media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+.page-nav select:disabled{opacity:.45;cursor:not-allowed}
+.page-nav .lock-hint{font-size:10.5px;color:var(--text-dim,#777);opacity:.85}
+@media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}.page-nav .lock-hint{display:none}}
 </style>
 
 <div class="page-nav">
-  <label for="pageNavSelect">Page</label>
-  <select id="pageNavSelect" aria-label="Choose page">
+  <select id="pageNavSelect" aria-label="Choose page" disabled>
     <option value="index.html">My Team</option>
     <option value="stats.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="draft.html" data-admin-only hidden>Draft Room</option>
+    <option value="draft.html" data-draft-live-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
 
-<div id="app">
+<div id="app" style="display:none">
   <header>
     <br>
     <h1 id="seasonTitle">SBL Season</h1>
@@ -769,53 +770,26 @@
   }
 
   function showAdminLogin(){
-    if(!IS_ADMIN_PAGE) return;
-    const app = document.getElementById('app');
-    app.style.display = 'none';
-    const existing = document.getElementById('adminAuth');
-    if(existing) existing.remove();
-    const wrap = document.createElement('div');
-    wrap.id = 'adminAuth';
-    wrap.innerHTML = `
-      <div class="auth-box">
-        <h1>SBL Dashboard Admin</h1>
-        <div class="sub">Sign in to add replays and change shared league data.</div>
-        <label>Email</label><input id="adminEmail" type="email" autocomplete="username" placeholder="you@example.com">
-        <label style="margin-top:12px;">Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password">
-        <button class="primary" id="adminLoginBtn" style="margin-top:14px;width:100%;">Log in</button>
-        <div id="adminError" class="auth-error"></div>
-      </div>`;
-    document.body.prepend(wrap);
-    document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
-    document.getElementById('adminPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') adminLogin(); });
-  }
-
-  async function adminLogin(){
-    const email = document.getElementById('adminEmail').value.trim();
-    const password = document.getElementById('adminPassword').value;
-    if(!email || !password){ showAdminError('Enter your email and password.'); return; }
-    const btn = document.getElementById('adminLoginBtn');
-    btn.disabled = true; btn.textContent = 'Logging in…';
-    const {data, error} = await supabase.auth.signInWithPassword({email, password});
-    btn.disabled = false; btn.textContent = 'Log in';
-    if(error){ showAdminError(error.message); return; }
-    adminUser = data.user;
-    document.getElementById('adminAuth')?.remove();
-    document.getElementById('app').style.display = '';
-    await loadState();
-    renderTicker(); render();
+    // Not logged in (or no assigned team) — bounce to the login page instead of
+    // rendering an inline form here. Every page other than index.html requires
+    // an authenticated session with a claimed team before it will show content.
+    location.replace('index.html');
   }
 
   async function initAdminAuth(){
-    if(!IS_ADMIN_PAGE) return true;
-    const {data} = await supabase.auth.getSession();
-    if(data.session){
-      adminUser = data.session.user;
-      document.getElementById('app').style.display = '';
-      return true;
+    const {data, error} = await supabase.auth.getSession();
+    if(error){ showAdminLogin(); return false; }
+    if(!data.session){ showAdminLogin(); return false; }
+    const {data:profile, error:profErr} = await supabase.from('profiles').select('team_name').eq('id', data.session.user.id).maybeSingle();
+    if(profErr || !profile?.team_name){
+      // Logged in but hasn't claimed/been assigned a team yet — no access to
+      // the rest of the site until that's done from the login page.
+      showAdminLogin();
+      return false;
     }
-    showAdminLogin();
-    return false;
+    adminUser = data.session.user;
+    document.getElementById('app').style.display = '';
+    return true;
   }
 
   // ---------- helpers ----------
@@ -2631,7 +2605,7 @@
 
   (async function init(){
     const ok = await initAdminAuth();
-    if(IS_ADMIN_PAGE && !ok) return;
+    if(!ok) return;
     await loadState();
     renderTicker();
     render();
@@ -2651,33 +2625,52 @@
 (function(){
   const select=document.getElementById('pageNavSelect');
   if(!select) return;
+  const lockHint=document.getElementById('pageNavLockHint');
   const ADMIN='admin.html';
   const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
   if(current===ADMIN) select.value=ADMIN;
   else if(Array.from(select.options).some(o=>o.value===current)) select.value=current;
 
+  function lockNav(locked){
+    select.disabled=locked;
+    select.title=locked ? 'Log in to switch pages' : '';
+    if(lockHint) lockHint.hidden=!locked;
+  }
+
+  const client=window.supabase?.createClient(
+    'https://dfxdkkemltukxaklhcpo.supabase.co',
+    'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
+  );
+
   async function setupCommissionerNav(){
     try{
-      const client=window.supabase?.createClient(
-        'https://dfxdkkemltukxaklhcpo.supabase.co',
-        'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-      );
-      if(!client) return;
+      if(!client){ lockNav(true); return; }
       const {data:{session}}=await client.auth.getSession();
+      lockNav(!session?.user);
       if(!session?.user) return;
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
         select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
       }
+      // "Draft Room" is shown to any logged-in team owner, but only while a
+      // draft is actually in progress -- independent of commissioner status.
+      try{
+        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
+        const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
+        if(draftStatus==='live'){
+          select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; });
+        }
+      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       if(current===ADMIN) select.value=ADMIN;
-    }catch(err){ console.warn('Commissioner navigation check failed:',err); }
+    }catch(err){ console.warn('Commissioner navigation check failed:',err); lockNav(true); }
   }
 
   select.addEventListener('change',e=>{
     if(e.target.value) location.href=e.target.value;
   });
   setupCommissionerNav();
+  client?.auth.onAuthStateChange((_event,session)=>{ lockNav(!session?.user); });
 })();
 </script>
 
