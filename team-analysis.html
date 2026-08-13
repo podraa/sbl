@@ -36,6 +36,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 .speed-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:10px}
 .speed-order{min-width:190px;display:flex;flex-direction:column;gap:5px}
 .speed-order select{width:100%}
+.speed-table{width:100%;table-layout:fixed}
+.speed-table th,.speed-table td{vertical-align:middle}
+.speed-table th:first-child,.speed-table td:first-child{width:40%;text-align:left}
+.speed-table th:nth-child(2),.speed-table td:nth-child(2){width:20%;text-align:center}
+.speed-table th:nth-child(3),.speed-table td:nth-child(3){width:20%;text-align:center}
+.speed-table th:nth-child(4),.speed-table td:nth-child(4){width:20%;text-align:center}
+.speed-table th.num{white-space:normal;line-height:1.25}
+.speed-table td.num{text-align:center}
 @media(max-width:700px){.speed-header{flex-direction:column}.speed-order{width:100%;min-width:0}}
 </style>
 <style>
@@ -487,7 +495,7 @@ async function speedTableForTeam(team){
 
   return `<section class="panel">
     <div class="speed-header"><div><h2>Speed</h2><p class="panel-desc">Level 100 Speed benchmarks. Min Speed assumes 0 IVs, 0 Speed EVs and a hindering nature. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial Speed nature. Choice Scarf is 1.5× maximum Speed.</p></div><div class="speed-order"><label for="speedOrderSelect">Order by</label><select id="speedOrderSelect"><option value="speed-desc" ${sortMode==='speed-desc'?'selected':''}>Speed descending</option><option value="speed-asc" ${sortMode==='speed-asc'?'selected':''}>Speed ascending</option><option value="name" ${sortMode==='name'?'selected':''}>Name</option></select></div></div>
-    <table><thead><tr><th>Pokémon</th><th class="num">Min Speed</th><th class="num">Max Speed</th><th class="num">Max Speed with Scarf</th></tr></thead>
+    <table class="speed-table"><thead><tr><th>Pokémon</th><th class="num">Min Speed</th><th class="num">Max Speed</th><th class="num">Max Speed with Scarf</th></tr></thead>
     <tbody>${grouped.map(renderRow).join('')}</tbody></table>
   </section>`;
 }
@@ -712,7 +720,7 @@ async function renderComparison(yourTeam, selectedOpponent){
   const typeMap={};typesArr.forEach(([s,t])=>typeMap[s]=t);
   const yourTypes=Object.fromEntries(your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>[m.species,typeMap[m.species]||[]]));
   const oppTypes=Object.fromEntries(opp.map(m=>[m.species,typeMap[m.species]||[]]));
-  const controls=`<section class="panel"><div class="compare-hero"><div><h2>Team Comparison</h2><p class="panel-desc" style="margin-bottom:0">Scout the opponent through the parts that matter in a match: , typing, individual matchups, Speed and likely role-based sets.</p></div><div class="compare-team"><span class="compare-vs">MATCHUP</span><strong class="compare-team-name">${esc(yourTeam)}</strong><span class="compare-vs">vs</span><strong class="compare-team-name">${esc(currentOpponent||'—')}</strong></div></div><div class="comparison-grid" style="margin-top:18px"><div class="compare-select"><label>Your Team</label><div class="notice"><strong>${esc(yourTeam)}</strong><div class="small">Your franchise</div></div></div><div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>!sameTeam(n,yourTeam)).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div></section>`;
+  const controls=`<section class="panel"><div class="compare-hero"><div><h2>Team Comparison</h2><p class="panel-desc" style="margin-bottom:0">Scout the opponent through the parts that matter in a match: typing, individual matchups, Speed and likely role-based sets.</p></div><div class="compare-team"><span class="compare-vs">MATCHUP</span><strong class="compare-team-name">${esc(yourTeam)}</strong><span class="compare-vs">vs</span><strong class="compare-team-name">${esc(currentOpponent||'—')}</strong></div></div><div class="comparison-grid" style="margin-top:18px"><div class="compare-select"><label>Your Team</label><select id="compareYourTeam">${names.map(n=>`<option value="${esc(n)}" ${sameTeam(n,yourTeam)?'selected':''}>${esc(n)}</option>`).join('')}</select><div class="small" style="margin-top:6px">Defaults to your franchise when you open Team Comparison, but you can change it.</div></div><div class="compare-select"><label>Opponent</label><select id="compareOpponent">${names.filter(n=>!sameTeam(n,yourTeam)).map(n=>`<option value="${esc(n)}" ${n===currentOpponent?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div></section>`;
   if(!currentOpponent)return controls+`<section class="panel"><div class="empty">Select an opponent franchise to compare.</div></section>`;
 
   const speedRows=[];
@@ -777,8 +785,17 @@ async function render(){
     return;
   }
   if($('viewSelect') && $('viewSelect').value==='comparison'){
-    const yourTeam=STATE.profileTeam||team;
-    const selectedOpponent=team;
+    // When opening Team Comparison, default Your Team to the logged-in user's
+    // franchise. Once the user changes it, keep that selection until they leave
+    // the comparison view; it remains a normal, changeable selector.
+    if(!STATE.compareYourTeam || !teamNames().some(n=>sameTeam(n,STATE.compareYourTeam))){
+      STATE.compareYourTeam=STATE.profileTeam||team;
+    }
+    const yourTeam=STATE.compareYourTeam;
+    let selectedOpponent=STATE.compareOpponent||team;
+    if(!selectedOpponent || sameTeam(selectedOpponent,yourTeam)){
+      selectedOpponent=teamNames().find(n=>!sameTeam(n,yourTeam))||'';
+    }
     STATE.compareOpponent=selectedOpponent;
     $('main').innerHTML='<div class="panel"><div class="empty">Loading Team Comparison…</div></div>';
     try{
@@ -787,11 +804,27 @@ async function render(){
       console.error('Team Comparison render failed:',e);
       $('main').innerHTML=`<section class="panel"><div class="empty">Team Comparison could not load: ${esc(e.message||e)}</div></section>`;
     }
+    $('compareYourTeam')?.addEventListener('change',async(e)=>{
+      const nextTeam=e.target.value;
+      STATE.compareYourTeam=nextTeam;
+      STATE.comparePokemon='';
+      STATE.setPokemon='';
+      // Your Team is independent of the page-level Franchise selector.
+      // If the newly selected team is also the opponent, move the opponent to
+      // the first other franchise so the comparison can never compare a team
+      // against itself.
+      if(sameTeam(STATE.compareOpponent,nextTeam)){
+        STATE.compareOpponent=teamNames().find(n=>!sameTeam(n,nextTeam))||'';
+        if(STATE.compareOpponent && $('teamSelect'))$('teamSelect').value=STATE.compareOpponent;
+      }
+      await render();
+    });
     $('compareOpponent')?.addEventListener('change',async(e)=>{
       STATE.compareOpponent=e.target.value;
       STATE.comparePokemon='';
       STATE.setPokemon='';
-      $('teamSelect').value=e.target.value;
+      // Keep the page-level Franchise selector synchronized with the opponent.
+      if($('teamSelect'))$('teamSelect').value=e.target.value;
       const u=new URL(location.href);
       u.searchParams.set('team',e.target.value);
       history.replaceState(null,'',u);
