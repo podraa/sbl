@@ -203,10 +203,7 @@
   .player-group .player-table-wrap{padding:4px 14px 12px;}
   .player-group table{margin-top:6px;}
   .player-filter{max-width:320px; margin-bottom:14px;}
-.roster-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.roster-admin-card{border:1px solid var(--border);background:var(--panel-alt);border-radius:10px;padding:12px}.roster-admin-card h3{margin:0 0 7px;font-size:14px}.roster-admin-mons{margin-top:10px;font-size:12px;line-height:1.6;color:var(--text-dim)} 
-<style>
-.trade-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.trade-card{border:1px solid var(--border);background:var(--panel-alt);border-radius:10px;padding:12px}.trade-card h3{margin:0 0 6px}.trade-mono{font-size:12px;color:var(--text-dim)}.fa-import-table{max-height:52vh;overflow:auto}.fa-import-table table{margin-top:8px}.taken-yes{color:#e7a6b8}.taken-no{color:#9de0bd}.trade-warning{color:#e7a6b8}.trade-good{color:#9de0bd}.trade-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-</style></style>
+.roster-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.roster-admin-card{border:1px solid var(--border);background:var(--panel-alt);border-radius:10px;padding:12px}.roster-admin-card h3{margin:0 0 7px;font-size:14px}.roster-admin-mons{margin-top:10px;font-size:12px;line-height:1.6;color:var(--text-dim)} </style>
 </head>
 <body data-admin="true">
 <style>
@@ -240,7 +237,7 @@
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
-    <button data-tab="trades">Trades</button>
+    <button data-tab="freeagency">Free Agency</button>
     <button data-tab="settings">Settings</button>
 
 
@@ -258,7 +255,7 @@
 <script>
 (function(){
   const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
-  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true, rosters:{}, freeAgency:{mons:[],updatedAt:null} } };
+  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true } };
   let loaded = false;
 
   // ---------- shared Supabase storage ----------
@@ -297,13 +294,13 @@
       }
       STATE.replays = replays;
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true, rosters:{}, freeAgency:{mons:[],updatedAt:null}}, (sharedState && sharedState.settings) || {}); STATE.settings.rosters=STATE.settings.rosters||{}; STATE.settings.freeAgency=STATE.settings.freeAgency||{mons:[],updatedAt:null};
+      STATE.settings = Object.assign({caseInsensitiveNames:true, rosters:{}}, (sharedState && sharedState.settings) || {}); STATE.settings.rosters=STATE.settings.rosters||{};
       loaded = true;
     }catch(e){
       console.error('Supabase load failed:', e);
       STATE.replays = {};
       STATE.teamMap = {};
-      STATE.settings = {caseInsensitiveNames:true, rosters:{}, freeAgency:{mons:[],updatedAt:null}};
+      STATE.settings = {caseInsensitiveNames:true, rosters:{}};
       loaded = true;
       throw e;
     }finally{
@@ -1235,7 +1232,7 @@
     if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'rosters') return renderRosters();
-    if(activeTab === 'trades') return renderTrades();
+    if(activeTab === 'freeagency') return renderFreeAgency();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
@@ -1735,57 +1732,466 @@
     };
   }
 
-  function faKey(s){ return String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,''); }
-  function rosterEntries(){
-    const out=[];
-    for(const [team,mons] of Object.entries(STATE.settings.rosters||{})){
-      for(const raw of (mons||[])){
-        const mon=typeof raw==='string'?{name:raw,points:0}:raw||{};
-        if(mon.name) out.push({team,name:String(mon.name),points:Number(mon.points)||0});
+
+  // ---------- Free Agency ----------
+  function normalizeFreeAgencyName(name){
+    return String(name ?? '')
+      .replace(/[’']/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function freeAgencyKey(name){
+    return normalizeFreeAgencyName(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '');
+  }
+
+  function parseFreeAgencyDraftBoard(wb){
+    if(!wb || !Array.isArray(wb.SheetNames) || !wb.SheetNames.length){
+      throw new Error('The workbook contains no worksheets.');
+    }
+
+    const sheetName =
+      wb.SheetNames.find(
+        n => String(n).trim().toLowerCase() === 'draft board'
+      ) || wb.SheetNames[0];
+
+    const ws = wb.Sheets[sheetName];
+    if(!ws) throw new Error(`Could not open the "${sheetName}" sheet.`);
+
+    const rows = XLSX.utils.sheet_to_json(
+      ws,
+      {header:1, defval:''}
+    );
+
+    if(!rows.length){
+      throw new Error(`The "${sheetName}" sheet is empty.`);
+    }
+
+    // Find the header row rather than assuming it is row 1.
+    let headerIndex = -1;
+
+    for(let r=0; r<Math.min(rows.length, 10); r++){
+      const row = rows[r] || [];
+      const hasPointsHeader = row.some(cell =>
+        /^\s*\d+\s*POINTS?\s*$/i.test(String(cell ?? ''))
+      );
+
+      if(hasPointsHeader){
+        headerIndex = r;
+        break;
       }
     }
-    return out;
-  }
-  function currentOwner(name){
-    const k=faKey(name); const hit=rosterEntries().find(x=>faKey(x.name)===k); return hit||null;
-  }
-  function freeAgencyMons(){ return Array.isArray(STATE.settings.freeAgency?.mons)?STATE.settings.freeAgency.mons:[]; }
-  function parseFreeAgencyWorkbook(wb){
-    const out=[]; const seen=new Set();
-    const nameHeaders=['pokemon','pokémon','species','pokemon species','name','mon'];
-    const pointHeaders=['points','point','cost','value','price','budget'];
-    const takenHeaders=['taken','drafted','drafted by','team','franchise','owner','status'];
-    for(const sheet of wb.SheetNames){
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheet],{header:1,defval:''}); if(!rows.length) continue;
-      const headers=rows[0].map(v=>String(v).trim().toLowerCase());
-      const ni=headers.findIndex(h=>nameHeaders.includes(h));
-      const pi=headers.findIndex(h=>pointHeaders.includes(h));
-      const ti=headers.findIndex(h=>takenHeaders.includes(h));
-      for(let r=0;r<rows.length;r++){
-        const row=rows[r];
-        const name=String(ni>=0?row[ni]:(r?row[2]:'')).trim();
-        const points=Number(pi>=0?row[pi]:(r?row[0]:''));
-        if(!name || !Number.isFinite(points) || /^(pokemon|pokémon|species|name|mon)$/i.test(name)) continue;
-        const key=faKey(name); if(seen.has(key)) continue; seen.add(key);
-        const rawTaken=String(ti>=0?row[ti]:'').trim();
-        out.push({name,points,takenBy:rawTaken&& !/^(no|false|available|undrafted)$/i.test(rawTaken)?rawTaken:null});
+
+    if(headerIndex < 0){
+      throw new Error(
+        `Could not find point columns in the "${sheetName}" sheet. ` +
+        `Expected headers such as "20 POINTS", "19 POINTS", etc.`
+      );
+    }
+
+    const header = rows[headerIndex] || [];
+    const pool = [];
+    const seen = new Set();
+
+    for(let c=0; c<header.length; c++){
+
+      const headerText =
+        String(header[c] ?? '').trim();
+
+      const match =
+        headerText.match(/^\s*(\d+)\s*POINTS?\s*$/i);
+
+      if(!match) continue;
+
+      const points = Number(match[1]);
+
+      if(!Number.isFinite(points)) continue;
+
+      for(let r=headerIndex + 1; r<rows.length; r++){
+
+        const raw =
+          String(rows[r]?.[c] ?? '').trim();
+
+        if(!raw) continue;
+
+        const name =
+          normalizeFreeAgencyName(raw);
+
+        if(!name) continue;
+
+        if(
+          /^(pokemon|pokémon|species|name|pick|roster)$/i
+            .test(name)
+        ) continue;
+
+        const key =
+          freeAgencyKey(name);
+
+        if(!key || seen.has(key)) continue;
+
+        seen.add(key);
+
+        pool.push({
+          name,
+          points
+        });
       }
     }
-    return out.sort((a,b)=>a.points-b.points||a.name.localeCompare(b.name));
+
+    if(!pool.length){
+      throw new Error(
+        `No Pokémon were found under the point columns in "${sheetName}".`
+      );
+    }
+
+    return pool.sort(
+      (a,b) =>
+        b.points - a.points ||
+        a.name.localeCompare(b.name)
+    );
   }
-  function renderTrades(){
-    const fa=freeAgencyMons();
-    const teams=Object.keys(STATE.settings.rosters||{}).sort();
-    const rosterByTeam={};
-    for(const t of teams) rosterByTeam[t]=(STATE.settings.rosters[t]||[]).map(raw=>typeof raw==='string'?{name:raw,points:0}:raw);
-    const imported=fa.length?`<div class="panel"><h2>Free Agency Import</h2><div class="note">Import a workbook containing Pokémon and point values. Taken status is inferred from the current rosters; an optional Taken/Drafted By/Team column is also accepted.</div><div class="row" style="align-items:flex-end;margin-top:12px"><div><label>Free agency workbook</label><input id="faFile" type="file" accept=".xlsx,.xls,.csv"></div><div style="flex:0"><button class="primary" id="faImport">Import / replace free agency</button></div></div><div id="faStatus" class="log"></div></div>`:`<div class="panel"><h2>Free Agency Import</h2><div class="note">Import a workbook with Pokémon names and point values. Supported columns include Pokémon/Species, Points/Cost, and optional Taken/Drafted By/Team.</div><div class="row" style="align-items:flex-end;margin-top:12px"><div><label>Free agency workbook</label><input id="faFile" type="file" accept=".xlsx,.xls,.csv"></div><div style="flex:0"><button class="primary" id="faImport">Import free agency</button></div></div><div id="faStatus" class="log"></div></div>`;
-    contentEl.innerHTML=imported+`<div class="panel"><h2>Make a trade</h2><div class="note">Select a free-agent Pokémon, send it to a team, and optionally choose the Pokémon it replaces. The roster is updated immediately and all public pages will read the new roster.</div><div class="trade-grid" style="margin-top:14px"><div><label>Free-agent Pokémon</label><select id="tradeMon"><option value="">Select Pokémon…</option>${fa.map(m=>{const owner=currentOwner(m.name);return `<option value="${escapeHtml(m.name)}" ${owner?'disabled':''}>${escapeHtml(m.name)} — ${m.points} pts${owner?' — '+escapeHtml(owner.team):''}</option>`}).join('')}</select></div><div><label>Destination team</label><select id="tradeTeam"><option value="">Select team…</option>${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div><div><label>Replace Pokémon (optional)</label><select id="tradeReplace"><option value="">No replacement</option></select></div></div><div id="tradePreview" class="note" style="margin-top:12px"></div><div class="trade-actions"><button class="primary" id="executeTrade">Complete trade</button></div></div><div class="panel"><h2>Current free agency</h2><div class="note">${fa.length?fa.length+' Pokémon imported. Current roster ownership is highlighted automatically.':'No free agency list imported yet.'}</div>${fa.length?`<div class="fa-import-table"><table><thead><tr><th>Pokémon</th><th class="num">Points</th><th>Status</th></tr></thead><tbody>${fa.map(m=>{const owner=currentOwner(m.name);return `<tr><td>${escapeHtml(m.name)}</td><td class="num">${m.points}</td><td class="${owner?'taken-yes':'taken-no'}">${owner?`Taken — ${escapeHtml(owner.team)}`:'Undrafted'}</td></tr>`}).join('')}</tbody></table></div>`:''}</div>`;
-    const monSel=$('tradeMon'),teamSel=$('tradeTeam'),repSel=$('tradeReplace'),preview=$('tradePreview');
-    function updateReplace(){ const t=teamSel.value; const mons=rosterByTeam[t]||[]; repSel.innerHTML='<option value="">No replacement</option>'+mons.map(m=>`<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)} — ${Number(m.points)||0} pts</option>`).join(''); updatePreview(); }
-    function updatePreview(){ const m=fa.find(x=>faKey(x.name)===faKey(monSel.value)); const t=teamSel.value; const rep=(rosterByTeam[t]||[]).find(x=>faKey(x.name)===faKey(repSel.value)); if(!m||!t){preview.innerHTML='';return} const spent=(rosterByTeam[t]||[]).reduce((a,x)=>a+(Number(x.points)||0),0); const after=spent+(m.points-(rep?Number(rep.points)||0:0)); preview.innerHTML=`Current spend: <strong>${spent}</strong> pts · After trade: <strong>${after}</strong> pts · Remaining: <strong>${120-after}</strong> pts${after>120?' <span class="trade-warning">— over budget</span>':''}`; }
-    monSel.addEventListener('change',updatePreview); teamSel.addEventListener('change',updateReplace); repSel.addEventListener('change',updatePreview);
-    $('faImport').onclick=async()=>{ const f=$('faFile').files?.[0],st=$('faStatus'); if(!f){st.textContent='Choose a workbook first.';return} try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const mons=parseFreeAgencyWorkbook(wb);if(!mons.length)throw new Error('No Pokémon/point rows detected.');STATE.settings.freeAgency={mons,updatedAt:Date.now()};await saveSettings();renderTrades();}catch(e){st.textContent='Import failed: '+e.message} };
-    $('executeTrade').onclick=async()=>{ const m=fa.find(x=>faKey(x.name)===faKey(monSel.value)); const team=teamSel.value; const rep=repSel.value; if(!m||!team){alert('Select a Pokémon and destination team.');return} const arr=STATE.settings.rosters[team]||[]; const existing=arr.findIndex(x=>faKey(typeof x==='string'?x:x?.name)===faKey(rep)); if(rep && existing<0){alert('Replacement Pokémon was not found on that team.');return} const next=arr.slice(); if(existing>=0) next.splice(existing,1); next.push({name:m.name,points:m.points}); const spend=next.reduce((a,x)=>a+(Number(typeof x==='string'?0:x.points)||0),0); if(spend>120&&!confirm(`This trade leaves ${team} ${spend-120} points over budget. Complete anyway?`)) return; STATE.settings.rosters[team]=next; await saveSettings(); await savePublishedRosters(STATE.settings.rosters); renderTrades(); };
+
+  async function saveFreeAgencyPool(pool, sourceName){
+    STATE.settings = STATE.settings || {};
+
+    STATE.settings.freeAgency = {
+      mons: pool.map(mon => ({
+        name: String(mon.name),
+        points: Number(mon.points) || 0
+      })),
+      source: String(sourceName || 'DRAFT BOARD'),
+      updatedAt: new Date().toISOString()
+    };
+
+    await saveSharedState();
+  }
+
+  function renderFreeAgency(){
+
+    const current =
+      Array.isArray(STATE.settings?.freeAgency?.mons)
+        ? STATE.settings.freeAgency.mons
+        : [];
+
+    contentEl.innerHTML = `
+
+      <div class="panel">
+
+        <h2>Free Agency</h2>
+
+        <div class="note">
+          Import the <strong>DRAFT BOARD</strong> sheet from the
+          Season 15 Tier List workbook. Pokémon receive the point
+          value of the column they appear under.
+        </div>
+
+        <div class="row"
+             style="align-items:flex-end;margin-top:14px">
+
+          <div>
+
+            <label for="freeAgencyFile">
+              Tier List workbook
+            </label>
+
+            <input
+              id="freeAgencyFile"
+              type="file"
+              accept=".xlsx,.xls"
+            >
+
+          </div>
+
+          <div style="flex:0">
+
+            <button
+              class="primary"
+              id="importFreeAgency"
+            >
+              Preview DRAFT BOARD
+            </button>
+
+          </div>
+
+        </div>
+
+        <div
+          id="freeAgencyStatus"
+          style="margin-top:12px">
+        </div>
+
+      </div>
+
+      <div class="panel">
+
+        <h2>
+          Published Free Agency Pool
+          <span class="badge">
+            ${current.length} Pokémon
+          </span>
+        </h2>
+
+        ${
+          current.length
+          ?
+          `<div class="note">
+             ${
+               STATE.settings.freeAgency?.source
+                 ? `Source: ${escapeHtml(
+                     STATE.settings.freeAgency.source
+                   )}`
+                 : ''
+             }
+           </div>
+
+           <div
+             class="roster-admin-grid"
+             style="margin-top:14px">
+
+             ${
+               [...current]
+                 .sort(
+                   (a,b) =>
+                     Number(b.points)-Number(a.points) ||
+                     a.name.localeCompare(b.name)
+                 )
+                 .map(mon => `
+                   <div class="roster-admin-card">
+
+                     <h3>
+                       ${escapeHtml(mon.name)}
+                     </h3>
+
+                     <div class="badge">
+                       ${Number(mon.points) || 0} points
+                     </div>
+
+                   </div>
+                 `)
+                 .join('')
+             }
+
+           </div>`
+          :
+          `<div class="empty-state">
+             No Free Agency pool has been published yet.
+           </div>`
+        }
+
+      </div>
+    `;
+
+    const fileInput =
+      document.getElementById('freeAgencyFile');
+
+    const importBtn =
+      document.getElementById('importFreeAgency');
+
+    const status =
+      document.getElementById('freeAgencyStatus');
+
+    importBtn.addEventListener(
+      'click',
+      async ()=>{
+
+        const file =
+          fileInput?.files?.[0];
+
+        if(!file){
+
+          status.innerHTML =
+            `<div class="note danger">
+               Choose the Tier List workbook first.
+             </div>`;
+
+          return;
+        }
+
+        importBtn.disabled = true;
+
+        status.innerHTML =
+          `<div class="note">
+             Reading DRAFT BOARD…
+           </div>`;
+
+        try{
+
+          const buffer =
+            await file.arrayBuffer();
+
+          const wb =
+            XLSX.read(
+              buffer,
+              {
+                type:'array',
+                cellDates:false
+              }
+            );
+
+          const pool =
+            parseFreeAgencyDraftBoard(wb);
+
+          status.innerHTML = `
+
+            <div
+              class="panel"
+              style="padding:14px">
+
+              <strong>
+                DRAFT BOARD ready
+              </strong>
+
+              <div
+                class="note"
+                style="margin-top:6px">
+
+                Found
+                <strong>${pool.length}</strong>
+                Pokémon.
+
+                ${
+                  wb.SheetNames.find(
+                    n =>
+                      String(n).trim().toLowerCase()
+                      === 'draft board'
+                  )
+                  ? 'Using the DRAFT BOARD sheet.'
+                  : `Using "${escapeHtml(
+                      wb.SheetNames[0]
+                    )}" as the first worksheet.`
+                }
+
+              </div>
+
+              <div
+                style="
+                  max-height:420px;
+                  overflow:auto;
+                  margin-top:12px;
+                ">
+
+                <table>
+
+                  <thead>
+                    <tr>
+                      <th>Pokémon</th>
+                      <th>Points</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    ${
+                      pool.map(mon => `
+                        <tr>
+                          <td>
+                            ${escapeHtml(mon.name)}
+                          </td>
+                          <td class="num">
+                            ${mon.points}
+                          </td>
+                        </tr>
+                      `).join('')
+                    }
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+              <div
+                class="foot-actions"
+                style="margin-top:14px">
+
+                <button
+                  class="primary"
+                  id="publishFreeAgency"
+                >
+                  Publish Free Agency Pool
+                </button>
+
+                <button
+                  class="ghost"
+                  id="cancelFreeAgency"
+                >
+                  Cancel
+                </button>
+
+              </div>
+
+            </div>
+          `;
+
+          document
+            .getElementById('cancelFreeAgency')
+            .addEventListener(
+              'click',
+              renderFreeAgency
+            );
+
+          document
+            .getElementById('publishFreeAgency')
+            .addEventListener(
+              'click',
+              async ()=>{
+
+                const publishBtn =
+                  document.getElementById(
+                    'publishFreeAgency'
+                  );
+
+                publishBtn.disabled = true;
+
+                try{
+
+                  await saveFreeAgencyPool(
+                    pool,
+                    file.name
+                  );
+
+                  renderFreeAgency();
+
+                }catch(err){
+
+                  console.error(err);
+
+                  status.innerHTML =
+                    `<div class="note danger">
+                       Could not publish Free Agency:
+                       ${escapeHtml(err.message)}
+                     </div>`;
+
+                  publishBtn.disabled = false;
+                }
+
+              }
+            );
+
+        }catch(err){
+
+          console.error(
+            'Free Agency import failed:',
+            err
+          );
+
+          status.innerHTML =
+            `<div class="note danger">
+               <strong>Import failed:</strong>
+               ${escapeHtml(err.message)}
+             </div>`;
+
+        }finally{
+
+          importBtn.disabled = false;
+
+        }
+
+      }
+    );
+
   }
 
   function renderSettings(){
