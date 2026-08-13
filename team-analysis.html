@@ -152,7 +152,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
       <option value="overview">Team Overview</option>
       <option value="speed">Speed Tiers</option><option value="comparison">Team Comparison</option>
     </select></div>
-    <div class="fixed"><a class="nav-link" href="rosters.html" style="margin-right:8px;">Rosters</a><button id="backDashboard">← Stats Dashboard</button></div>
+    <div class="fixed"><button id="backDashboard">← Stats Dashboard</button></div>
   </div>
 </header>
 <div id="main"></div>
@@ -167,22 +167,43 @@ const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let STATE={replays:{},teamMap:{},settings:{caseInsensitiveNames:true,rosters:{}},speedSort:'name'};
 const $=id=>document.getElementById(id);
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
-function norm(s){return String(s||'').trim().toLowerCase().replace(/[-_]/g,' ')}
-function teamFor(u){const k=String(u||'').trim().toLowerCase();return STATE.teamMap[k]||String(u||'').trim()||'Unknown'}
+function norm(s){
+  const raw=String(s??'').trim().toLowerCase().replace(/[-_]/g,' ');
+  // A legacy replay contains Comfey with the species text reversed as "yefmoc".
+  // Treat it as Comfey for all joins while preserving the replay statistics.
+  if(raw.replace(/\s+/g,'')==='yefmoc') return 'comfey';
+  return raw.replace(/\s+/g,' ');
+}
+function teamKey(s){return norm(s).replace(/[^a-z0-9]/g,'')}
+function sameTeam(a,b){return teamKey(a)===teamKey(b)}
+function teamFor(u){const raw=String(u||'').trim();const k=raw.toLowerCase();return STATE.teamMap[k]||raw||'Unknown'}
 function spriteId(s){return String(s||'').split('-').map(x=>x.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-')}
 function sprite(s,cls='sprite'){return `<img class="${cls}" src="https://play.pokemonshowdown.com/sprites/gen5/${spriteId(s)}.png" alt="${esc(s)}" loading="lazy" onerror="this.onerror=null;this.style.opacity='.2'">`}
 function allRows(){return Object.values(STATE.replays)}
-function rowsForTeam(team){return allRows().filter(r=>teamFor(r.players?.p1)===team||teamFor(r.players?.p2)===team)}
-function sideForTeam(r,team){if(teamFor(r.players?.p1)===team)return 'p1';if(teamFor(r.players?.p2)===team)return 'p2';return null}
-function monsForSide(r,side){const out={};for(const m of Object.values(r.mons||{})){if(m.side===side)out[norm(m.species)]=m}for(const sp of (r.teamRoster?.[side]||[])){const k=norm(sp);if(!out[k])out[k]={species:sp,appearances:0,kills:0,deaths:0,damageDealt:0,damageTaken:0,moves:{}}}return Object.values(out)}
+function rowsForTeam(team){return allRows().filter(r=>sameTeam(teamFor(r.players?.p1),team)||sameTeam(teamFor(r.players?.p2),team))}
+function sideForTeam(r,team){if(sameTeam(teamFor(r.players?.p1),team))return 'p1';if(sameTeam(teamFor(r.players?.p2),team))return 'p2';return null}
+function monsForSide(r,side){const out={};for(const m of Object.values(r.mons||{})){if(String(m?.side||'').toLowerCase()===side && m.species){const species=canonicalSpecies(m.species);out[norm(species)]={...m,species}}}for(const sp of (r.teamRoster?.[side]||[])){const k=norm(sp);if(!out[k])out[k]={species:sp,appearances:0,kills:0,deaths:0,damageDealt:0,damageTaken:0,moves:{}}}return Object.values(out)}
 function rosterForTeam(team){
   const rosters=STATE.settings?.rosters||{};
-  const key=Object.keys(rosters).find(k=>norm(k)===norm(team));
-  return key ? (rosters[key]||[]) : [];
+  const key=Object.keys(rosters).find(k=>sameTeam(k,team));
+  return key ? (Array.isArray(rosters[key]) ? rosters[key] : []) : [];
 }
+function rosterMonName(mon){
+  if(typeof mon==='string') return mon.trim();
+  if(mon && typeof mon==='object') return String(mon.name ?? mon.species ?? mon.pokemon ?? '').trim();
+  return String(mon ?? '').trim();
+}
+function canonicalSpecies(s){return norm(s)==='comfey'?'Comfey':String(s??'').trim()}
 function hasCurrentRoster(team){return rosterForTeam(team).length>0}
 function aggregate(team){
   const games=rowsForTeam(team);const mons={};let wins=0;const pairCounts={};
+  const currentRoster=rosterForTeam(team);
+  // Seed the analysis with every current-roster Pokémon so the page represents
+  // the current roster even when a Pokémon has not appeared in a processed replay.
+  for(const mon of currentRoster){
+    const species=canonicalSpecies(rosterMonName(mon)); const k=norm(species);
+    if(species && !mons[k]) mons[k]={species,appearances:0,kills:0,deaths:0,dealt:0,taken:0,replays:new Set(),gameSets:[]};
+  }
   for(const r of games){
     const side=sideForTeam(r,team);if(!side)continue;
     const winner=String(r.winner||'').trim();const player=r.players?.[side]||'';
@@ -203,7 +224,7 @@ function aggregate(team){
     seen.sort();for(let i=0;i<seen.length;i++)for(let j=i+1;j<seen.length;j++){const key=seen[i]+'|'+seen[j];pairCounts[key]=(pairCounts[key]||0)+1}
   }
   if(hasCurrentRoster(team)){
-    const allowed=new Set(rosterForTeam(team).map(x=>norm(x)));
+    const allowed=new Set(currentRoster.map(x=>norm(rosterMonName(x))).filter(Boolean));
     Object.keys(mons).forEach(k=>{if(!allowed.has(norm(mons[k].species)))delete mons[k]});
     Object.keys(pairCounts).forEach(k=>{const [x,y]=k.split('|');if(!allowed.has(x)||!allowed.has(y))delete pairCounts[k]});
   }
@@ -517,9 +538,9 @@ async function speedTableForTeam(team){
 }
 
 function teamNames(){
-  return [...new Set(allRows().flatMap(r=>[
-    teamFor(r.players?.p1),teamFor(r.players?.p2)
-  ]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const replayTeams=allRows().flatMap(r=>[teamFor(r.players?.p1),teamFor(r.players?.p2)]).filter(Boolean);
+  const rosterTeams=Object.keys(STATE.settings?.rosters||{});
+  return [...new Map([...replayTeams,...rosterTeams].map(t=>[teamKey(t),t])).values()].sort((a,b)=>a.localeCompare(b));
 }
 
 function statSignatureForMon(m){
@@ -832,8 +853,18 @@ async function load(){
     if(error)throw error;
     for(const row of data||[]){
       if(row.replay_id===STATE_ID){
-        STATE.teamMap=row.replay_data?.teamMap||{};
-        STATE.settings=Object.assign(STATE.settings,row.replay_data?.settings||{}); STATE.settings.rosters=STATE.settings.rosters||{};
+        const shared=row.replay_data||{};
+        STATE.teamMap=shared.teamMap||{};
+        STATE.settings=Object.assign(STATE.settings,shared.settings||{});
+        STATE.settings.rosters=STATE.settings.rosters||{};
+        if(shared.replays && typeof shared.replays==='object'){
+          for(const [id,replay] of Object.entries(shared.replays)) if(id && replay) STATE.replays[id]=replay;
+        }
+      }else if(row.replay_id==='__rosters__'){
+        const published=row.replay_data?.rosters;
+        if(published && typeof published==='object' && Object.keys(STATE.settings.rosters||{}).length===0){
+          STATE.settings.rosters=published;
+        }
       }else if(row.replay_id){
         STATE.replays[row.replay_id]=row.replay_data||{};
       }
@@ -843,9 +874,11 @@ async function load(){
     return;
   }
 
-  const teams=[...new Set(allRows()
+  const replayTeams=allRows()
     .flatMap(r=>[teamFor(r.players?.p1),teamFor(r.players?.p2)])
-    .filter(Boolean))]
+    .filter(Boolean);
+  const rosterTeams=Object.keys(STATE.settings?.rosters||{});
+  const teams=[...new Set([...replayTeams,...rosterTeams])]
     .sort((a,b)=>a.localeCompare(b));
 
   const qs=new URLSearchParams(location.search);

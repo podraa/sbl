@@ -462,8 +462,6 @@
     <button data-tab="causes">Death Stats</button>
     <button data-tab="teamcompare">Standings</button>
     <button data-tab="teams">Franchise Stats</button>
-    <a class="nav-link" href="rosters.html" style="align-self:center;margin-left:4px;">Rosters ↗</a>
-    <a class="nav-link" href="team-analysis.html" style="align-self:center;margin-left:4px;">Team Analysis ↗</a>
     <button data-tab="replays">Replay Browser</button>
   </nav>
 
@@ -502,7 +500,16 @@
       let sharedState = null;
       for(const row of (data || [])){
         if(row.replay_id === SUPABASE_STATE_ID) sharedState = row.replay_data || {};
+        else if(row.replay_id === '__rosters__') { /* metadata only; never a replay */ }
         else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
+      }
+      // Some older shared-state backups stored replays inside __dashboard_state__;
+      // the current schema stores them as individual rows. Support both so a state
+      // migration can never blank the public dashboard.
+      if(sharedState && sharedState.replays && typeof sharedState.replays === 'object') {
+        for(const [id, replay] of Object.entries(sharedState.replays)) {
+          if(id && replay && typeof replay === 'object') replays[id] = replay;
+        }
       }
       STATE.replays = replays;
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
@@ -519,6 +526,10 @@
         loaded = true;
       }
       if(IS_ADMIN_PAGE) showAdminError('Could not load shared data: ' + e.message);
+      else {
+        const el=document.getElementById('content');
+        if(el) el.innerHTML=`<div class="panel"><div class="empty-state"><strong>Could not load shared dashboard data.</strong><br>${escapeHtml(e.message||e)}</div></div>`;
+      }
     }finally{
       loadingFromRemote = false;
     }
@@ -644,7 +655,11 @@
   }
 
   // ---------- helpers ----------
-  function normName(n){ return n.trim().toLowerCase().replace(/-/g,' ').replace(/_/g,' '); }
+  function normName(n){
+    const raw=String(n??'').trim().toLowerCase().replace(/-/g,' ').replace(/_/g,' ').replace(/\s+/g,' ');
+    if(raw.replace(/\s+/g,'')==='yefmoc') return 'comfey';
+    return raw;
+  }
   function toShowdownId(species){
     // Showdown's sprite filenames keep the hyphen as a forme separator
     // (landorus-therian.png, ho-oh.png, porygon-z.png, necrozma-dusk-mane.png)
@@ -694,8 +709,16 @@
   // this is what keeps e.g. "Team Fire" and "team fire" from splitting into
   // two separate teams just because they were typed differently at different times.
   function groupKey(value){
-    return STATE.settings.caseInsensitiveNames ? value.trim().toLowerCase() : value.trim();
+    return STATE.settings.caseInsensitiveNames ? String(value||'').trim().toLowerCase() : String(value||'').trim();
   }
+  function rosterTeamKey(value){ return String(value||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''); }
+  function sameRosterTeam(a,b){ return rosterTeamKey(a)===rosterTeamKey(b); }
+  function rosterMonName(mon){
+    if(typeof mon==='string') return mon.trim();
+    if(mon && typeof mon==='object') return String(mon.name ?? mon.species ?? mon.pokemon ?? '').trim();
+    return String(mon??'').trim();
+  }
+  function canonicalRosterSpecies(mon){ const s=rosterMonName(mon); return normName(s)==='comfey'?'Comfey':s; }
   function extractReplayId(url){
     url = url.trim();
     if(!url) return null;
@@ -1100,8 +1123,9 @@
     for(const r of allReplays(weekFilter)){
       for(const k in r.mons){
         const m = r.mons[k];
-        const nk = normName(m.species);
-        if(!out[nk]) out[nk] = {species:m.species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[], coaches:new Set()};
+        const displaySpecies = normName(m.species)==='comfey' ? 'Comfey' : m.species;
+        const nk = normName(displaySpecies);
+        if(!out[nk]) out[nk] = {species:displaySpecies, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[], coaches:new Set()};
         out[nk].dealt += m.damageDealt;
         out[nk].taken += m.damageTaken;
         out[nk].kills += m.kills;
@@ -1117,32 +1141,56 @@
 
   function rosterForTeam(team){
     const rosters=STATE.settings?.rosters||{};
-    const key=Object.keys(rosters).find(k=>groupKey(k)===groupKey(team));
-    return key ? (rosters[key]||[]) : [];
+    const key=Object.keys(rosters).find(k=>sameRosterTeam(k,team));
+    return key ? (Array.isArray(rosters[key]) ? rosters[key] : []) : [];
+  }
+  function rosterMonName(mon){
+    if(typeof mon==='string') return mon.trim();
+    if(mon && typeof mon==='object') return String(mon.name ?? mon.species ?? mon.pokemon ?? '').trim();
+    return String(mon ?? '').trim();
   }
   function isCurrentRosterPokemon(team,species){
     const r=rosterForTeam(team);
-    return !r.length || r.some(x=>normName(x)===normName(species));
+    return !r.length || r.some(x=>normName(canonicalRosterSpecies(x))===normName(species));
   }
 
   function teamPokemonStats(weekFilter){
     const groups = {}; // groupKey -> { label, species: {normSpecies -> stats} }
+
+    // Seed every current roster team, even if it has no processed replay yet.
+    for(const [rosterTeam, roster] of Object.entries(STATE.settings?.rosters || {})){
+      const team = rosterTeam;
+      const gk = groupKey(team);
+      if(!groups[gk]) groups[gk] = { label: team, species: {} };
+      for(const mon of (roster || [])){
+        const species = canonicalRosterSpecies(mon), nk = normName(species);
+        if(species && !groups[gk].species[nk]) groups[gk].species[nk] = {species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
+      }
+    }
+
     for(const r of allReplays(weekFilter)){
       for(const side of ['p1','p2']){
-        const team = teamFor(r.players[side]);
+        const team = teamFor(r.players?.[side]);
+        if(!team || team==='Unknown') continue;
         const gk = groupKey(team);
         if(!groups[gk]) groups[gk] = { label: team, species: {} };
         const bucket = groups[gk].species;
-        for(const k in r.mons){
+        const currentRoster = rosterForTeam(team);
+        for(const mon of currentRoster){
+          const species = canonicalRosterSpecies(mon), nk = normName(species);
+          if(species && !bucket[nk]) bucket[nk] = {species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
+        }
+        for(const k in (r.mons || {})){
           const m = r.mons[k];
-          if(m.side !== side) continue;
-          const nk = normName(m.species);
-          if(!bucket[nk]) bucket[nk] = {species:m.species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
-          bucket[nk].dealt += m.damageDealt;
-          bucket[nk].taken += m.damageTaken;
-          bucket[nk].kills += m.kills;
-          bucket[nk].deaths += m.deaths;
-          bucket[nk].games += m.appearances;
+          if(!m || m.side !== side || !m.species) continue;
+          const displaySpecies = normName(m.species)==='comfey' ? 'Comfey' : m.species;
+          const nk = normName(displaySpecies);
+          if(!bucket[nk]) bucket[nk] = {species:displaySpecies, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
+          bucket[nk].dealt += Number(m.damageDealt)||0;
+          bucket[nk].taken += Number(m.damageTaken)||0;
+          bucket[nk].kills += Number(m.kills)||0;
+          bucket[nk].deaths += Number(m.deaths)||0;
+          bucket[nk].games += Number(m.appearances)||0;
           if(m.killLog) bucket[nk].killLog.push(...m.killLog);
           if(m.deathLog) bucket[nk].deathLog.push(...m.deathLog);
         }
@@ -1774,7 +1822,13 @@
 
   function teamComparisonData(weekFilter){
     const out={};
+    // Current roster teams must remain visible even before they have replay data.
+    for(const rosterTeam of Object.keys(STATE.settings?.rosters||{})){
+      const key=groupKey(rosterTeam);
+      if(!out[key]) out[key]={team:rosterTeam,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0};
+    }
     for(const r of allReplays(weekFilter)){
+      if(!r || !r.players) continue;
       const sides=['p1','p2'];
       for(const side of sides){
         const team=teamFor(r.players[side]); const key=groupKey(team);
@@ -1842,7 +1896,9 @@
   }
 
   function renderTeams(){
-    const teams = Object.keys(teamPokemonStats('ALL')).sort();
+    const statTeams = Object.keys(teamPokemonStats('ALL'));
+    const rosterTeams = Object.keys(STATE.settings?.rosters||{});
+    const teams = [...new Set([...statTeams, ...rosterTeams])].sort();
     contentEl.innerHTML = `
       <div class="panel">
         <h2>Franchise Stats</h2>
