@@ -1,35 +1,210 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Current Rosters</title>
-<style>:root{--bg:#0d1117;--panel:#151b23;--panel-alt:#10161e;--border:#2a3340;--text:#edf2f7;--text-dim:#9aa7b5;--teal:#62d6c8}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}#app{max-width:1180px;margin:auto;padding:24px 18px 50px}h1{margin:0;font-size:28px}.sub{color:var(--text-dim);font-size:12px}.nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.nav a{color:var(--teal);text-decoration:none;border:1px solid var(--border);padding:7px 10px;border-radius:7px;background:var(--panel)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:15px}.head{display:flex;justify-content:space-between;align-items:center;gap:10px}.head h2{margin:0;font-size:18px}.count{font-size:10px;color:var(--text-dim);border:1px solid var(--border);padding:4px 7px;border-radius:999px}.mons{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:13px}.mon{display:flex;align-items:center;gap:7px;padding:7px;border:1px solid var(--border);border-radius:8px;background:var(--panel-alt)}.mon img{width:42px;height:42px;object-fit:contain}.mon span{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.empty{padding:30px;text-align:center;color:var(--text-dim);border:1px dashed var(--border);border-radius:10px}</style>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Current Rosters</title>
+
 <style>
-.roster-page{max-width:1180px;margin:0 auto;padding:28px 20px 48px}
-.roster-page h1{margin:0 0 6px;font-size:28px}
-.roster-page .roster-sub{margin:0 0 24px;color:var(--text-dim,#777);font-size:13px}
-.roster-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
-.roster-card{background:var(--panel,#fff);border:1px solid var(--border,#ddd);border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.06)}
-.roster-card-head{padding:16px 18px 13px;border-bottom:1px solid var(--border,#ddd);display:flex;align-items:center;justify-content:space-between;gap:12px}
-.roster-team-name{font-size:17px;font-weight:850}
-.roster-count{font-size:11px;color:var(--text-dim,#777);white-space:nowrap}
-.roster-mons{padding:8px 12px 12px}
-.roster-mon{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 7px;border-radius:10px}
-.roster-mon+.roster-mon{border-top:1px solid var(--border,#eee);border-radius:0}
-.roster-mon:hover{background:var(--panel-alt,#f7f7f7)}
-.roster-mon-sprite{width:54px;height:54px;object-fit:contain;image-rendering:pixelated}
-.roster-mon-name{font-weight:750;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.roster-mon-points{font-family:var(--mono,monospace);font-weight:850;font-size:14px;padding:5px 9px;border:1px solid var(--border,#ddd);border-radius:7px;background:var(--panel-alt,#f7f7f7);white-space:nowrap}
-.roster-empty{padding:30px;text-align:center;color:var(--text-dim,#777);border:1px dashed var(--border,#ddd);border-radius:12px}
-@media(max-width:600px){
-  .roster-page{padding:20px 12px 36px}
-  .roster-grid{grid-template-columns:1fr}
+:root{
+  --bg:#160308;
+  --panel:#24060d;
+  --panel-alt:#310a14;
+  --border:#4a1421;
+  --text:#f7eef0;
+  --text-dim:#b99da5;
+  --teal:#a9566d;
+  --amber:#c56880;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:14px 'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+
+#app{
+  width:min(1500px,calc(100% - 32px));
+  margin:auto;
+  padding:26px 0 64px;
+}
+
+header{margin-bottom:24px}
+
+h1{
+  font-size:clamp(24px,2vw,30px);
+  margin:0 0 4px;
+}
+
+.sub{
+  color:var(--text-dim);
+  font-size:14px;
+  line-height:1.5;
+  margin:0 0 22px;
+}
+
+.nav{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:16px 0;
+}
+
+.nav a{
+  color:var(--teal);
+  text-decoration:none;
+  border:1px solid var(--border);
+  padding:8px 12px;
+  border-radius:8px;
+  background:var(--panel);
+  font-weight:600;
+}
+
+.nav a:hover{
+  border-color:var(--amber);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:16px;
+}
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:18px;
+}
+
+.head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.head h2{
+  margin:0;
+  font-size:20px;
+  line-height:1.2;
+}
+
+.count{
+  font-size:11px;
+  color:var(--text-dim);
+  border:1px solid var(--border);
+  padding:5px 9px;
+  border-radius:999px;
+  white-space:nowrap;
+}
+
+.mons{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+
+.mon{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:11px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--panel-alt);
+}
+
+.mon img{
+  width:60px;
+  height:60px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  flex:0 0 60px;
+}
+
+.mon-info{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  flex:1;
+}
+
+.mon-name{
+  font-size:14px;
+  font-weight:750;
+  color:var(--text);
+  line-height:1.2;
+}
+
+.mon-team{
+  margin-top:3px;
+  font-size:11px;
+  color:var(--text-dim);
+}
+
+.mon-points{
+  margin-top:6px;
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  padding:4px 8px;
+  border-radius:999px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  font-size:11px;
+  font-weight:800;
+  color:var(--amber);
+}
+
+.empty{
+  padding:34px;
+  text-align:center;
+  color:var(--text-dim);
+  border:1px dashed var(--border);
+  border-radius:12px;
+  background:var(--panel);
+}
+
+.page-nav{
+  position:fixed;
+  top:14px;
+  right:18px;
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.page-nav label{
+  font-size:11px;
+  color:var(--text-dim);
+  font-weight:700;
+}
+
+.page-nav select{
+  font:inherit;
+  font-size:12px;
+  padding:7px 30px 7px 10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--panel);
+  color:var(--text);
+}
+
+@media(max-width:700px){
+  #app{width:min(100% - 20px,1500px)}
+  .page-nav{top:8px;right:8px}
+  .page-nav label{display:none}
 }
 </style>
 </head>
+
 <body>
-<style>
-.page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
-.page-nav label{font-size:11px;color:var(--text-dim,#777);font-weight:700}
-.page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--panel,#fff);color:var(--text,#222);box-shadow:0 2px 8px rgba(0,0,0,.08)}
-@media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
-</style>
 
 <div class="page-nav">
   <label for="pageNavSelect">Page</label>
@@ -39,26 +214,141 @@
     <option value="team-analysis.html">Team Analysis</option>
   </select>
 </div>
-<div id="app"><header><h1>Current Rosters</h1><p class="sub">The currently published Pokémon rosters for every franchise.</p><div class="nav"><a href="index.html">Stats Dashboard</a><a href="team-analysis.html">Team Analysis</a><a href="admin.html">Admin</a></div></header><main id="content"><div class="empty">Loading rosters…</div></main></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-function renderRosterCards(ROSTERS){
-  const teams=Object.keys(ROSTERS||{}).sort((a,b)=>a.localeCompare(b));
-  return `<main class="roster-page"><h1>Current Rosters</h1><p class="roster-sub">Each team's current roster, including Pokémon point values.</p><div class="roster-grid">${teams.map(team=>{const mons=ROSTERS[team]||[];return `<article class="roster-card"><div class="roster-card-head"><div class="roster-team-name">${esc(team)}</div><div class="roster-count">${mons.length} Pokémon</div></div><div class="roster-mons">${mons.map(m=>{const name=typeof m==='string'?m:(m.species||m.name||'');const points=typeof m==='object'?(m.points??m.pointValue??m.cost??''):'';return `<div class="roster-mon">${sprite(name,'roster-mon-sprite')}<div class="roster-mon-name">${esc(name)}</div><div class="roster-mon-points">${points!==''?esc(points)+' pts':'—'}</div></div>`}).join('')}</div></article>`}).join('')}</div></main>`;
+
+<div id="app">
+  <header>
+    <h1>Current Rosters</h1>
+    <p class="sub">
+      The currently published Pokémon rosters for every franchise.
+    </p>
+
+    <div class="nav">
+      <a href="index.html">Stats Dashboard</a>
+      <a href="team-analysis.html">Team Analysis</a>
+      <a href="admin.html">Admin</a>
+    </div>
+  </header>
+
+  <main id="content">
+    <div class="empty">Loading rosters…</div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const supabase = window.supabase.createClient(
+  'https://dfxdkkemltukxaklhcpo.supabase.co',
+  'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
+);
+
+const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({
+  '&':'&amp;',
+  '<':'&lt;',
+  '>':'&gt;',
+  "'":'&#39;',
+  '"':'&quot;'
+}[c]));
+
+const sid = s => String(s || '')
+  .split('-')
+  .map(x => x.toLowerCase().replace(/[^a-z0-9]/g,''))
+  .filter(Boolean)
+  .join('-');
+
+const sprite = s => `
+  <img
+    src="https://play.pokemonshowdown.com/sprites/gen5/${sid(s)}.png"
+    alt="${esc(s)}"
+    onerror="this.style.opacity='.2'"
+  >`;
+
+function renderPokemon(franchise, mon){
+  const p = typeof mon === 'string'
+    ? { name: mon, points: null }
+    : mon;
+
+  return `
+    <div class="mon">
+      ${sprite(p.name)}
+      <div class="mon-info">
+        <div class="mon-name">${esc(p.name)}</div>
+        <div class="mon-team">${esc(franchise)}</div>
+        ${p.points != null
+          ? `<div class="mon-points">${p.points} pts</div>`
+          : ''}
+      </div>
+    </div>
+  `;
 }
-</script><script>
-const supabase=window.supabase.createClient('https://dfxdkkemltukxaklhcpo.supabase.co','sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN');
-const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));const sid=s=>String(s||'').split('-').map(x=>x.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-');const sprite=s=>`<img src="https://play.pokemonshowdown.com/sprites/gen5/${sid(s)}.png" alt="${esc(s)}" onerror="this.style.opacity='.2'">`;
-(async()=>{try{const {data,error}=await supabase.from('replays').select('replay_id,replay_data');if(error)throw error;let settings={rosters:{}};for(const r of data||[])if(r.replay_id==='__dashboard_state__')settings=Object.assign(settings,r.replay_data?.settings||{});const rosters=settings.rosters||{};const teams=Object.keys(rosters).sort();document.getElementById('content').innerHTML=teams.length?`<div class="grid">${teams.map(t=>`<section class="card"><div class="head"><h2>${esc(t)}</h2><span class="count">${rosters[t].length} Pokémon</span></div><div class="mons">${rosters[t].map(p=>`<div class="mon">${sprite(p)}<span>${esc(p)}</span></div>`).join('')}</div></section>`).join('')}</div>`:`<div class="empty">No current rosters have been published yet.</div>`}catch(e){document.getElementById('content').innerHTML=`<div class="empty">Could not load rosters: ${esc(e.message)}</div>`}})();
+
+(async () => {
+  try{
+    const {data, error} = await supabase
+      .from('replays')
+      .select('replay_id,replay_data');
+
+    if(error) throw error;
+
+    let settings = { rosters:{} };
+
+    for(const row of (data || [])){
+      if(row.replay_id === '__dashboard_state__'){
+        settings = Object.assign(
+          settings,
+          row.replay_data?.settings || {}
+        );
+      }
+    }
+
+    const rosters = settings.rosters || {};
+    const teams = Object.keys(rosters).sort();
+
+    document.getElementById('content').innerHTML = teams.length
+      ? `
+        <div class="grid">
+          ${teams.map(team => `
+            <section class="card">
+              <div class="head">
+                <h2>${esc(team)}</h2>
+                <span class="count">${rosters[team].length} Pokémon</span>
+              </div>
+
+              <div class="mons">
+                ${rosters[team].map(mon => renderPokemon(team, mon)).join('')}
+              </div>
+            </section>
+          `).join('')}
+        </div>
+      `
+      : `<div class="empty">No current rosters have been published yet.</div>`;
+
+  }catch(err){
+    document.getElementById('content').innerHTML = `
+      <div class="empty">
+        Could not load rosters: ${esc(err.message)}
+      </div>`;
+  }
+})();
 </script>
+
 <script>
 (function(){
-  const select=document.getElementById('pageNavSelect');
-  if(!select)return;
-  const current=location.pathname.split('/').pop()||'index.html';
-  select.value=['index.html','rosters.html','team-analysis.html'].includes(current)?current:'index.html';
-  select.addEventListener('change',function(){
-    if(this.value) location.href=this.value;
+  const select = document.getElementById('pageNavSelect');
+  if(!select) return;
+
+  const current = location.pathname.split('/').pop() || 'index.html';
+
+  select.value = [
+    'index.html',
+    'rosters.html',
+    'team-analysis.html'
+  ].includes(current) ? current : 'index.html';
+
+  select.addEventListener('change', function(){
+    if(this.value) location.href = this.value;
   });
 })();
 </script>
-</body></html>
+
+</body>
+</html>
