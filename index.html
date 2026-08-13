@@ -501,7 +501,10 @@
       for(const row of (data || [])){
         if(row.replay_id === SUPABASE_STATE_ID) sharedState = row.replay_data || {};
         else if(row.replay_id === '__rosters__') { /* metadata only; never a replay */ }
-        else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
+        else if(row.replay_id === '__rosters__' || row.replay_id === '__free_agency__'){
+          // Published metadata records are not replays.
+          continue;
+        } else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
       }
       // Some older shared-state backups stored replays inside __dashboard_state__;
       // the current schema stores them as individual rows. Support both so a state
