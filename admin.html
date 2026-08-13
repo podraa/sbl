@@ -234,8 +234,6 @@
     <button data-tab="global">Leaderboards</button>
     <button data-tab="goldenfist">Golden Fist</button>
     <button data-tab="teams">Franchise Stats</button>
-    <a class="nav-link" href="rosters.html" style="align-self:center;margin-left:4px;">Rosters ↗</a>
-    <a class="nav-link" href="team-analysis.html" style="align-self:center;margin-left:4px;">Team Analysis ↗</a>
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
     <button data-tab="settings">Settings</button>
@@ -280,8 +278,17 @@
       const replays = {};
       let sharedState = null;
       for(const row of (data || [])){
-        if(row.replay_id === SUPABASE_STATE_ID) sharedState = row.replay_data || {};
-        else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
+        if(row.replay_id === SUPABASE_STATE_ID){
+          sharedState = row.replay_data || {};
+          continue;
+        }
+        // __rosters__ is a separate published-roster record, not a replay.
+        // Never load it into STATE.replays or the dashboard aggregation will
+        // try to treat its roster payload as replay data.
+        if(row.replay_id === '__rosters__') continue;
+        if(row.replay_id && row.replay_data && row.replay_data.mons && row.replay_data.players){
+          replays[row.replay_id] = row.replay_data;
+        }
       }
       STATE.replays = replays;
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
@@ -345,15 +352,20 @@
 
   async function deleteAllRemote(){
     requireAdmin();
-    const {error} = await supabase.from('replays').delete().neq('replay_id', SUPABASE_STATE_ID);
+    const {data, error} = await supabase.from('replays').select('replay_id');
     if(error) throw error;
+    const ids = (data||[]).map(r=>r.replay_id).filter(id=>id && id!==SUPABASE_STATE_ID && id!=='__rosters__');
+    if(ids.length){
+      const {error: delErr}=await supabase.from('replays').delete().in('replay_id',ids);
+      if(delErr) throw delErr;
+    }
   }
 
   async function deleteRemoteRowsNotInState(){
     requireAdmin();
     const {data, error} = await supabase.from('replays').select('replay_id');
     if(error) throw error;
-    const stale = (data || []).map(r=>r.replay_id).filter(id => id !== SUPABASE_STATE_ID && !STATE.replays[id]);
+    const stale = (data || []).map(r=>r.replay_id).filter(id => id !== SUPABASE_STATE_ID && id !== '__rosters__' && !STATE.replays[id]);
     if(stale.length){
       const {error: delErr} = await supabase.from('replays').delete().in('replay_id', stale);
       if(delErr) throw delErr;
@@ -452,9 +464,26 @@
     const safe = escapeHtml(species);
     return `<img class="${cls}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
   }
+  function usernameKey(username){
+    return String(username || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g,'')
+      .replace(/[_-]+/g,'');
+  }
   function teamFor(username){
-    const key = (username||'').trim().toLowerCase();
-    return STATE.teamMap[key] || (username||'').trim() || 'Unknown';
+    const raw = String(username || '').trim();
+    if(!raw) return 'Unknown';
+    // First honor the exact lower-cased mapping used by existing saved data.
+    const exact = STATE.teamMap[raw.toLowerCase()];
+    if(exact) return exact;
+    // Then support harmless Showdown username variations such as
+    // Dossa_37 / dossa37 without requiring the mapping to be entered twice.
+    const key = usernameKey(raw);
+    for(const [mappedUser, team] of Object.entries(STATE.teamMap || {})){
+      if(usernameKey(mappedUser) === key) return team;
+    }
+    return raw;
   }
   // groups values that only differ by case/whitespace under one canonical label
   // (the first-seen casing) when "case-insensitive names" is on in Settings —
@@ -824,17 +853,17 @@
   }
 
   function ensureWeekStart(){
-    if(STATE.settings && STATE.settings.weekStartDate){
-      const d = new Date(STATE.settings.weekStartDate + 'T00:00:00');
-      if(!Number.isNaN(d.getTime())) return d;
-    }
     const dates = Object.values(STATE.replays)
       .map(replayTimestamp)
       .filter(Number.isFinite);
     if(!dates.length) return null;
+    // Always derive the season start from the earliest replay. This matters when
+    // a bulk import is pasted out of chronological order or an older replay is
+    // added later: automatic week numbers must remain chronological.
     const start = mondayStart(Math.min(...dates));
     if(start){
-      STATE.settings.weekStartDate = start.toISOString().slice(0,10);
+      const iso = start.toISOString().slice(0,10);
+      STATE.settings.weekStartDate = iso;
     }
     return start;
   }
@@ -850,8 +879,8 @@
   }
 
   function assignAutomaticWeeks(){
-    const start = ensureWeekStart();
-    if(!start) return;
+    // Manual overrides are sacred. Only automatic assignments are recalculated.
+    ensureWeekStart();
     for(const replay of Object.values(STATE.replays)){
       if(!replay.weekOverride){
         replay.week = automaticWeekForReplay(replay);
@@ -859,40 +888,73 @@
     }
   }
 
+  async function fetchReplayForImport(id){
+    const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
+    if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
+    const json = await resp.json();
+    const parsed = parseLog(json, id);
+    parsed.uploadtime = json.uploadtime;
+    parsed.weekOverride = false;
+    parsed.processedAt = Date.now();
+    return parsed;
+  }
+
   async function processUrls(urlsRaw, logEl){
-    const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
-    if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
-    let added = 0, skipped = 0, failed = 0;
-    for(const url of urls){
+    const rawLines = urlsRaw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    if(rawLines.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
+
+    // De-duplicate IDs before fetching, while preserving the order in which the
+    // user pasted them for the import log. Week assignment itself is based on
+    // replay upload timestamps, not paste order.
+    const ids = [];
+    const seen = new Set();
+    let invalid = 0, skipped = 0;
+    for(const url of rawLines){
       const id = extractReplayId(url);
-      if(!id){ appendLog(logEl, `Could not read a replay id from: ${url}`, true); failed++; continue; }
-      if(STATE.replays[id]){ appendLog(logEl, `Already processed: ${id} — skipped`, false); skipped++; continue; }
-      try{
-        const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
-        if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
-        const json = await resp.json();
-        const parsed = parseLog(json, id);
-        parsed.uploadtime = json.uploadtime;
-        parsed.weekOverride = false;
-        parsed.processedAt = Date.now();
-        STATE.replays[id] = parsed;
-        // Recalculate automatic weeks chronologically after adding the replay.
-        assignAutomaticWeeks();
-        appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
-        added++;
-      }catch(e){
-        appendLog(logEl, `✗ ${id} — ${e.message}`, true);
-        failed++;
+      if(!id){ appendLog(logEl, `Could not read a replay id from: ${url}`, true); invalid++; continue; }
+      if(seen.has(id) || STATE.replays[id]){
+        appendLog(logEl, `Already processed: ${id} — skipped`, false);
+        skipped++;
+        continue;
       }
+      seen.add(id);
+      ids.push(id);
     }
+    if(!ids.length){
+      appendLog(logEl, `Done. 0 added, ${skipped} already had, ${invalid} invalid, 0 failed.`, false);
+      return;
+    }
+
+    let added = 0, failed = 0;
+    const queue = ids.slice();
+    const worker = async()=>{
+      while(queue.length){
+        const id = queue.shift();
+        try{
+          const parsed = await fetchReplayForImport(id);
+          STATE.replays[id] = parsed;
+          appendLog(logEl, `✓ ${id}  (${parsed.players.p1 || '?'} vs ${parsed.players.p2 || '?'})`, false, true);
+          added++;
+        }catch(e){
+          appendLog(logEl, `✗ ${id} — ${e.message}`, true);
+          failed++;
+        }
+      }
+    };
+    // Fetch several replays at once so a large bulk import does not take forever,
+    // while avoiding an unbounded burst of requests.
+    await Promise.all(Array.from({length: Math.min(6, ids.length)}, worker));
+
+    // Assign ALL automatic weeks only after the complete bulk is loaded. This
+    // makes the result deterministic regardless of paste order or fetch timing.
     if(added > 0){
       assignAutomaticWeeks();
       await saveSettings();
       await saveReplays();
     }
-    appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${failed} failed.`, false);
+    appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${invalid} invalid, ${failed} failed.`, false);
     renderTicker();
-    render(); // refresh whatever tab is open
+    render();
   }
   function appendLog(el, text, isErr, isOk){
     const line = document.createElement('div');
@@ -913,6 +975,7 @@
   function globalPokemonStats(weekFilter){
     const out = {}; // normSpecies -> {species, dealt, taken, kills, deaths, games, coaches}
     for(const r of allReplays(weekFilter)){
+      if(!r || !r.mons || !r.players) continue;
       for(const k in r.mons){
         const m = r.mons[k];
         const nk = normName(m.species);
@@ -932,6 +995,7 @@
   function teamPokemonStats(weekFilter){
     const groups = {}; // groupKey -> { label, species: {normSpecies -> stats} }
     for(const r of allReplays(weekFilter)){
+      if(!r || !r.mons || !r.players) continue;
       for(const side of ['p1','p2']){
         const team = teamFor(r.players[side]);
         const gk = groupKey(team);
@@ -967,6 +1031,7 @@
   function usernameGameCounts(){
     const counts = {};
     for(const r of Object.values(STATE.replays)){
+      if(!r || !r.players) continue;
       for(const side of ['p1','p2']){
         const u = (r.players[side]||'').trim();
         if(!u) continue;
@@ -980,6 +1045,7 @@
   function findDuplicatePlayerGroups(){
     const seen = {}; // lowercase username -> raw display username (first seen casing)
     for(const r of Object.values(STATE.replays)){
+      if(!r || !r.players) continue;
       for(const side of ['p1','p2']){
         const u = (r.players[side]||'').trim();
         if(!u) continue;
@@ -1046,6 +1112,7 @@
   function usernamesForTeamLabel(label){
     const out = new Set();
     for(const r of Object.values(STATE.replays)){
+      if(!r || !r.players) continue;
       for(const side of ['p1','p2']){
         const u = (r.players[side]||'').trim();
         if(u && teamFor(u) === label) out.add(u);
@@ -1250,14 +1317,14 @@
     const rows = list.map(r => `
       <tr>
         <td>
-          <div style="display:flex;align-items:center;gap:8px;min-width:190px;">
+          <div style="display:flex;align-items:center;gap:8px;min-width:210px;flex-wrap:wrap;">
             <input type="text" class="week-override-input" data-week-id="${escapeHtml(r.id)}" value="${escapeHtml(r.week||'Unassigned')}" placeholder="Week 1">
-            ${r.weekOverride ? '<span class="badge" title="Manual week override — reprocessing will preserve this week">Manual</span>' : ''}
+            ${r.weekOverride ? '<span class="badge" title="Manual week override — reprocessing will preserve this week">Manual</span>' : '<span class="badge" title="Automatically assigned from replay upload date">Auto</span>'}
           </div>
         </td>
         <td>${escapeHtml(r.players.p1||'?')} <span style="color:var(--text-dim)">vs</span> ${escapeHtml(r.players.p2||'?')}</td>
         <td style="color:var(--text-dim)">${escapeHtml(r.format||'')}</td>
-        <td class="num" style="white-space:nowrap;"><button class="ghost small" data-save-week="${escapeHtml(r.id)}">Save week</button> <button class="ghost small danger-btn" data-remove="${escapeHtml(r.id)}">Remove</button></td>
+        <td class="num" style="white-space:nowrap;"><button class="ghost small" data-save-week="${escapeHtml(r.id)}">Save week</button> ${r.weekOverride ? `<button class="ghost small" data-auto-week="${escapeHtml(r.id)}">Auto</button>` : ''} <button class="ghost small danger-btn" data-remove="${escapeHtml(r.id)}">Remove</button></td>
       </tr>`).join('');
     setTimeout(()=>{
       document.querySelectorAll('[data-save-week]').forEach(btn=>{
@@ -1269,6 +1336,19 @@
           const week = input.value.trim() || 'Unassigned';
           replay.week = week;
           replay.weekOverride = true;
+          await saveReplays();
+          renderTicker();
+          render();
+        });
+      });
+      document.querySelectorAll('[data-auto-week]').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          const id = btn.dataset.autoWeek;
+          const replay = STATE.replays[id];
+          if(!replay) return;
+          replay.weekOverride = false;
+          replay.week = automaticWeekForReplay(replay);
+          assignAutomaticWeeks();
           await saveReplays();
           renderTicker();
           render();
@@ -1415,10 +1495,11 @@
   function playerReplayGroups(){
     const groups = {}; // lowercase username -> {label, team, replays:[]}
     for(const r of Object.values(STATE.replays)){
+      if(!r || !r.players) continue;
       for(const side of ['p1','p2']){
         const uname = (r.players[side]||'').trim();
         if(!uname) continue;
-        const key = uname.toLowerCase();
+        const key = usernameKey(uname);
         if(!groups[key]) groups[key] = { label: uname, team: teamFor(uname), replays: [] };
         const oppSide = side === 'p1' ? 'p2' : 'p1';
         groups[key].replays.push({
@@ -1773,7 +1854,8 @@
       render();
     });
     document.getElementById('addMap').addEventListener('click', async ()=>{
-      const u = document.getElementById('newUser').value.trim().toLowerCase();
+      const rawUser = document.getElementById('newUser').value.trim();
+      const u = rawUser.toLowerCase();
       const t = document.getElementById('newTeam').value.trim();
       if(!u || !t) return;
       STATE.teamMap[u] = t;
@@ -1810,7 +1892,8 @@
         if(!confirm(`This will replace your current data with the backup (${Object.keys(data.replays).length} replays). Continue?`)) return;
         STATE.replays = data.replays || {};
         STATE.teamMap = data.teamMap || {};
-        STATE.settings = Object.assign({caseInsensitiveNames:true}, data.settings || {});
+        STATE.settings = Object.assign({caseInsensitiveNames:true, rosters:{}}, data.settings || {});
+        STATE.settings.rosters = STATE.settings.rosters || {};
         await deleteRemoteRowsNotInState();
         await saveReplays();
         await saveTeamMap();
@@ -1853,105 +1936,13 @@
 (function(){
   const select=document.getElementById('pageNavSelect');
   if(!select)return;
-  const current=location.pathname.split('/').pop()||'index.html';
-  select.value=['index.html','rosters.html','team-analysis.html'].includes(current)?current:'index.html';
+  const current=location.pathname.split('/').pop()||'admin.html';
+  // Admin is not one of the public-page choices; keep the selector on Stats Dashboard
+  // when navigating back from the public pages.
+  select.value='index.html';
   select.addEventListener('change',function(){
     if(this.value) location.href=this.value;
   });
-
-/* =========================================================
-   ROSTER EXCEL IMPORT
-   - Safe additive feature
-   - Does NOT modify replay processing, leaderboards,
-     Golden Fist, franchise stats, or any existing logic
-   ========================================================= */
-
-const rosterFileInput = document.getElementById('rosterFile');
-const uploadRosterBtn = document.getElementById('uploadRosterBtn');
-const rosterUploadLog = document.getElementById('rosterUploadLog');
-
-function logRosterUpload(message, ok = true){
-  if(!rosterUploadLog) return;
-  rosterUploadLog.innerHTML = `<span class="${ok ? 'ok' : 'err'}">${message}</span>`;
-}
-
-function normalizeRosterName(name){
-  return String(name || '')
-    .replace(/[_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-if(uploadRosterBtn){
-  uploadRosterBtn.addEventListener('click', async () => {
-    try{
-
-      const file = rosterFileInput?.files?.[0];
-      if(!file){
-        logRosterUpload('Choose an Excel workbook first.', false);
-        return;
-      }
-
-      uploadRosterBtn.disabled = true;
-      logRosterUpload('Reading workbook…');
-
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer);
-
-      const importedRosters = {};
-
-      workbook.SheetNames.forEach(sheetName => {
-        const sheet = workbook.Sheets[sheetName];
-        if(!sheet) return;
-
-        const rows = XLSX.utils.sheet_to_json(sheet, {
-          header: 1,
-          defval: ''
-        });
-
-        const mons = [];
-
-        rows.forEach(row => {
-          const rawPoints = row[0];
-          const rawName = row[2];
-
-          const points = Number(rawPoints);
-          const name = normalizeRosterName(rawName);
-
-          if(!name) return;
-          if(Number.isNaN(points)) return;
-
-          mons.push({
-            name,
-            points
-          });
-        });
-
-        if(mons.length){
-          importedRosters[normalizeRosterName(sheetName)] = mons;
-        }
-      });
-
-      STATE.settings = STATE.settings || {};
-      STATE.settings.rosters = importedRosters;
-
-      await saveSharedState();
-
-      if(typeof renderRosterAdmin === 'function'){
-        renderRosterAdmin();
-      }
-
-      logRosterUpload(`Imported ${Object.keys(importedRosters).length} franchises successfully.`);
-
-    }catch(err){
-      console.error(err);
-      logRosterUpload(`Roster import failed: ${err.message}`, false);
-    }finally{
-      uploadRosterBtn.disabled = false;
-    }
-  });
-}
-
 })();
 </script>
 </body>
