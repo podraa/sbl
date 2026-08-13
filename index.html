@@ -248,15 +248,8 @@
       const {data, error} = await supabase.auth.signUp({email, password});
       btn.disabled = false;
       if(error){ setMsg(error.message, true); return; }
-      if(data.session){
-        session = data.session;
-        await boot();
-      }else{
-        const login = await supabase.auth.signInWithPassword({ email, password });
-        if(login.error){ setMsg(login.error.message, true); return; }
-        session = login.data.session;
-        await boot();
-      }
+      if(data.session){ session = data.session; await boot(); }
+      else{ setMsg('Account created — check your email to confirm, then log in.', false); }
     };
   }
 
@@ -291,7 +284,7 @@
       if(!val){ msgEl.className='note danger'; msgEl.textContent='Pick or type a team name.'; return; }
       const btn = document.getElementById('claimBtn'); btn.disabled = true;
       try{
-        const {error} = await supabase.from('profiles').update({ team_name: val }).eq('id', session.user.id);
+        const {error} = await supabase.from('profiles').update({ team_name: val, status: 'pending' }).eq('id', session.user.id);
         if(error) throw error;
         await loadProfile();
         render();
