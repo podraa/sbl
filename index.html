@@ -219,7 +219,25 @@
   function teamsList(){ return Object.keys(DASH.settings.rosters||{}).sort(); }
   function myRoster(){ return (profile && profile.team_name && DASH.settings.rosters[profile.team_name]) || []; }
   function rosterPoints(list){ return (list||[]).reduce((s,m)=> s + (Number(m.points)||0), 0); }
-  function freeAgencyMons(){ return Array.isArray(DASH.settings?.freeAgency?.mons) ? DASH.settings.freeAgency.mons : []; }
+  function freeAgencyMons(){
+    const pool = Array.isArray(DASH.settings?.freeAgency?.mons)
+      ? DASH.settings.freeAgency.mons
+      : [];
+
+    // Free Agency is only for genuinely undrafted Pokémon. The published
+    // Free Agency board may still contain a Pokémon that was later drafted,
+    // traded, or otherwise moved onto a team, so filter against every
+    // currently published team roster before showing anything as available.
+    const drafted = new Set();
+    for(const roster of Object.values(DASH.settings?.rosters || {})){
+      for(const mon of (Array.isArray(roster) ? roster : [])){
+        const name = typeof mon === 'string' ? mon : mon?.name;
+        if(name) drafted.add(normName(name));
+      }
+    }
+
+    return pool.filter(mon => mon?.name && !drafted.has(normName(mon.name)));
+  }
 
   // ---------- pokémon stat aggregation (mirrors stats.html) ----------
   function normName(n){
@@ -489,7 +507,7 @@
 
     function faResultsHtml(){
       const q = (draft.faQuery||'').trim().toLowerCase();
-      if(!q) return '<div class="fa-hint">Start typing a Pokémon’s name to search free agency.</div>';
+      if(!q) return '<div class="fa-hint">Only Pokémon that are currently undrafted are available in Free Agency.</div>';
       const matches = freeAgencyMons().filter(m=>m.name.toLowerCase().includes(q)).slice(0,30);
       if(!matches.length) return `<div class="fa-empty">No free agents match “${escapeHtml(draft.faQuery)}”.</div>`;
       return matches.map(m=>pickCard(m,'requested')).join('');
@@ -516,11 +534,11 @@
           </div>
         </div>
         <div class="trade-col">
-          <h4>You get</h4>
+          <h4>You get ${targetIsFA?'(undrafted only)':''}</h4>
           <div class="selected-row" id="requestedSelected">${chipsHtml('requested')}</div>
           ${targetIsFA ? `
             <div class="fa-search-wrap">
-              <input type="text" id="faSearch" placeholder="Search free agency by name…" value="${escapeHtml(draft.faQuery||'')}" autocomplete="off">
+              <input type="text" id="faSearch" placeholder="Search undrafted Pokémon…" value="${escapeHtml(draft.faQuery||'')}" autocomplete="off">
             </div>
             <div class="pick-grid" id="requestedPicks">${faResultsHtml()}</div>
           ` : `
@@ -695,6 +713,7 @@
         draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
         await loadTrades();
         activeTab = 'trades';
+        markTradeTabSeen('trades');
         setStatus('Trade proposal sent.', false);
         renderTabs(); render();
       }catch(e){
@@ -794,6 +813,7 @@
 
     document.getElementById('backToTrades').onclick = ()=>{
       activeTab = 'trades';
+      markTradeTabSeen('trades');
       renderTabs();
       render();
     };
@@ -852,6 +872,7 @@
 
     document.getElementById('viewTradeHistory')?.addEventListener('click', ()=>{
       activeTab = 'tradehistory';
+      markTradeTabSeen('tradehistory');
       renderTabs();
       render();
     });
@@ -904,6 +925,61 @@
   // ---------- shell ----------
   function setStatus(msg, danger){ statusMsg = msg; }
 
+  // ---------- trade notification / seen state ----------
+  // Notifications are local to the signed-in user. A trade remains
+  // unread until the relevant tab is actually opened. Opening Trades
+  // clears pending-trade notifications; opening Trade History clears
+  // resolved-trade notifications. New trades automatically become
+  // unread because their IDs are not in the seen sets.
+  function tradeSeenKey(){
+    return `sbl_trade_seen_${session?.user?.id || 'anonymous'}`;
+  }
+
+  function getTradeSeen(){
+    try{
+      const raw = localStorage.getItem(tradeSeenKey());
+      const parsed = raw ? JSON.parse(raw) : {};
+      return {
+        pending: new Set(Array.isArray(parsed.pending) ? parsed.pending.map(Number) : []),
+        history: new Set(Array.isArray(parsed.history) ? parsed.history.map(Number) : [])
+      };
+    }catch(e){
+      return {pending:new Set(), history:new Set()};
+    }
+  }
+
+  function saveTradeSeen(seen){
+    try{
+      localStorage.setItem(tradeSeenKey(), JSON.stringify({
+        pending: Array.from(seen.pending),
+        history: Array.from(seen.history)
+      }));
+    }catch(e){}
+  }
+
+  function markTradeTabSeen(tab){
+    if(!profile?.team_name) return;
+    const seen = getTradeSeen();
+    if(tab === 'trades'){
+      trades.filter(t => t.target_team === profile.team_name && t.status === 'pending')
+        .forEach(t => seen.pending.add(Number(t.id)));
+    }else if(tab === 'tradehistory'){
+      trades.filter(t => t.status !== 'pending' && (t.proposer_team === profile.team_name || t.target_team === profile.team_name))
+        .forEach(t => seen.history.add(Number(t.id)));
+    }
+    saveTradeSeen(seen);
+  }
+
+  function unreadTradeCounts(){
+    const seen = getTradeSeen();
+    const myTeam = profile?.team_name;
+    if(!myTeam) return {incoming:0, history:0};
+    return {
+      incoming: trades.filter(t => t.target_team === myTeam && t.status === 'pending' && !seen.pending.has(Number(t.id))).length,
+      history: trades.filter(t => t.status !== 'pending' && (t.proposer_team === myTeam || t.target_team === myTeam) && !seen.history.has(Number(t.id))).length
+    };
+  }
+
   function renderTabs(){
     let nav = document.getElementById('tabs');
     if(!nav){
@@ -912,9 +988,9 @@
       nav.id = 'tabs';
       contentEl.before(nav);
     }
-    const myTeam = profile && profile.team_name;
-    const incomingCount = myTeam ? trades.filter(t=>t.target_team===myTeam && t.status==='pending').length : 0;
-    const historyCount = myTeam ? trades.filter(t=>t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam)).length : 0;
+    const unread = unreadTradeCounts();
+    const incomingCount = unread.incoming;
+    const historyCount = unread.history;
     const tabs = [
       ['myteam','My Team'],
       ['trades',`Trades${incomingCount ? ` <span class="tab-badge">${incomingCount}</span>` : ''}`],
@@ -924,7 +1000,12 @@
     ];
     nav.innerHTML = tabs.map(([id,label])=>`<button data-tab="${id}" class="${activeTab===id?'active':''}">${label}</button>`).join('');
     nav.querySelectorAll('button').forEach(b=>{
-      b.onclick = ()=>{ activeTab = b.dataset.tab; renderTabs(); render(); };
+      b.onclick = ()=>{
+        activeTab = b.dataset.tab;
+        if(activeTab === 'trades' || activeTab === 'tradehistory') markTradeTabSeen(activeTab);
+        renderTabs();
+        render();
+      };
     });
   }
 
