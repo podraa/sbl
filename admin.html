@@ -212,6 +212,7 @@
   .status-pill.rejected{color:var(--red); background:#3a1414; border:1px solid #5a2020;}
   .status-pill.accepted{color:var(--teal); background:#0f2b27; border:1px solid #1c4a43;}
   .status-pill.withdrawn{color:var(--text-dim); background:var(--panel-alt); border:1px solid var(--border);}
+  .status-pill.reverted{color:var(--text-dim); background:var(--panel-alt); border:1px solid var(--border);}
   .trade-card{border:1px solid var(--border); border-radius:10px; background:var(--panel-alt); padding:14px; margin-bottom:10px;}
   .trade-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
   .trade-teams{font-weight:700; font-size:13px;}
@@ -1921,7 +1922,7 @@
         <div class="trade-col"><h4>Requested</h4><div class="note">${(t.mons_requested||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
       </div>
       ${(canRevoke || canRevert) ? `<div class="foot-actions">
-        ${canRevert ? `<button class="ghost small danger-btn" data-trade-action="revert" data-trade-id="${t.id}">Revert (undo roster swap)</button>` : ''}
+        ${canRevert ? `<button class="ghost small danger-btn" data-trade-action="revert" data-trade-id="${t.id}">Revert &amp; end trade</button>` : ''}
         ${canRevoke ? `<button class="ghost small" data-trade-action="revoke" data-trade-id="${t.id}">Reset to pending</button>` : ''}
       </div>` : ''}
       <div class="note danger" id="tradeCommErr-${t.id}"></div>
@@ -1953,7 +1954,7 @@
       </div>` : ''}
       <div class="panel">
         <h2>All Trades <span class="badge">${COMM_TRADES.length}</span></h2>
-        <div class="note">Only the two teams involved can accept, reject, or withdraw a trade. As commissioner you can reset a resolved trade back to pending, or revert an accepted trade (undoing the roster swap).</div>
+        <div class="note">Only the two teams involved can accept, reject, or withdraw a trade. As commissioner you can reset a resolved trade back to pending, or revert an accepted trade (undoing the roster swap and ending it — a reverted trade stays reverted, it does not go back to pending).</div>
         ${COMM_TRADES.length ? COMM_TRADES.map(commTradeRow).join('') : '<div class="empty-state">No trades yet.</div>'}
       </div>`;
 
@@ -1963,7 +1964,7 @@
         const action = btn.dataset.tradeAction;
         const errEl = document.getElementById(`tradeCommErr-${id}`);
         if(errEl){ errEl.textContent = ''; }
-        if(action === 'revert' && !confirm('This undoes the roster swap from this accepted trade and puts it back to pending. Continue?')) return;
+        if(action === 'revert' && !confirm('This undoes the roster swap from this accepted trade and ends it — it will NOT go back to pending. Continue?')) return;
         btn.disabled = true;
         try{
           if(action === 'revoke'){

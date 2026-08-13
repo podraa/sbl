@@ -64,6 +64,7 @@
   .status-pill.rejected{color:var(--red); background:#3a1414; border:1px solid #5a2020;}
   .status-pill.accepted{color:var(--teal); background:#0f2b27; border:1px solid #1c4a43;}
   .status-pill.withdrawn{color:var(--text-dim); background:var(--panel-alt); border:1px solid var(--border);}
+  .status-pill.reverted{color:var(--text-dim); background:var(--panel-alt); border:1px solid var(--border);}
 
   .sprite{width:32px; height:32px; object-fit:contain; vertical-align:middle; image-rendering:pixelated; background:var(--panel-alt); border-radius:6px;}
   .mon-pill{display:inline-flex; align-items:center; gap:6px; background:var(--panel-alt); border:1px solid var(--border); border-radius:20px; padding:3px 10px 3px 3px; font-size:12px; margin:3px 4px 3px 0;}
@@ -489,6 +490,7 @@
 
     el.innerHTML = `
       <h2>Propose a Trade</h2>
+      <div class="note">You can offer multiple Pokémon for multiple Pokémon as long as both sides' total points match, and neither roster drops below 10 Pokémon.</div>
       <div class="row">
         <div>
           <label>Trade with</label>
@@ -521,10 +523,30 @@
           `}
         </div>
       </div>
+      <div class="note" id="tradeSummary"></div>
       <div class="foot-actions">
         <button class="primary" id="submitTradeBtn">Send trade proposal</button>
       </div>
       <div id="tradeMsg" class="note"></div>`;
+
+    function totalPts(role){
+      const set = role === 'offered' ? draft.offered : draft.requested;
+      const pool = role === 'offered' ? roster : requestPool;
+      return Array.from(set).reduce((s,name)=>{ const m = pool.find(x=>x.name===name); return s + (m ? (Number(m.points)||0) : 0); }, 0);
+    }
+
+    function updateTradeSummary(){
+      const summaryEl = document.getElementById('tradeSummary');
+      if(!summaryEl) return;
+      const offPts = totalPts('offered'), reqPts = totalPts('requested');
+      const proposerAfter = roster.length - draft.offered.size + draft.requested.size;
+      const targetAfter = targetIsFA ? null : ((targetRoster||[]).length - draft.requested.size + draft.offered.size);
+      const bits = [`Offered ${offPts} pts / Requested ${reqPts} pts${(draft.offered.size||draft.requested.size) ? (offPts===reqPts ? ' — balanced' : ' — must match to trade') : ''}`];
+      bits.push(`Your roster after: ${proposerAfter}${proposerAfter<10?' (below 10 minimum)':''}`);
+      if(!targetIsFA) bits.push(`${escapeHtml(draft.target)}'s roster after: ${targetAfter}${targetAfter<10?' (below 10 minimum)':''}`);
+      summaryEl.textContent = bits.join(' · ');
+    }
+    updateTradeSummary();
 
     document.getElementById('targetSelect').onchange = (e)=>{
       draft.target = e.target.value;
@@ -544,6 +566,7 @@
           const rowId = role === 'offered' ? 'offeredSelected' : 'requestedSelected';
           document.getElementById(rowId).innerHTML = chipsHtml(role);
           bindChipRemovers();
+          updateTradeSummary();
         };
         card.addEventListener('click', toggle);
         card.addEventListener('keydown', (e)=>{
@@ -563,6 +586,7 @@
           const card = grid && Array.from(grid.querySelectorAll('.pick-card')).find(c=>c.dataset.name === name);
           if(card){ card.classList.remove('checked'); card.setAttribute('aria-pressed','false'); }
           bindChipRemovers();
+          updateTradeSummary();
         };
       });
     }
@@ -582,15 +606,23 @@
 
     document.getElementById('submitTradeBtn').onclick = async ()=>{
       const msgEl = document.getElementById('tradeMsg');
-      if(draft.offered.size !== 1 || draft.requested.size !== 1){ msgEl.className='note danger'; msgEl.textContent='Trades are limited to exactly one Pokémon for one Pokémon.'; return; }
+      if(draft.offered.size < 1 || draft.requested.size < 1){ msgEl.className='note danger'; msgEl.textContent='Select at least one Pokémon on each side.'; return; }
+      const offPts = totalPts('offered'), reqPts = totalPts('requested');
+      if(offPts !== reqPts){ msgEl.className='note danger'; msgEl.textContent=`Trade must be point-balanced — offered totals ${offPts} pts but requested totals ${reqPts} pts.`; return; }
+      const proposerAfter = roster.length - draft.offered.size + draft.requested.size;
+      if(proposerAfter < 10){ msgEl.className='note danger'; msgEl.textContent=`This trade would leave your roster with only ${proposerAfter} Pokémon — teams must keep at least 10.`; return; }
+      if(!targetIsFA){
+        const targetAfter = (targetRoster||[]).length - draft.requested.size + draft.offered.size;
+        if(targetAfter < 10){ msgEl.className='note danger'; msgEl.textContent=`This trade would leave ${draft.target}'s roster with only ${targetAfter} Pokémon — teams must keep at least 10.`; return; }
+      }
       const btn = document.getElementById('submitTradeBtn'); btn.disabled = true;
       msgEl.className='note'; msgEl.textContent='Sending…';
       try{
         const {error} = await supabase.from('trade_requests').insert({
           proposer_team: profile.team_name,
           target_team: targetIsFA ? null : draft.target,
-          mons_offered: Array.from(draft.offered).slice(0,1),
-          mons_requested: Array.from(draft.requested).slice(0,1)
+          mons_offered: Array.from(draft.offered),
+          mons_requested: Array.from(draft.requested)
         });
         if(error) throw error;
         draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
