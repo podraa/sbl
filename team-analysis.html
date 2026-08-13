@@ -516,13 +516,10 @@ function groupEquivalentVariants(list){
   }
   return out;
 }
-function displaySpecies(m){
-  const first=m.names?.[0]||m.species||'';
-  const key=variantGroupName(first);
-  const canonical={
-    gastrodon:'Gastrodon'
-  };
-  return canonical[key]||first;
+function displaySpecies(m){return m.names?.length?m.names.join(', '):m.species;}
+function franchiseMons(team){
+  const list=Object.values(aggregate(team).mons).sort((a,b)=>b.appearances-a.appearances||a.species.localeCompare(b.species));
+  return groupEquivalentVariants(list);
 }
 
 function typeChartMultiplier(attacking, defending){
