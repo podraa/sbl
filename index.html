@@ -513,29 +513,70 @@
   function renderTeamClaim(){
     const current = profile.team_name || '';
     const currentUsername = profile.username || '';
+    const needsUsername = !currentUsername;
+    const title = needsUsername ? 'Choose your username' : (current ? 'Your profile' : 'Choose your franchise');
+    const intro = needsUsername
+      ? 'Choose the username you want to use in the league. Your username identifies you and will be connected to your franchise.'
+      : 'Choose the franchise you own. Your username stays connected to this franchise unless an admin changes your profile.';
+
     contentEl.innerHTML = `
       <div class="gate">
         <div class="panel">
-          <h2>${currentUsername ? (current ? 'Your profile' : 'Set up your profile') : 'Choose your username'}</h2>
-          <div class="note">Choose the username you want to use in the league, then connect it to your franchise. Your username identifies you; your franchise is the team you own.</div>
-          <label style="margin-top:12px;">Username</label>
-          <input id="usernamePick" type="text" value="${escapeHtml(currentUsername)}" maxlength="24" placeholder="e.g. Poorvansh" autocomplete="nickname">
-          <div class="note">2–24 characters. Letters, numbers, underscores and hyphens only. Usernames are unique.</div>
-          <div id="teamClaimFields"><div class="note">Loading available teams…</div></div>
-          <div class="foot-actions">
-            <button class="primary" id="claimBtn" disabled>${current ? 'Update claim' : 'Submit claim'}</button>
-          </div>
+          <h2>${title}</h2>
+          <div class="note">${intro}</div>
+          ${needsUsername ? `
+            <label style="margin-top:12px;">Username</label>
+            <input id="usernamePick" type="text" value="" maxlength="24" placeholder="e.g. Poorvansh" autocomplete="nickname">
+            <div class="note">2–24 characters. Letters, numbers, underscores and hyphens only. Usernames are unique.</div>
+            <div class="foot-actions">
+              <button class="primary" id="saveUsernameBtn">Continue</button>
+            </div>
+          ` : `
+            <div class="profile-summary" style="margin-top:14px;">
+              <div><strong>Username</strong><br>${escapeHtml(currentUsername)}</div>
+            </div>
+            <div id="teamClaimFields"><div class="note">Loading available franchises…</div></div>
+            <div class="foot-actions">
+              <button class="primary" id="claimBtn" disabled>${current ? 'Update franchise' : 'Submit franchise claim'}</button>
+            </div>
+          `}
           <div id="claimMsg" class="note"></div>
         </div>
       </div>`;
+
+    const msgEl = document.getElementById('claimMsg');
+
+    // Username is deliberately a separate onboarding step. This guarantees that
+    // every account gets a league username before entering the normal dashboard,
+    // even if the account already has a pending/approved franchise claim.
+    if(needsUsername){
+      const btn = document.getElementById('saveUsernameBtn');
+      btn.onclick = async ()=>{
+        const username = document.getElementById('usernamePick').value.trim();
+        if(!/^[A-Za-z0-9_-]{2,24}$/.test(username)){
+          msgEl.className='note danger';
+          msgEl.textContent='Username must be 2–24 characters and use only letters, numbers, underscores or hyphens.';
+          return;
+        }
+        btn.disabled = true;
+        try{
+          const {error} = await supabase.from('profiles').update({username}).eq('id', session.user.id);
+          if(error) throw error;
+          await loadProfile();
+          renderTeamClaim();
+        }catch(e){
+          msgEl.className='note danger';
+          msgEl.textContent = /duplicate|unique/i.test(e.message||'') ? 'That username is already taken. Please choose another.' : e.message;
+          btn.disabled = false;
+        }
+      };
+      return;
+    }
 
     (async ()=>{
       const allTeams = teamsList();
       let taken = new Set();
       try{
-        // Franchises already claimed by an approved owner shouldn't show up for
-        // anyone else to pick. We can't (and don't need to) see the full profile
-        // of other users — just which team names are already spoken for.
         const {data, error} = await supabase.from('profiles').select('team_name').eq('status','approved').neq('id', session.user.id);
         if(error) throw error;
         taken = new Set((data||[]).map(p=>p.team_name).filter(Boolean));
@@ -545,34 +586,31 @@
       const teams = allTeams.filter(t => t === current || !taken.has(t));
 
       const fieldsEl = document.getElementById('teamClaimFields');
-      if(!fieldsEl) return; // user navigated away before this finished loading
+      if(!fieldsEl) return;
       fieldsEl.innerHTML = teams.length ? `
-        <label style="margin-top:12px;">Team</label>
+        <label style="margin-top:12px;">Franchise</label>
         <select id="teamPick">
-          <option value="">— Select a team —</option>
+          <option value="">— Select a franchise —</option>
           ${teams.map(t=>`<option value="${escapeHtml(t)}" ${t===current?'selected':''}>${escapeHtml(t)}</option>`).join('')}
         </select>` : `
-        <label style="margin-top:12px;">Team name</label>
-        <input id="teamPickText" type="text" value="${escapeHtml(current)}" placeholder="Type your team's exact name">
-        <div class="note">Rosters haven't been published yet, so type the exact franchise name — a commissioner will match it up.</div>`;
+        <label style="margin-top:12px;">Franchise name</label>
+        <input id="teamPickText" type="text" value="${escapeHtml(current)}" placeholder="Type your franchise's exact name">
+        <div class="note">Franchises haven't been published yet, so type the exact franchise name — an admin will match it up.</div>`;
 
       const btn = document.getElementById('claimBtn');
       btn.disabled = false;
       btn.onclick = async ()=>{
-        const username = document.getElementById('usernamePick').value.trim();
         const val = teams.length ? document.getElementById('teamPick').value.trim() : document.getElementById('teamPickText').value.trim();
-        const msgEl = document.getElementById('claimMsg');
-        if(!/^[A-Za-z0-9_-]{2,24}$/.test(username)){ msgEl.className='note danger'; msgEl.textContent='Username must be 2–24 characters and use only letters, numbers, underscores or hyphens.'; return; }
-        if(!val){ msgEl.className='note danger'; msgEl.textContent='Pick or type a team name.'; return; }
+        if(!val){ msgEl.className='note danger'; msgEl.textContent='Pick or type a franchise name.'; return; }
         btn.disabled = true;
         try{
-          const {error} = await supabase.from('profiles').update({ username, team_name: val, status: 'pending' }).eq('id', session.user.id);
+          const {error} = await supabase.from('profiles').update({ team_name: val, status: 'pending' }).eq('id', session.user.id);
           if(error) throw error;
           await loadProfile();
           render();
         }catch(e){
           msgEl.className='note danger';
-          msgEl.textContent = /duplicate|unique/i.test(e.message||'') ? 'That username is already taken. Please choose another.' : e.message;
+          msgEl.textContent = e.message;
           btn.disabled = false;
         }
       };

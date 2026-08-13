@@ -355,7 +355,7 @@
         <button data-tab="draft">Draft</button>
     <button data-tab="freeagency">Free Agency</button>
     <button data-tab="trades">Trades</button>
-    <button data-tab="commissioner">Commissioner</button>
+    <button data-tab="commissioner">User Control</button>
     <button data-tab="admin-log">Admin Log</button>
     <button data-tab="settings">Settings</button>
 
@@ -363,7 +363,7 @@
   </nav>
 
   
-<!-- Commissioner UI: budgets and administration only; franchise rosters are intentionally not shown here. -->
+<!-- User Control UI: budgets and administration only; franchise rosters are intentionally not shown here. -->
 
 <div id="content"></div>
 </div>
@@ -2345,7 +2345,7 @@
             <div class="map-row">
               <input type="text" value="${escapeHtml(t)}" disabled style="flex:2">
               <input type="text" data-budget-override="${escapeHtml(t)}" placeholder="${escapeHtml(d.defaultBudget)}" value="${d.budgets[t] != null ? escapeHtml(d.budgets[t]) : ''}" style="flex:1">
-            </div>`).join('') : '<div class="empty-state">No approved franchises yet — approve teams in the Commissioner tab first.</div>'}
+            </div>`).join('') : '<div class="empty-state">No approved franchises yet — approve teams in the User Control tab first.</div>'}
         </div>
         ${franchises.length ? `<div class="foot-actions"><button class="ghost" id="saveBudgetOverridesBtn">Save overrides</button></div>` : ''}
         <div class="note danger" id="draftBudgetErr"></div>
@@ -2700,12 +2700,12 @@
   }
 
   function renderCommissioner(){
-    contentEl.innerHTML = `<div class="empty-state">Loading commissioner data…</div>`;
+    contentEl.innerHTML = `<div class="empty-state">Loading user control data…</div>`;
     loadCommissionerData().then(()=>{
       if(activeTab === 'commissioner') drawCommissioner();
     }).catch(e=>{
       if(activeTab === 'commissioner'){
-        contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load commissioner data: ${escapeHtml(e.message)}</div></div>`;
+        contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load user control data: ${escapeHtml(e.message)}</div></div>`;
       }
     });
   }
@@ -2727,7 +2727,7 @@
       <div class="trade-head">
         <div>
           <div class="trade-teams">${escapeHtml(p.team_name || '(no team picked yet)')}</div>
-          <div class="trade-sub">${escapeHtml(p.email)} · joined ${new Date(p.created_at).toLocaleDateString()}</div>
+          <div class="trade-sub"><strong>${escapeHtml(p.username || '(no username)')}</strong> · ${escapeHtml(p.email)} · joined ${new Date(p.created_at).toLocaleDateString()}</div>
         </div>
         <span class="status-pill ${p.status}">${p.status}</span>
       </div>
@@ -2745,6 +2745,7 @@
         ${p.is_commissioner
           ? `<button class="ghost small" data-comm-action="remove-commissioner" data-id="${p.id}">Remove commissioner</button>`
           : `<button class="ghost small" data-comm-action="make-commissioner" data-id="${p.id}">Make commissioner</button>`}
+        <button class="ghost small" data-comm-action="edit-profile" data-id="${p.id}">Edit profile</button>
       </div>
       <div class="note danger" id="commErr-${p.id}"></div>
     </div>`;
@@ -3010,17 +3011,9 @@
 
   async function logAdminAction(actionType, message, metadata={}){
     const user = adminUser || (await supabase.auth.getUser()).data?.user;
-    let adminUsername = null;
-    if(user?.id){
-      try{
-        const {data:adminProfile} = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle();
-        adminUsername = adminProfile?.username || null;
-      }catch(e){ console.warn('Could not load admin username:', e); }
-    }
     const entry = {
       admin_id: user?.id || null,
       admin_email: user?.email || null,
-      admin_username: adminUsername,
       action_type: actionType,
       message,
       metadata: Object.assign({
@@ -3085,7 +3078,7 @@
     contentEl.innerHTML = `
       <div class="panel">
         <div class="section-head-row">
-          <div><h2>Admin Log</h2><div class="note">Commissioner and administrative actions.</div></div>
+          <div><h2>Admin Log</h2><div class="note">User control and administrative actions.</div></div>
           <div class="foot-actions">
             <select id="adminLogActionFilter" class="input">
               <option value="all">All actions</option>
@@ -3101,7 +3094,7 @@
             <div class="admin-log-time">${escapeHtml(new Date(log.created_at).toLocaleString())}</div>
             <div class="admin-log-action"><strong>${escapeHtml(log.action_type || 'action')}</strong></div>
             <div class="admin-log-message">${escapeHtml(log.message || '')}</div>
-            <div class="admin-log-admin"><span class="admin-log-admin-label">Admin</span><strong>${escapeHtml(log.admin_username || log.admin_email || log.admin_id || 'Unknown admin')}</strong></div>
+            <div class="admin-log-admin"><span class="admin-log-admin-label">Admin</span><strong>${escapeHtml(log.admin_email || log.admin_id || 'Unknown admin')}</strong></div>
           </div>`).join('')}</div>` : ''}
       </div>`;
     document.getElementById('refreshAdminLogBtn')?.addEventListener('click', drawAdminLog);
@@ -3128,8 +3121,8 @@
 
     contentEl.innerHTML = `
       <div class="panel">
-        <h2>Commissioner / Admin</h2>
-        <div class="note">Commissioner controls only. Franchise rosters are not displayed on this page; budgets remain visible for every franchise. Trade management has its own tab.</div>
+        <h2>User Control</h2>
+        <div class="note">User control settings only. Franchise rosters are not displayed on this page; budgets remain visible for every franchise. Trade management has its own tab.</div>
       </div>
 
       <div class="panel commissioner-only-ui" data-commissioner-ui="budgets-no-rosters">
@@ -3161,15 +3154,15 @@
       </div>
 
       <div class="panel">
-        <h2>Pending Team Claims <span class="badge">${pending.length}</span></h2>
+        <h2>Pending User / Franchise Claims <span class="badge">${pending.length}</span></h2>
         ${pending.length ? pending.map(p=>commClaimRow(p,true)).join('') : '<div class="empty-state">No pending claims.</div>'}
       </div>
       <div class="panel">
-        <h2>Approved Teams <span class="badge">${approved.length}</span></h2>
+        <h2>Approved Users / Franchises <span class="badge">${approved.length}</span></h2>
         ${approved.length ? approved.map(p=>commClaimRow(p,false)).join('') : '<div class="empty-state">No approved teams yet.</div>'}
       </div>
       ${rejected.length ? `<div class="panel">
-        <h2>Rejected Claims <span class="badge">${rejected.length}</span></h2>
+        <h2>Rejected User Claims <span class="badge">${rejected.length}</span></h2>
         ${rejected.map(p=>commClaimRow(p,false)).join('')}
       </div>` : ''}`;
 
@@ -3182,6 +3175,24 @@
         btn.disabled=true;
         try{
           let patch=null;
+          if(action==='edit-profile'){
+            const profile = (COMM_PROFILES || []).find(p => String(p.id) === String(id));
+            if(!profile) throw new Error('Profile not found.');
+            const username = prompt('Username:', profile.username || '');
+            if(username === null){ btn.disabled=false; return; }
+            const clean = username.trim();
+            if(!/^[A-Za-z0-9_-]{2,24}$/.test(clean)) throw new Error('Username must be 2–24 characters and use only letters, numbers, underscores or hyphens.');
+            const team = prompt('Franchise name:', profile.team_name || '');
+            if(team === null){ btn.disabled=false; return; }
+            const cleanTeam = team.trim();
+            if(!cleanTeam) throw new Error('Franchise name cannot be empty.');
+            const {error}=await supabase.from('profiles').update({username:clean, team_name:cleanTeam}).eq('id',id);
+            if(error) throw error;
+            await logAdminAction('edit_profile', `Edited profile ${profile.email || id}: username/franchise changed.`, {profileId:id, username:clean, team:cleanTeam});
+            await loadCommissionerData();
+            if(activeTab==='commissioner') drawCommissioner();
+            return;
+          }
           if(action==='approve') patch={status:'approved'};
           else if(action==='reject') patch={status:'rejected'};
           else if(action==='revoke') patch={status:'pending'};
