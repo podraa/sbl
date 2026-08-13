@@ -24,36 +24,27 @@ async function load(){
   const {data,error}=await db
     .from('replays')
     .select('replay_data')
-    .eq('replay_id','__free_agency__')
+    .eq('replay_id','__dashboard_state__')
     .maybeSingle();
 
   if(error) throw error;
 
-  const payload=data?.replay_data||{};
-  const mons=Array.isArray(payload.mons)
-    ? payload.mons
-    : (Array.isArray(payload.pool) ? payload.pool : []);
-
-  let rosters={};
-
-  try{
-    const rosterResult=await db
-      .from('replays')
-      .select('replay_data')
-      .eq('replay_id','__rosters__')
-      .maybeSingle();
-
-    if(!rosterResult.error){
-      rosters=rosterResult.data?.replay_data?.rosters||{};
-    }
-  }catch(e){
-    console.warn('Free Agency roster lookup failed:',e);
-  }
+  const shared=data?.replay_data||{};
+  const sharedSettings=shared.settings||{};
 
   settings={
-    rosters,
-    freeAgency:{mons},
-    freeAgencySource:payload.source||''
+    ...sharedSettings,
+    rosters:sharedSettings.rosters||{}
+  };
+
+  // Free Agency is now simply part of the existing dashboard settings.
+  // There is no special Free Agency database row to fail.
+  settings.freeAgency = {
+    mons:Array.isArray(sharedSettings.freeAgency?.mons)
+      ? sharedSettings.freeAgency.mons
+      : (Array.isArray(sharedSettings.freeAgency?.pool)
+          ? sharedSettings.freeAgency.pool
+          : [])
   };
 
   render();
