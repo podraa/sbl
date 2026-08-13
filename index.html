@@ -192,7 +192,7 @@
   let DASH = { teamMap:{}, settings:{ rosters:{}, freeAgency:{ mons:[] } }, replays:{} };
   let trades = [];
   let tradeLimits = [];
-  let activeTradeSeason = null;
+  let activeTradeSeason = new Date().getFullYear();
   let activeTab = 'myteam';
   let draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
   let statusMsg = '';
@@ -308,8 +308,16 @@
   }
 
   async function loadTrades(){
-    // Trade history is required. Franchise limits are an optional enhancement,
-    // so a missing/unmigrated limits table must NOT take down the entire Trades tab.
+    // The active trade season is controlled by the commissioner reset, not by
+    // the calendar year. This is critical after an end-of-season reset.
+    const {data:seasonRow, error:seasonErr} = await supabase
+      .from('trade_season_settings')
+      .select('active_season')
+      .eq('id', 1)
+      .maybeSingle();
+    if(seasonErr) throw seasonErr;
+    activeTradeSeason = Number(seasonRow?.active_season) || new Date().getFullYear();
+
     const {data, error} = await supabase.from('trade_requests').select('*').order('created_at', {ascending:false});
     if(error) throw error;
     trades = data || [];
@@ -317,7 +325,7 @@
     const {data:limits, error:limitErr} = await supabase
       .from('franchise_trade_limits')
       .select('*')
-      .eq('season', new Date().getFullYear());
+      .eq('season', activeTradeSeason);
     if(limitErr){
       console.warn('Franchise trade limits unavailable; using 8-trade defaults:', limitErr.message);
       tradeLimits = [];
@@ -333,10 +341,10 @@
   }
 
   function completedTradeCount(team, kind='team'){
-    const season = activeTradeSeason || currentSeason();
+    const season = activeTradeSeason;
     return trades.filter(t=>
       (t.status==='accepted' || t.status==='reverted') &&
-      Number(t.season || new Date(t.created_at).getFullYear())===season &&
+      Number(t.season ?? new Date(t.created_at).getFullYear())===season &&
       (kind==='freeagency' ? t.target_team===null && t.proposer_team===team : t.target_team!==null && (t.proposer_team===team || t.target_team===team))
     ).length;
   }
@@ -692,7 +700,7 @@
       const proposerAllowance = tradeAllowance(profile.team_name, targetIsFA ? 'freeagency' : 'team');
       if(proposerAllowance.remaining <= 0){
         msgEl.className='note danger';
-        msgEl.textContent=`Trade limit reached: ${profile.team_name} has no ${targetIsFA ? 'Free Agency' : 'team-to-team'} trades remaining for ${currentSeason()}.`;
+        msgEl.textContent=`You don't have any ${targetIsFA ? 'Free Agency' : 'team-to-team'} trades remaining.`;
         return;
       }
 
@@ -715,7 +723,7 @@
 
         if(targetAllowance.remaining <= 0){
           msgEl.className='note danger';
-          msgEl.textContent=`Invalid trade: ${draft.target} has no team-to-team trades remaining for ${currentSeason()}.`;
+          msgEl.textContent=`${draft.target} doesn't have any team-to-team trades remaining.`;
           return;
         }
 
@@ -878,12 +886,12 @@
         <div class="trade-cols" style="margin-top:12px;">
           <div class="trade-col">
             <h4>Team-to-team trades</h4>
-            <div class="budget-value">${tradeAllowance(myTeam,'team').remaining} remaining</div>
+            <div class="budget-value">${tradeAllowance(myTeam,'team').remaining > 0 ? `${tradeAllowance(myTeam,'team').remaining} remaining` : `You don't have any team-to-team trades remaining`}</div>
             <div class="note">${tradeAllowance(myTeam,'team').used} used · ${tradeAllowance(myTeam,'team').limit} total allowance</div>
           </div>
           <div class="trade-col">
             <h4>Free Agency trades</h4>
-            <div class="budget-value">${tradeAllowance(myTeam,'freeagency').remaining} remaining</div>
+            <div class="budget-value">${tradeAllowance(myTeam,'freeagency').remaining > 0 ? `${tradeAllowance(myTeam,'freeagency').remaining} remaining` : `You don't have any Free Agency trades remaining`}</div>
             <div class="note">${tradeAllowance(myTeam,'freeagency').used} used · ${tradeAllowance(myTeam,'freeagency').limit} total allowance</div>
           </div>
           ${profile?.trade_credits ? `<div class="trade-col">
