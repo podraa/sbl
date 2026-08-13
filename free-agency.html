@@ -21,46 +21,42 @@ function spriteCandidates(name){const n=String(name||'').trim().toLowerCase();co
 function sprite(name){const c=spriteCandidates(name);let i=0;return `<img src="https://play.pokemonshowdown.com/sprites/gen9/${c[0]}.png" alt="${esc(name)}" data-sprite-cands="${esc(c.join('|'))}" onerror="if(this.dataset.i==='1'){this.style.visibility='hidden'}else{this.dataset.i='1';this.src='https://play.pokemonshowdown.com/sprites/gen9/'+this.dataset.spriteCands.split('|')[1]+'.png'}">`}
 function openPlanner(mon){const teams=Object.keys(settings.rosters||{}).sort();const modal=document.createElement('div');modal.className='modal';modal.innerHTML=`<div class="modalbox"><h2>${esc(mon.name)} — ${mon.points} points</h2><div class="note">This is a trade planner. Completing the actual trade is done from Admin → Trades, where the roster and all downstream pages are updated together.</div><label>Destination team</label><select id="planTeam"><option value="">Select team…</option>${teams.map(t=>`<option>${esc(t)}</option>`).join('')}</select><label>Replace Pokémon</label><select id="planReplace"><option value="">No replacement</option></select><div id="planBudget" class="note" style="margin-top:10px"></div><div class="actions"><button class="btn" id="closePlan">Cancel</button><button class="btn primary" id="openAdmin">Open Admin Trades</button></div></div>`;document.body.appendChild(modal);const ts=modal.querySelector('#planTeam'),rs=modal.querySelector('#planReplace'),bud=modal.querySelector('#planBudget');function upd(){const arr=(settings.rosters||{})[ts.value]||[];rs.innerHTML='<option value="">No replacement</option>'+arr.map(x=>{const m=typeof x==='string'?{name:x,points:0}:x;return `<option value="${esc(m.name)}">${esc(m.name)} — ${Number(m.points)||0} pts</option>`}).join('');const rep=arr.find(x=>key(typeof x==='string'?x:x.name)===key(rs.value));const spend=arr.reduce((a,x)=>a+(Number(typeof x==='string'?0:x.points)||0),0);const after=spend+mon.points-(rep?Number(rep.points)||0:0);bud.innerHTML=ts.value?`Current: ${spend} pts · After trade: ${after} pts · Remaining: ${120-after} pts`:''}ts.onchange=upd;rs.onchange=upd;modal.querySelector('#closePlan').onclick=()=>modal.remove();modal.querySelector('#openAdmin').onclick=()=>location.href='admin.html';}
 async function load(){
-  const stateResult = await db
+  const {data,error}=await db
     .from('replays')
     .select('replay_data')
-    .eq('replay_id','__dashboard_state__')
+    .eq('replay_id','__free_agency__')
     .maybeSingle();
 
-  if(stateResult.error) throw stateResult.error;
+  if(error) throw error;
 
-  const rosterResult = await db
-    .from('replays')
-    .select('replay_data')
-    .eq('replay_id','__rosters__')
-    .maybeSingle();
+  const payload=data?.replay_data||{};
+  const mons=Array.isArray(payload.mons)
+    ? payload.mons
+    : (Array.isArray(payload.pool) ? payload.pool : []);
 
-  // A published roster row is optional for Free Agency.
-  if(rosterResult.error && rosterResult.error.code !== 'PGRST116'){
-    throw rosterResult.error;
+  // Load roster data separately. A roster failure must never blank Free Agency.
+  let rosters={};
+  try{
+    const rosterResult=await db
+      .from('replays')
+      .select('replay_data')
+      .eq('replay_id','__rosters__')
+      .maybeSingle();
+
+    if(!rosterResult.error){
+      rosters=rosterResult.data?.replay_data?.rosters||{};
+    }
+  }catch(e){
+    console.warn('Free Agency roster lookup failed; continuing without roster ownership:',e);
   }
 
-  const sharedSettings =
-    stateResult.data?.replay_data?.settings || {};
-
-  settings = Object.assign(
-    {rosters:{},freeAgency:{mons:[]}},
-    sharedSettings
-  );
-
-  settings.rosters = settings.rosters || {};
-
-  const publishedRosters =
-    rosterResult.data?.replay_data?.rosters;
-
-  // The dedicated published roster row is the public source of truth when
-  // available. Fall back to dashboard settings otherwise.
-  if(
-    publishedRosters &&
-    typeof publishedRosters === 'object'
-  ){
-    settings.rosters = publishedRosters;
-  }
+  settings={
+    rosters,
+    freeAgency:{
+      mons
+    },
+    freeAgencySource:payload.source||''
+  };
 
   render();
 }
