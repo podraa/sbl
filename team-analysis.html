@@ -572,14 +572,36 @@ function displaySpecies(m){
 
 
 async function franchiseMons(team){
-  const list=Object.values(aggregate(team).mons);
-  const enriched=await Promise.all(list.map(async m=>{
+  // Team Comparison must operate on one row per current-roster species.
+  // Do not use groupEquivalentVariants here: that function intentionally groups
+  // Pokémon with identical speed signatures, which can incorrectly merge two
+  // completely different species (and makes matchup rows disappear).
+  const source=aggregate(team).mons;
+  const merged=new Map();
+  for(const m of Object.values(source)){
+    const species=canonicalSpecies(m.species);
+    const key=norm(species);
+    if(!key) continue;
+    if(!merged.has(key)){
+      merged.set(key,{...m,species,replays:m.replays instanceof Set?new Set(m.replays):new Set(),gameSets:Array.isArray(m.gameSets)?m.gameSets.slice():[]});
+    }else{
+      const x=merged.get(key);
+      x.appearances=(Number(x.appearances)||0)+(Number(m.appearances)||0);
+      x.kills=(Number(x.kills)||0)+(Number(m.kills)||0);
+      x.deaths=(Number(x.deaths)||0)+(Number(m.deaths)||0);
+      x.dealt=(Number(x.dealt)||0)+(Number(m.dealt)||0);
+      x.taken=(Number(x.taken)||0)+(Number(m.taken)||0);
+      if(m.replays instanceof Set)m.replays.forEach(r=>x.replays.add(r));
+      if(Array.isArray(m.gameSets))x.gameSets.push(...m.gameSets);
+    }
+  }
+  const enriched=await Promise.all([...merged.values()].map(async m=>{
     const base=await fetchBaseSpeed(m.species);
     const max=base===null?null:maxSpeedFromBase(base,100);
-    return {...m,baseSpeed:base,maxSpeed:max,scarfSpeed:max===null?null:scarfSpeedFromMax(max)};
+    return {...m,baseSpeed:base,maxSpeed:max,scarfSpeed:max===null?null:scarfSpeedFromMax(max),names:[m.species]};
   }));
   enriched.sort((a,b)=>b.appearances-a.appearances||a.species.localeCompare(b.species));
-  return groupEquivalentVariants(enriched);
+  return enriched;
 }
 
 function typeChartMultiplier(attacking, defending){
@@ -668,17 +690,26 @@ function roleMoves(m,role){
   const secondary=observed.filter(x=>!primary.includes(x));
   return [...primary,...secondary];
 }
+function canonicalMoveSet(moves){
+  return [...new Set((moves||[]).map(x=>String(x||'').trim().toLowerCase()).filter(Boolean))].sort().join('|');
+}
+function observedSetKeys(m){
+  return new Set((m.gameSets||[]).map(g=>canonicalMoveSet(g.moves||[])).filter(Boolean));
+}
 function suggestedSetsForMon(m){
-  const roles=inferRoles(m);const observed=observedMoves(m);
+  const roles=inferRoles(m);const observed=observedMoves(m);const existing=observedSetKeys(m);
   return roles.map(role=>{
     const candidates=roleMoves(m,role);
     const moves=candidates.slice(0,4);
     return {role,moves,observedCount:observed.length};
+  }).filter(s=>{
+    const key=canonicalMoveSet(s.moves);
+    return !key || !existing.has(key);
   });
 }
 function setSuggestionsMarkup(m){
   const sets=suggestedSetsForMon(m);
-  if(!sets.length)return '<div class="empty">No role information is available.</div>';
+  if(!sets.length)return '<div class="empty">No additional potential sets were identified beyond the recorded sets.</div>';
   return `<div class="set-role-grid">${sets.map(s=>`<article class="set-suggestion"><h4>${esc(s.role)}</h4><div class="role-desc">${esc(roleDescription(s.role))}</div><div class="set-moves">${s.moves.length?s.moves.map(x=>`<div class="set-move observed">${esc(x)}</div>`).join(''):'<div class="set-move">No observed moves</div>'}</div><div class="observed-note">Built from ${s.observedCount} observed move${s.observedCount===1?'':'s'} and the inferred role. This is a scouting hypothesis, not a confirmed set.</div></article>`).join('')}</div>`;
 }
 function defensiveTypeRows(data,total){
@@ -689,13 +720,27 @@ function defensiveProfileCard(title,data,total){
   return `<div class="defensive-team"><h3>${title}</h3><table class="type-count-table"><thead><tr><th>Type</th><th class="num">Weak</th><th class="num">Resist</th><th class="num">Immune</th></tr></thead><tbody>${rows.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(x=>`<tr><td>${typePills([x.t])}</td><td class="num ${x.w?'count-bad':'count-neutral'}">${x.w}/${total}</td><td class="num ${x.r?'count-good':'count-neutral'}">${x.r}/${total}</td><td class="num ${x.i?'count-good':'count-neutral'}">${x.i}/${total}</td></tr>`).join('')}</tbody></table><div class="small" style="margin-top:9px">Weak = 2× or more. Resist = ½× or less. Immunity = 0×.</div></div>`;
 }
 
+async function comparisonTypes(species){
+  // Type data is supplementary to the comparison. A slow/unavailable PokéAPI
+  // request must never prevent the comparison UI from rendering.
+  try{
+    return await Promise.race([
+      fetchTypes(species),
+      new Promise(resolve=>setTimeout(()=>resolve([]),2500))
+    ]);
+  }catch(e){
+    console.warn('Type lookup failed for',species,e);
+    return [];
+  }
+}
+
 async function renderComparison(team){
   const names=teamNames();
-  const opponentDefault=names.find(x=>x!==team)||'';
-  const currentOpponent=STATE.compareOpponent||opponentDefault;
-  const your=franchiseMons(team),opp=franchiseMons(currentOpponent);
+  const opponentDefault=names.find(x=>!sameTeam(x,team))||'';
+  const currentOpponent=(STATE.compareOpponent && !sameTeam(STATE.compareOpponent,team)) ? STATE.compareOpponent : opponentDefault;
+  const your=await franchiseMons(team),opp=await franchiseMons(currentOpponent);
   const all=[...your,...opp];
-  const typesArr=await Promise.all(all.map(async m=>[m.species,await fetchTypes(m.species)]));
+  const typesArr=await Promise.all(all.map(async m=>[m.species,await comparisonTypes(m.species)]));
   const typeMap={};typesArr.forEach(([s,t])=>typeMap[s]=t);
   const yourTypes=Object.fromEntries(your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>[m.species,typeMap[m.species]||[]]));
   const oppTypes=Object.fromEntries(opp.map(m=>[m.species,typeMap[m.species]||[]]));
@@ -735,20 +780,12 @@ async function renderComparison(team){
   const speedCard=(title,mons,typesMap,side)=>{const list=mons.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>{const row=side==='your'?speedRows.find(x=>x.y.species===m.species):speedRows.find(x=>x.o.species===m.species);return {m,max:side==='your'?row?.ymax:row?.omax,scarf:side==='your'?row?.scarf:row?.oscarf}}).sort((a,b)=>(b.max??-1)-(a.max??-1));return `<div class="speed-team"><h3>${esc(title)}</h3><div class="speed-row" style="border-bottom:1px solid var(--border);color:var(--text-dim);font-size:9px;text-transform:uppercase"><span></span><span>Pokémon</span><span class="speed-num">Max</span><span class="speed-num">Scarf</span></div>${list.map(x=>`<div class="speed-row">${sprite(x.m.species)}<div><div class="sname">${esc(x.m.species)}</div><div class="types">${typePills(typesMap[x.m.species]||[])}</div></div><div class="speed-num">${x.max??'—'}</div><div class="speed-num">${x.scarf??'—'}</div></div>`).join('')}</div>`};
   const speedSection=`<section class="panel"><h2>Speed Tiers</h2><p class="panel-desc">Both rosters side by side, sorted by Level 100 maximum Speed. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial nature; Scarf is 1.5× that benchmark.</p><div class="speed-columns">${speedCard(team,your,yourTypes,'your')}${speedCard(currentOpponent,opp,oppTypes,'opp')}</div></section>`;
 
-  const defensiveMatchup=(mult)=>{
-    if(mult===null)return ['Neutral matchup','defensive-neutral'];
-    if(mult>=2)return ['Unfavourable matchup','defensive-favourable'];
-    if(mult<1)return ['Favourable matchup','defensive-unfavourable'];
-    return ['Neutral matchup','defensive-neutral'];
-  };
-  const defensiveMatrix=`<section class="panel"><h2>Defensive Matchups</h2><p class="panel-desc">How each opposing Pokémon matches into your team defensively. Favourable means your Pokémon resists the opponent's typing; unfavourable means it is weak to it.</p><div class="defensive-matrix-wrap"><table class="defensive-matrix"><thead><tr><th class="your-mon-head">Your Pokémon</th>${opp.map(o=>`<th class="opp-head"><div class="matchup-name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</th>`).join('')}</tr></thead><tbody>${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(y=>`<tr><th class="your-mon-cell"><div class="mon-inline">${sprite(y.species,'sprite-small')}<div><div class="name">${esc(y.species)}</div>${typePills(yourTypes[y.species]||[])}</div></div></th>${opp.map(o=>{const vals=(oppTypes[o.species]||[]).map(t=>defensiveMultiplier(t,yourTypes[y.species]||[]));const max=vals.length?Math.max(...vals):null;const [label,c]=defensiveMatchup(max);return `<td class="matchup-cell"><span class="matchup-pill ${c}">${label}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></div></section>`;
-
   const setDefault=STATE.setPokemon&&opp.some(m=>m.species===STATE.setPokemon)?STATE.setPokemon:(opp[0]?.species||'');
   const setMon=opp.find(m=>m.species===setDefault)||opp[0];
   const renderSetDetail=(species)=>{const m=opp.find(x=>x.species===species)||opp[0];if(!m)return '<div class="empty">No Pokémon selected.</div>';return `<div class="set-detail-head">${sprite(m.species)}<div><h3 style="margin:0">${esc(displaySpecies(m))}</h3>${typePills(oppTypes[m.species]||[])}<div class="small">${m.replays.size} recorded replay${m.replays.size===1?'':'s'} · ${observedMoves(m).length} unique observed moves · ${inferRoles(m).length} inferred role${inferRoles(m).length===1?'':'s'}</div></div></div>${setSuggestionsMarkup(m)}`};
   const setSection=`<section class="panel"><h2>Likely Sets</h2><p class="panel-desc">Select an opposing Pokémon to see role-based set concepts inferred from its observed moves. If a Pokémon has multiple observed roles, each role gets its own separate set concept.</p><div class="set-layout"><div class="set-selector"><label>Opponent Pokémon</label><select id="setPokemonSelect">${opp.map(m=>`<option value="${esc(displaySpecies(m))}" ${m.species===setMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select><div class="set-mon-list">${opp.map(m=>`<button type="button" class="set-mon-option ${m.species===setMon?.species?'active':''}" data-set-mon="${esc(displaySpecies(m))}">${sprite(m.species)}<span><strong>${esc(displaySpecies(m))}</strong><br>${typePills(oppTypes[m.species]||[])}</span></button>`).join('')}</div></div><div class="set-detail" id="setDetail">${renderSetDetail(setDefault)}</div></div></section>`;
 
-  return controls+offense+speedSection+defensiveMatrix+setSection;
+  return controls+offense+speedSection+setSection;
 }
 
 async function render(){
@@ -787,9 +824,7 @@ async function render(){
       const selected=e.target.options[e.target.selectedIndex];
       const label=$('offenseSelectedName');
       if(label) label.textContent=selected?.textContent?.trim()||species;
-      const y=franchiseMons($('teamSelect').value);
-      const opponent=STATE.compareOpponent||teamNames().find(x=>x!==$('teamSelect').value)||'';
-      const oppMons=franchiseMons(opponent);
+      Promise.all([franchiseMons($('teamSelect').value), franchiseMons(STATE.compareOpponent||teamNames().find(x=>x!==$('teamSelect').value)||'')]).then(([y,oppMons])=>{
       const target=y.find(m=>m.species===species)||y[0];
       const results=$('offenseResults');
       if(!target||!results)return;
@@ -818,6 +853,7 @@ async function render(){
         console.error('Offensive matchup update failed:',err);
         results.innerHTML='<div class="empty">Could not load matchup data.</div>';
       });
+    }).catch(err=>{console.error('Roster load failed:',err);});
     });
     $('setPokemonSelect')?.addEventListener('change',async(e)=>{
       STATE.setPokemon=e.target.value;

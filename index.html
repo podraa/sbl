@@ -1916,7 +1916,11 @@
       document.getElementById('coachLine').innerHTML = coaches.length===0 ? '' :
         `Coached by <strong>${coaches.map(escapeHtml).join(', ')}</strong>`;
       const data = teamPokemonStats('ALL');
-      const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>b.dealt-a.dealt);
+      const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>{
+        const ac=isCurrentRosterPokemon(teamSel.value,a.species), bc=isCurrentRosterPokemon(teamSel.value,b.species);
+        if(ac!==bc) return ac ? -1 : 1;
+        return b.dealt-a.dealt || b.games-a.games || a.species.localeCompare(b.species);
+      });
       document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team.</div>` :
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
         ${list.map((s,i)=>{
