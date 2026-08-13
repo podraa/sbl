@@ -3,246 +3,685 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Team — SBL</title>
+<title>My Team — SBL Dashboard</title>
 <style>
-:root{
-  --bg:#0b1020;
-  --panel:#121a2b;
-  --panel2:#182338;
-  --border:#2a3954;
-  --text:#eef4ff;
-  --muted:#9fb0cf;
-  --accent:#7cc7ff;
-  --accent2:#5eead4;
-}
-*{box-sizing:border-box}
-body{margin:0;background:linear-gradient(180deg,#08101d,#0b1020);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}
-.container{max-width:1200px;margin:0 auto;padding:28px}
-.header{
-  background:linear-gradient(135deg,#14213d,#0f1728);
-  border:1px solid var(--border);
-  border-radius:20px;
-  padding:24px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:24px;
-}
-.team h1{margin:0;font-size:34px}
-.team p{margin:8px 0 0;color:var(--muted)}
-.budget{
-  min-width:320px;
-  background:rgba(255,255,255,.03);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:18px;
-}
-.budget .row{display:flex;justify-content:space-between;align-items:center}
-.bar{height:10px;background:#0b1324;border-radius:999px;overflow:hidden;margin:14px 0}
-.fill{height:100%;width:94%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-.tabs{display:flex;gap:10px;margin:22px 0}
-.tab{padding:10px 16px;border-radius:12px;border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer}
-.tab.active{background:#1b2a46;color:var(--text);border-color:#3a5586}
-.section{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
-.card{
-  background:linear-gradient(180deg,#182338,#141d30);
-  border:1px solid var(--border);
-  border-radius:18px;
-  padding:18px;
-  transition:.18s ease;
-}
-.card:hover{transform:translateY(-3px);border-color:#4f79b8}
-.top{display:flex;align-items:center;gap:14px}
-.sprite{width:64px;height:64px;image-rendering:pixelated}
-.name{font-weight:800;font-size:18px}
-.types{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
-.type{font-size:11px;padding:4px 8px;border-radius:999px;background:#223252;color:#dbe9ff}
-.points{
-  margin-top:14px;
-  display:inline-flex;
-  padding:6px 10px;
-  border-radius:999px;
-  background:#10243a;
-  border:1px solid #29507a;
-  color:var(--accent);
-  font-weight:800;
-}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
-.stat{background:#101827;border:1px solid var(--border);border-radius:12px;padding:12px}
-.stat .k{font-size:11px;color:var(--muted);text-transform:uppercase}
-.stat .v{font-size:20px;font-weight:800;margin-top:4px}
-.actions{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
-.link{color:var(--accent);text-decoration:none;font-weight:700}
-.trade-layout{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
-.panel{background:var(--panel2);border:1px solid var(--border);border-radius:16px;padding:18px}
-label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
-select,input{
-  width:100%;
-  background:#0f1728;
-  color:var(--text);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:12px;
-}
-.btn{
-  background:linear-gradient(90deg,var(--accent),var(--accent2));
-  color:#062033;
-  border:none;
-  border-radius:12px;
-  padding:12px 16px;
-  font-weight:800;
-  cursor:pointer;
-}
-.trade-card{
-  background:#111a2a;
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:16px;
-  margin-bottom:14px;
-}
-.badge{
-  display:inline-block;
-  padding:4px 8px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:800;
-  background:#2a2110;
-  color:#ffd27a;
-}
-@media (max-width:900px){
-  .header{flex-direction:column;align-items:flex-start}
-  .budget{width:100%;min-width:0}
-  .trade-layout{grid-template-columns:1fr}
-}
+  :root{
+    --bg:#0e1218;
+    --panel:#161c26;
+    --panel-alt:#1c2432;
+    --border:#2a3444;
+    --text:#e8edf5;
+    --text-dim:#8996a8;
+    --amber:#ffb454;
+    --teal:#5eead4;
+    --red:#ff7a7a;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased;}
+  #app{max-width:1280px; margin:0 auto; padding:28px 24px 72px;}
+
+  header{margin-bottom:20px;}
+  h1{font-size:22px; margin:0 0 2px; letter-spacing:.2px;}
+  .sub{color:var(--text-dim); font-size:13px; margin-bottom:16px;}
+
+  nav.tabs{display:flex; gap:4px; margin:20px 0 16px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
+  nav.tabs button{background:none; border:none; color:var(--text-dim); padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; font-family:var(--sans);}
+  nav.tabs button.active{color:var(--text); border-bottom-color:var(--amber);}
+  nav.tabs button:hover{color:var(--text);}
+
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px;}
+  .panel + .panel{margin-top:14px;}
+  .panel h2{font-size:14px; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim);}
+
+  label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px;}
+  input[type=text], input[type=email], input[type=password], select{
+    width:100%; background:var(--panel-alt); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); padding:10px 12px; font-family:var(--sans); font-size:13px;
+  }
+  .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+  .row > div{flex:1; min-width:160px;}
+
+  button.primary{background:var(--amber); color:#1a1206; border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans);}
+  button.primary:disabled{opacity:.5; cursor:default;}
+  button.ghost{background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer; font-family:var(--sans);}
+  button.ghost:hover{border-color:var(--amber);}
+  button.small{padding:5px 10px; font-size:11px;}
+  button.danger{border:1px solid var(--red); color:var(--red); background:none; border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer;}
+  button.teal{background:var(--teal); color:#062521; border:none; border-radius:8px; padding:9px 14px; font-size:12px; font-weight:700; cursor:pointer;}
+
+  .note{font-size:12px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
+  .note.danger{color:var(--red);}
+  .note.ok{color:var(--teal);}
+  .empty-state{color:var(--text-dim); font-size:13px; padding:20px 0; text-align:center;}
+  .badge{display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px; background:var(--panel-alt); border:1px solid var(--border); color:var(--text-dim); margin-left:6px;}
+  .foot-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+
+  .status-pill{display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:.04em;}
+  .status-pill.pending{color:var(--amber); background:#3a2c12; border:1px solid #5a4620;}
+  .status-pill.approved{color:var(--teal); background:#0f2b27; border:1px solid #1c4a43;}
+  .status-pill.rejected{color:var(--red); background:#3a1414; border:1px solid #5a2020;}
+  .status-pill.accepted{color:var(--teal); background:#0f2b27; border:1px solid #1c4a43;}
+  .status-pill.withdrawn{color:var(--text-dim); background:var(--panel-alt); border:1px solid var(--border);}
+
+  .sprite{width:32px; height:32px; object-fit:contain; vertical-align:middle; image-rendering:pixelated; background:var(--panel-alt); border-radius:6px;}
+  .mon-pill{display:inline-flex; align-items:center; gap:6px; background:var(--panel-alt); border:1px solid var(--border); border-radius:20px; padding:3px 10px 3px 3px; font-size:12px; margin:3px 4px 3px 0;}
+  .mon-list{display:flex; flex-wrap:wrap; margin-top:4px;}
+  .mon-pick{display:flex; align-items:center; gap:8px; background:var(--panel-alt); border:1px solid var(--border); border-radius:8px; padding:6px 10px; margin:4px 4px 4px 0; cursor:pointer; font-size:12px;}
+  .mon-pick input{margin:0;}
+  .mon-pick.checked{border-color:var(--amber);}
+  .mon-pick-grid{display:flex; flex-wrap:wrap;}
+  .pts{color:var(--text-dim); font-family:var(--mono); font-size:11px;}
+
+  .budget-bar{height:8px; border-radius:6px; background:var(--panel-alt); border:1px solid var(--border); overflow:hidden; margin-top:8px;}
+  .budget-fill{height:100%; background:var(--amber);}
+  .budget-fill.over{background:var(--red);}
+
+  .trade-card{border:1px solid var(--border); border-radius:10px; background:var(--panel-alt); padding:14px; margin-bottom:10px;}
+  .trade-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
+  .trade-teams{font-weight:700; font-size:13px;}
+  .trade-teams .arrow{color:var(--text-dim); margin:0 6px; font-weight:400;}
+  .trade-sub{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .trade-cols{display:flex; gap:16px; flex-wrap:wrap; margin-top:6px;}
+  .trade-col{flex:1; min-width:180px;}
+  .trade-col h4{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin:0 0 4px;}
+
+  .roster-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px;}
+  .roster-card{border:1px solid var(--border); background:var(--panel-alt); border-radius:10px; padding:12px;}
+  .roster-card.mine{border-color:var(--amber);}
+  .roster-card h3{margin:0 0 4px; font-size:14px;}
+
+  .gate{max-width:480px; margin:60px auto; text-align:center;}
+  .gate .panel{text-align:left;}
+
+  .page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
+  .page-nav label{font-size:11px;color:var(--text-dim);font-weight:700}
+  .page-nav select{font-size:12px;padding:7px 30px 7px 10px;box-shadow:0 2px 8px rgba(0,0,0,.25); width:auto;}
+  @media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+
+  .hero{background:linear-gradient(135deg,#182338,#101827);border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:18px;}
+  .hero-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;}
+  .hero-title h2{margin:0;font-size:30px;}
+  .hero-title p{margin:6px 0 0;color:var(--text-dim);}
+  .budget-card{min-width:280px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:16px;}
+  .budget-row{display:flex;justify-content:space-between;align-items:center;}
+  .budget-value{font-family:var(--mono);font-weight:700;}
+  .roster-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:18px;}
+  .pokemon-card{background:linear-gradient(180deg,#1b2434,#151d2b);border:1px solid var(--border);border-radius:16px;padding:18px;transition:.18s ease;}
+  .pokemon-card:hover{border-color:var(--amber);transform:translateY(-2px);}
+  .pokemon-head{display:flex;align-items:center;gap:14px;}
+  .pokemon-head .sprite{width:64px;height:64px;border-radius:10px;}
+  .pokemon-name{font-size:18px;font-weight:700;}
+  .pokemon-points{display:inline-flex;margin-top:12px;padding:6px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--amber);}
+  .pokemon-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+  .meta-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px;}
+  .meta-box .label{font-size:10px;text-transform:uppercase;color:var(--text-dim);}
+  .meta-box .value{font-size:16px;font-weight:700;margin-top:4px;}
+
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <div class="team">
-      <h1>Kanto Kings</h1>
-      <p>Coach dashboard • 6 Pokémon roster • Budget cap: <strong>115 pts</strong></p>
-    </div>
-    <div class="budget">
-      <div class="row"><strong>Budget used</strong><strong>108 / 115</strong></div>
-      <div class="bar"><div class="fill"></div></div>
-      <div class="row"><span style="color:var(--muted)">Remaining</span><strong>7 pts</strong></div>
-    </div>
-  </div>
 
-  <div class="tabs">
-    <div class="tab active">Roster</div>
-    <div class="tab">Trades</div>
-    <div class="tab">Account</div>
-  </div>
-
-  <div class="section">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0">Roster</h2>
-      <span style="color:var(--muted)">6 Pokémon</span>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <div class="top">
-          <img class="sprite" src="https://play.pokemonshowdown.com/sprites/gen5/garchomp.png">
-          <div>
-            <div class="name">Garchomp</div>
-            <div class="types"><span class="type">Dragon</span><span class="type">Ground</span></div>
-          </div>
-        </div>
-        <div class="points">18 pts</div>
-        <div class="stats">
-          <div class="stat"><div class="k">Damage dealt</div><div class="v">1,842</div></div>
-          <div class="stat"><div class="k">KOs</div><div class="v">11</div></div>
-          <div class="stat"><div class="k">Damage taken</div><div class="v">1,126</div></div>
-          <div class="stat"><div class="k">Win rate</div><div class="v">71%</div></div>
-        </div>
-        <div class="actions"><span style="color:var(--muted);font-size:12px">Breaker • Cleaner</span><a class="link" href="team-analysis.html">View analysis</a></div>
-      </div>
-
-      <div class="card">
-        <div class="top">
-          <img class="sprite" src="https://play.pokemonshowdown.com/sprites/gen5/rotom-wash.png">
-          <div>
-            <div class="name">Rotom-Wash</div>
-            <div class="types"><span class="type">Electric</span><span class="type">Water</span></div>
-          </div>
-        </div>
-        <div class="points">14 pts</div>
-        <div class="stats">
-          <div class="stat"><div class="k">Damage dealt</div><div class="v">1,204</div></div>
-          <div class="stat"><div class="k">KOs</div><div class="v">5</div></div>
-          <div class="stat"><div class="k">Damage taken</div><div class="v">1,488</div></div>
-          <div class="stat"><div class="k">Win rate</div><div class="v">63%</div></div>
-        </div>
-        <div class="actions"><span style="color:var(--muted);font-size:12px">Pivot • Utility</span><a class="link" href="team-analysis.html">View analysis</a></div>
-      </div>
-    </div>
-  </div>
-
-  <div style="height:18px"></div>
-
-  <div class="section">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0">Trades</h2>
-      <span class="badge">Integrated trade requests</span>
-    </div>
-
-    <div class="trade-layout">
-      <div class="panel">
-        <h3 style="margin-top:0">Create trade request</h3>
-        <label>Trading with</label>
-        <select><option>Lavender Gengars</option><option>Celadon Rockets</option></select>
-
-        <div style="height:14px"></div>
-
-        <label>Pokémon you are offering</label>
-        <select><option>Garchomp (18 pts)</option><option>Rotom-Wash (14 pts)</option></select>
-
-        <div style="height:14px"></div>
-
-        <label>Pokémon you want</label>
-        <select><option>Iron Valiant (19 pts)</option><option>Dragapult (20 pts)</option></select>
-
-        <div style="height:18px"></div>
-
-        <div class="panel" style="padding:14px">
-          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Current roster</span><strong>108 pts</strong></div>
-          <div style="display:flex;justify-content:space-between;margin-top:8px"><span style="color:var(--muted)">After trade</span><strong>109 pts</strong></div>
-          <div style="display:flex;justify-content:space-between;margin-top:8px"><span style="color:var(--muted)">Budget cap</span><strong>115 pts</strong></div>
-        </div>
-
-        <div style="height:16px"></div>
-        <button class="btn">Send trade request</button>
-      </div>
-
-      <div class="panel">
-        <h3 style="margin-top:0">Incoming requests</h3>
-        <div class="trade-card">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <strong>Lavender Gengars</strong>
-            <span class="badge">Pending</span>
-          </div>
-          <p style="color:var(--muted);margin:10px 0 14px">They are offering <strong>Iron Valiant</strong> for <strong>Garchomp</strong>.</p>
-          <div style="display:flex;gap:10px">
-            <button class="btn">Accept</button>
-            <button style="background:#202a3d;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-weight:700">Reject</button>
-          </div>
-        </div>
-
-        <h3>Sent requests</h3>
-        <div class="trade-card">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <strong>Celadon Rockets</strong>
-            <span class="badge">Pending</span>
-          </div>
-          <p style="color:var(--muted);margin:10px 0 0">Waiting for response.</p>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="page-nav">
+  <label for="pageNavSelect">Page</label>
+  <select id="pageNavSelect" aria-label="Choose page">
+    <option value="stats.html">Stats Dashboard</option>
+    <option value="rosters.html">Rosters</option>
+    <option value="team-analysis.html">Team Analysis</option>
+    <option value="free-agency.html">Free Agency</option>
+    <option value="index.html" selected>My Team</option>
+  </select>
 </div>
+
+<div id="app">
+  <header>
+    <h1>My Team</h1>
+    <div class="sub">Manage your roster, propose trades, and browse free agency</div>
+  </header>
+  <div id="content"><div class="empty-state">Loading…</div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
+  const SUPABASE_STATE_ID = '__dashboard_state__';
+  const ROSTER_BUDGET = 115; // keep in sync with the `budget` constant in accept_trade()
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const appEl = document.getElementById('app');
+  const contentEl = document.getElementById('content');
+
+  document.getElementById('pageNavSelect').addEventListener('change', e=>{
+    if(e.target.value) location.href = e.target.value;
+  });
+
+  let session = null;
+  let profile = null;
+  let DASH = { teamMap:{}, settings:{ rosters:{}, freeAgency:{ mons:[] } } };
+  let trades = [];
+  let activeTab = 'myteam';
+  let draft = { target:'', offered:new Set(), requested:new Set() };
+  let statusMsg = '';
+
+  // ---------- helpers ----------
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function toShowdownId(species){
+    return String(species||'').split('-').map(part => part.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-');
+  }
+  function spriteUrl(species){ return `https://play.pokemonshowdown.com/sprites/gen5/${toShowdownId(species)}.png`; }
+  function spriteImg(species, cls){
+    const safe = escapeHtml(species);
+    return `<img class="${cls||'sprite'}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
+  }
+  function normalizeStoredRosters(rosters){
+    const out = {};
+    for(const [team, list] of Object.entries(rosters || {})){
+      out[team] = (Array.isArray(list) ? list : []).map(mon => {
+        if(typeof mon === 'string') return {name:mon, points:null};
+        return {name:String(mon?.name ?? ''), points:mon?.points ?? null};
+      }).filter(mon => mon.name);
+    }
+    return out;
+  }
+  function teamsList(){ return Object.keys(DASH.settings.rosters||{}).sort(); }
+  function myRoster(){ return (profile && profile.team_name && DASH.settings.rosters[profile.team_name]) || []; }
+  function rosterPoints(list){ return (list||[]).reduce((s,m)=> s + (Number(m.points)||0), 0); }
+  function freeAgencyMons(){ return Array.isArray(DASH.settings?.freeAgency?.mons) ? DASH.settings.freeAgency.mons : []; }
+
+  // ---------- data loading ----------
+  async function loadDashboardState(){
+    const {data, error} = await supabase.from('replays').select('replay_id,replay_data').eq('replay_id', SUPABASE_STATE_ID);
+    if(error) throw error;
+    const row = (data||[])[0];
+    const shared = row ? (row.replay_data||{}) : {};
+    DASH.teamMap = shared.teamMap || {};
+    DASH.settings = Object.assign({ rosters:{}, freeAgency:{mons:[]} }, shared.settings || {});
+    DASH.settings.rosters = normalizeStoredRosters(DASH.settings.rosters||{});
+  }
+
+  async function loadProfile(){
+    const uid = session.user.id;
+    let {data, error} = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
+    if(error) throw error;
+    if(!data){
+      const {data: created, error: insErr} = await supabase.from('profiles')
+        .insert({ id: uid, email: session.user.email })
+        .select('*').single();
+      if(insErr) throw insErr;
+      data = created;
+    }
+    profile = data;
+  }
+
+  async function loadTrades(){
+    const {data, error} = await supabase.from('trade_requests').select('*').order('created_at', {ascending:false});
+    if(error) throw error;
+    trades = data || [];
+  }
+
+  async function refreshAll(){
+    await Promise.all([loadDashboardState(), loadProfile(), loadTrades()]);
+  }
+
+  // ---------- auth screens ----------
+  function renderAuthGate(){
+    appEl.querySelector('header .sub').textContent = 'Sign in to manage your team';
+    contentEl.innerHTML = `
+      <div class="gate">
+        <div class="panel">
+          <h2>Sign In</h2>
+          <label>Email</label>
+          <input id="authEmail" type="email" autocomplete="username" placeholder="you@example.com" style="margin-bottom:12px;">
+          <label>Password</label>
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="Password" style="margin-bottom:14px;">
+          <div class="foot-actions">
+            <button class="primary" id="loginBtn" style="flex:1;">Log in</button>
+            <button class="ghost" id="signupBtn" style="flex:1;">Sign up</button>
+          </div>
+          <div id="authMsg" class="note"></div>
+        </div>
+      </div>`;
+    const msgEl = document.getElementById('authMsg');
+    const setMsg = (text, danger)=>{ msgEl.className = 'note' + (danger?' danger':' ok'); msgEl.textContent = text; };
+
+    document.getElementById('loginBtn').onclick = async ()=>{
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if(!email || !password){ setMsg('Enter your email and password.', true); return; }
+      const btn = document.getElementById('loginBtn'); btn.disabled = true;
+      const {data, error} = await supabase.auth.signInWithPassword({email, password});
+      btn.disabled = false;
+      if(error){ setMsg(error.message, true); return; }
+      session = data.session;
+      await boot();
+    };
+
+    document.getElementById('signupBtn').onclick = async ()=>{
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if(!email || !password){ setMsg('Enter an email and password.', true); return; }
+      if(password.length < 6){ setMsg('Password should be at least 6 characters.', true); return; }
+      const btn = document.getElementById('signupBtn'); btn.disabled = true;
+      const {data, error} = await supabase.auth.signUp({email, password});
+      btn.disabled = false;
+      if(error){ setMsg(error.message, true); return; }
+      if(data.session){ session = data.session; await boot(); }
+      else{ setMsg('Account created — check your email to confirm, then log in.', false); }
+    };
+  }
+
+  // ---------- team claim / status gate ----------
+  function renderTeamClaim(){
+    const teams = teamsList();
+    const taken = new Set(); // we can't see other users' claims, so just list all published teams
+    const current = profile.team_name || '';
+    contentEl.innerHTML = `
+      <div class="gate">
+        <div class="panel">
+          <h2>${current ? 'Change your team' : 'Claim your team'}</h2>
+          <div class="note">Pick the franchise you own. A commissioner needs to approve your claim before you can trade.</div>
+          ${teams.length ? `
+            <label style="margin-top:12px;">Team</label>
+            <select id="teamPick">
+              <option value="">— Select a team —</option>
+              ${teams.map(t=>`<option value="${escapeHtml(t)}" ${t===current?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+            </select>` : `
+            <label style="margin-top:12px;">Team name</label>
+            <input id="teamPickText" type="text" value="${escapeHtml(current)}" placeholder="Type your team's exact name">
+            <div class="note">Rosters haven't been published yet, so type the exact franchise name — a commissioner will match it up.</div>`}
+          <div class="foot-actions">
+            <button class="primary" id="claimBtn">${current ? 'Update claim' : 'Submit claim'}</button>
+          </div>
+          <div id="claimMsg" class="note"></div>
+        </div>
+      </div>`;
+    document.getElementById('claimBtn').onclick = async ()=>{
+      const val = teams.length ? document.getElementById('teamPick').value.trim() : document.getElementById('teamPickText').value.trim();
+      const msgEl = document.getElementById('claimMsg');
+      if(!val){ msgEl.className='note danger'; msgEl.textContent='Pick or type a team name.'; return; }
+      const btn = document.getElementById('claimBtn'); btn.disabled = true;
+      try{
+        const {error} = await supabase.from('profiles').update({ team_name: val, status: 'pending' }).eq('id', session.user.id);
+        if(error) throw error;
+        await loadProfile();
+        render();
+      }catch(e){
+        msgEl.className='note danger'; msgEl.textContent = e.message;
+        btn.disabled = false;
+      }
+    };
+  }
+
+  function renderPendingOrRejected(){
+    const rejected = profile.status === 'rejected';
+    contentEl.innerHTML = `
+      <div class="gate">
+        <div class="panel">
+          <h2>${rejected ? 'Claim rejected' : 'Waiting for approval'}</h2>
+          <div class="note">
+            ${rejected
+              ? `Your claim for <strong>${escapeHtml(profile.team_name)}</strong> was rejected. Pick a different team below, or reach out to your commissioner if you think this is a mistake.`
+              : `Your claim for <strong>${escapeHtml(profile.team_name)}</strong> is <span class="status-pill pending">pending</span>. A commissioner needs to approve it before you can manage your roster or propose trades. You can still browse Free Agency and Rosters below.`}
+          </div>
+          <div class="foot-actions">
+            <button class="ghost" id="changeTeamBtn">${rejected ? 'Pick a different team' : 'Change team pick'}</button>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('changeTeamBtn').onclick = ()=>{ renderTeamClaim(); };
+  }
+
+  // ---------- My Team tab ----------
+  function renderMyTeam(){
+    if(profile.status !== 'approved'){
+      contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can manage your roster.</div></div>`;
+      return;
+    }
+    const roster = myRoster();
+    const pts = rosterPoints(roster);
+    const pct = Math.min(100, Math.round((pts / ROSTER_BUDGET) * 100));
+    contentEl.innerHTML = `
+      <div class="hero">
+        <div class="hero-head">
+          <div class="hero-title">
+            <h2>${escapeHtml(profile.team_name)}</h2>
+            <p>Franchise dashboard · ${roster.length} Pokémon on your active roster</p>
+          </div>
+          <div class="budget-card">
+            <div class="budget-row"><span>Budget used</span><span class="budget-value">${pts} / ${ROSTER_BUDGET}</span></div>
+            <div class="budget-bar"><div class="budget-fill${pts>ROSTER_BUDGET?' over':''}" style="width:${pct}%"></div></div>
+            <div class="budget-row"><span>Remaining</span><span class="budget-value">${Math.max(0, ROSTER_BUDGET-pts)} pts</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Roster</h2>
+        ${roster.length ? `
+          <div class="roster-cards">
+            ${roster.map(m=>`
+              <div class="pokemon-card">
+                <div class="pokemon-head">
+                  ${spriteImg(m.name,'sprite')}
+                  <div>
+                    <div class="pokemon-name">${escapeHtml(m.name)}</div>
+                    <div class="note">Roster member</div>
+                  </div>
+                </div>
+                <div class="pokemon-points">${m.points!=null?escapeHtml(m.points)+' pts':'Unranked'}</div>
+                <div class="pokemon-meta">
+                  <div class="meta-box"><div class="label">Damage dealt</div><div class="value">—</div></div>
+                  <div class="meta-box"><div class="label">KOs</div><div class="value">—</div></div>
+                  <div class="meta-box"><div class="label">Damage taken</div><div class="value">—</div></div>
+                  <div class="meta-box"><div class="label">Win rate</div><div class="value">—</div></div>
+                </div>
+              </div>`).join('')}
+          </div>` : `<div class="empty-state">No roster published for your team yet.</div>`}
+      </div>
+      <div class="panel" id="proposePanel"></div>`;
+    renderProposeTrade();
+  }
+
+  function renderProposeTrade(){
+    const el = document.getElementById('proposePanel');
+    const roster = myRoster();
+    const otherTeams = teamsList().filter(t=>t!==profile.team_name);
+    const targetIsFA = draft.target === '';
+    const targetRoster = targetIsFA ? null : (DASH.settings.rosters[draft.target] || []);
+    const requestPool = targetIsFA ? freeAgencyMons() : targetRoster;
+
+    el.innerHTML = `
+      <h2>Propose a Trade</h2>
+      <div class="row">
+        <div>
+          <label>Trade with</label>
+          <select id="targetSelect">
+            <option value="" ${targetIsFA?'selected':''}>— Free Agency —</option>
+            ${otherTeams.map(t=>`<option value="${escapeHtml(t)}" ${t===draft.target?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="trade-cols">
+        <div class="trade-col">
+          <h4>You give ${targetIsFA?'(optional for a free-agency pickup)':''}</h4>
+          <div class="mon-pick-grid" id="offeredPicks">
+            ${roster.length ? roster.map(m=>`
+              <label class="mon-pick${draft.offered.has(m.name)?' checked':''}" data-name="${escapeHtml(m.name)}">
+                <input type="checkbox" data-role="offered" value="${escapeHtml(m.name)}" ${draft.offered.has(m.name)?'checked':''}>
+                ${spriteImg(m.name,'sprite')} ${escapeHtml(m.name)} ${m.points!=null?`<span class="pts">${escapeHtml(m.points)}pt</span>`:''}
+              </label>`).join('') : '<div class="empty-state">Your roster is empty.</div>'}
+          </div>
+        </div>
+        <div class="trade-col">
+          <h4>You get</h4>
+          <div class="mon-pick-grid" id="requestedPicks">
+            ${requestPool && requestPool.length ? requestPool.map(m=>`
+              <label class="mon-pick${draft.requested.has(m.name)?' checked':''}" data-name="${escapeHtml(m.name)}">
+                <input type="checkbox" data-role="requested" value="${escapeHtml(m.name)}" ${draft.requested.has(m.name)?'checked':''}>
+                ${spriteImg(m.name,'sprite')} ${escapeHtml(m.name)} ${m.points!=null?`<span class="pts">${escapeHtml(m.points)}pt</span>`:''}
+              </label>`).join('') : `<div class="empty-state">${targetIsFA?'Free agency pool is empty.':'That team has no published roster.'}</div>`}
+          </div>
+        </div>
+      </div>
+      <div class="foot-actions">
+        <button class="primary" id="submitTradeBtn">Send trade proposal</button>
+      </div>
+      <div id="tradeMsg" class="note"></div>`;
+
+    document.getElementById('targetSelect').onchange = (e)=>{
+      draft.target = e.target.value;
+      draft.requested = new Set();
+      renderProposeTrade();
+    };
+
+    el.querySelectorAll('input[data-role]').forEach(cb=>{
+      cb.addEventListener('change', ()=>{
+        const set = cb.dataset.role === 'offered' ? draft.offered : draft.requested;
+        if(cb.checked) set.add(cb.value); else set.delete(cb.value);
+        cb.closest('.mon-pick').classList.toggle('checked', cb.checked);
+      });
+    });
+
+    document.getElementById('submitTradeBtn').onclick = async ()=>{
+      const msgEl = document.getElementById('tradeMsg');
+      if(draft.requested.size === 0){ msgEl.className='note danger'; msgEl.textContent='Pick at least one Pokémon you want to receive.'; return; }
+      const btn = document.getElementById('submitTradeBtn'); btn.disabled = true;
+      msgEl.className='note'; msgEl.textContent='Sending…';
+      try{
+        const {error} = await supabase.from('trade_requests').insert({
+          proposer_team: profile.team_name,
+          target_team: targetIsFA ? null : draft.target,
+          mons_offered: Array.from(draft.offered),
+          mons_requested: Array.from(draft.requested)
+        });
+        if(error) throw error;
+        draft = { target:'', offered:new Set(), requested:new Set() };
+        await loadTrades();
+        activeTab = 'trades';
+        setStatus('Trade proposal sent.', false);
+        renderTabs(); render();
+      }catch(e){
+        msgEl.className='note danger'; msgEl.textContent = e.message;
+        btn.disabled = false;
+      }
+    };
+  }
+
+  // ---------- Trades tab ----------
+  function tradeCard(t, role){
+    const canRespond = role === 'incoming' && t.status === 'pending';
+    const canWithdraw = role === 'outgoing' && t.status === 'pending';
+    return `<div class="trade-card" data-id="${t.id}">
+      <div class="trade-head">
+        <div>
+          <div class="trade-teams">${escapeHtml(t.proposer_team)}<span class="arrow">→</span>${t.target_team ? escapeHtml(t.target_team) : 'Free Agency'}</div>
+          <div class="trade-sub">${new Date(t.created_at).toLocaleString()}</div>
+        </div>
+        <span class="status-pill ${t.status}">${t.status}</span>
+      </div>
+      <div class="trade-cols">
+        <div class="trade-col"><h4>Offered</h4><div class="mon-list">${(t.mons_offered||[]).length ? t.mons_offered.map(n=>`<span class="mon-pill">${spriteImg(n)} ${escapeHtml(n)}</span>`).join('') : '<span class="note">Nothing</span>'}</div></div>
+        <div class="trade-col"><h4>Requested</h4><div class="mon-list">${(t.mons_requested||[]).length ? t.mons_requested.map(n=>`<span class="mon-pill">${spriteImg(n)} ${escapeHtml(n)}</span>`).join('') : '<span class="note">Nothing</span>'}</div></div>
+      </div>
+      ${canRespond ? `<div class="foot-actions">
+          <button class="teal small" data-action="accept" data-id="${t.id}">Accept</button>
+          <button class="danger small" data-action="reject" data-id="${t.id}">Reject</button>
+        </div>` : ''}
+      ${canWithdraw ? `<div class="foot-actions">
+          <button class="ghost small" data-action="withdraw" data-id="${t.id}">Withdraw</button>
+        </div>` : ''}
+      <div class="note trade-err" id="tradeErr-${t.id}"></div>
+    </div>`;
+  }
+
+  function renderTrades(){
+    if(profile.status !== 'approved'){
+      contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can send or receive trades.</div></div>`;
+      return;
+    }
+    const myTeam = profile.team_name;
+    const incoming = trades.filter(t=>t.target_team===myTeam && t.status==='pending');
+    const outgoing = trades.filter(t=>t.proposer_team===myTeam && t.status==='pending');
+    const history = trades.filter(t=> t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam));
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Incoming <span class="badge">${incoming.length}</span></h2>
+        ${incoming.length ? incoming.map(t=>tradeCard(t,'incoming')).join('') : '<div class="empty-state">No incoming trade offers.</div>'}
+      </div>
+      <div class="panel">
+        <h2>Sent by you <span class="badge">${outgoing.length}</span></h2>
+        ${outgoing.length ? outgoing.map(t=>tradeCard(t,'outgoing')).join('') : '<div class="empty-state">You have no pending sent trades.</div>'}
+      </div>
+      <div class="panel">
+        <h2>History <span class="badge">${history.length}</span></h2>
+        ${history.length ? history.map(t=>tradeCard(t,'history')).join('') : '<div class="empty-state">No resolved trades yet.</div>'}
+      </div>`;
+
+    contentEl.querySelectorAll('button[data-action]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = Number(btn.dataset.id);
+        const action = btn.dataset.action;
+        const errEl = document.getElementById(`tradeErr-${id}`);
+        errEl.className = 'note';
+        errEl.textContent = '';
+        btn.disabled = true;
+        try{
+          if(action === 'accept'){
+            const {error} = await supabase.rpc('accept_trade', { trade_id: id });
+            if(error) throw error;
+          } else if(action === 'reject'){
+            const {error} = await supabase.from('trade_requests')
+              .update({ status:'rejected', responded_at:new Date().toISOString(), responded_by:session.user.id })
+              .eq('id', id);
+            if(error) throw error;
+          } else if(action === 'withdraw'){
+            const {error} = await supabase.from('trade_requests')
+              .update({ status:'withdrawn', responded_at:new Date().toISOString(), responded_by:session.user.id })
+              .eq('id', id);
+            if(error) throw error;
+          }
+          await refreshAll();
+          render();
+        }catch(e){
+          errEl.className = 'note danger';
+          errEl.textContent = e.message;
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // ---------- Free Agency tab ----------
+  function renderFreeAgency(){
+    const mons = freeAgencyMons();
+    const groups = {};
+    mons.forEach(m=>{ const p = Number(m.points)||0; (groups[p] ??= []).push(m); });
+    const tiers = Object.keys(groups).sort((a,b)=>Number(b)-Number(a));
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Free Agency Pool <span class="badge">${mons.length} Pokémon</span></h2>
+        ${DASH.settings?.freeAgency?.source ? `<div class="note">Source: ${escapeHtml(DASH.settings.freeAgency.source)}</div>` : ''}
+        ${!mons.length ? '<div class="empty-state">No Free Agency pool published yet.</div>' : tiers.map(tier=>`
+          <div style="margin-top:14px;">
+            <h4 style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">${tier} pts</h4>
+            <div class="mon-list">${groups[tier].map(m=>`<span class="mon-pill">${spriteImg(m.name)} ${escapeHtml(m.name)}</span>`).join('')}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // ---------- All Rosters tab ----------
+  function renderRosters(){
+    const rosters = DASH.settings.rosters || {};
+    const teams = Object.keys(rosters).sort();
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>League Rosters</h2>
+        ${teams.length ? `<div class="roster-grid">${teams.map(t=>{
+          const list = rosters[t];
+          const pts = rosterPoints(list);
+          const mine = profile && t === profile.team_name;
+          return `<div class="roster-card${mine?' mine':''}">
+            <h3>${escapeHtml(t)} ${mine?'<span class="badge">You</span>':''}</h3>
+            <div class="note">${list.length} Pokémon · ${pts}/${ROSTER_BUDGET} pts</div>
+            <div class="mon-list">${list.map(m=>`<span class="mon-pill">${spriteImg(m.name)} ${escapeHtml(m.name)}</span>`).join('')}</div>
+          </div>`;
+        }).join('')}</div>` : '<div class="empty-state">No rosters published yet.</div>'}
+      </div>`;
+  }
+
+  // ---------- Account tab ----------
+  function renderAccount(){
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Account</h2>
+        <div class="row">
+          <div><label>Email</label><div>${escapeHtml(session.user.email||'')}</div></div>
+          <div><label>Team</label><div>${escapeHtml(profile.team_name||'—')} <span class="status-pill ${profile.status}">${profile.status}</span></div></div>
+        </div>
+        <div class="foot-actions">
+          <button class="ghost" id="changeTeamBtn2">Change team pick</button>
+          <button class="danger" id="logoutBtn">Log out</button>
+        </div>
+      </div>`;
+    document.getElementById('changeTeamBtn2').onclick = renderTeamClaim;
+    document.getElementById('logoutBtn').onclick = async ()=>{
+      await supabase.auth.signOut();
+      session = null; profile = null; trades = [];
+      renderAuthGate();
+    };
+  }
+
+  // ---------- shell ----------
+  function setStatus(msg, danger){ statusMsg = msg; }
+
+  function renderTabs(){
+    let nav = document.getElementById('tabs');
+    if(!nav){
+      nav = document.createElement('nav');
+      nav.className = 'tabs';
+      nav.id = 'tabs';
+      contentEl.before(nav);
+    }
+    const tabs = [
+      ['myteam','My Team'],
+      ['trades','Trades'],
+      ['freeagency','Free Agency'],
+      ['rosters','All Rosters'],
+      ['account','Account']
+    ];
+    nav.innerHTML = tabs.map(([id,label])=>`<button data-tab="${id}" class="${activeTab===id?'active':''}">${label}</button>`).join('');
+    nav.querySelectorAll('button').forEach(b=>{
+      b.onclick = ()=>{ activeTab = b.dataset.tab; renderTabs(); render(); };
+    });
+  }
+
+  function render(){
+    if(!session){ document.getElementById('tabs')?.remove(); renderAuthGate(); return; }
+    if(!profile){ document.getElementById('tabs')?.remove(); contentEl.innerHTML = '<div class="empty-state">Loading…</div>'; return; }
+
+    if(!profile.team_name){ document.getElementById('tabs')?.remove(); renderTeamClaim(); return; }
+    if(profile.status === 'pending' || profile.status === 'rejected'){
+      // still show tabs so people can browse Free Agency / Rosters
+      renderTabs();
+      if(activeTab === 'freeagency') return renderFreeAgency();
+      if(activeTab === 'rosters') return renderRosters();
+      if(activeTab === 'account') return renderAccount();
+      return renderPendingOrRejected();
+    }
+
+    renderTabs();
+    if(activeTab === 'myteam') return renderMyTeam();
+    if(activeTab === 'trades') return renderTrades();
+    if(activeTab === 'freeagency') return renderFreeAgency();
+    if(activeTab === 'rosters') return renderRosters();
+    if(activeTab === 'account') return renderAccount();
+  }
+
+  async function boot(){
+    contentEl.innerHTML = '<div class="empty-state">Loading…</div>';
+    try{
+      await refreshAll();
+      render();
+    }catch(e){
+      contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load your dashboard: ${escapeHtml(e.message)}</div></div>`;
+    }
+  }
+
+  (async function init(){
+    const {data} = await supabase.auth.getSession();
+    session = data.session;
+    if(session){ await boot(); }
+    else{ renderAuthGate(); }
+
+    supabase.auth.onAuthStateChange((event, newSession)=>{
+      if(event === 'SIGNED_OUT'){ session=null; profile=null; trades=[]; render(); }
+    });
+  })();
+})();
+</script>
 </body>
 </html>
