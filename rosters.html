@@ -252,6 +252,7 @@ h1{
     <option value="index.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
+    <option value="free-agency.html">Free Agency</option>
   </select>
 </div>
 
@@ -394,7 +395,7 @@ function normalizeRosters(raw){
   return out;
 }
 
-const ROSTER_BUDGET = 115;
+const ROSTER_BUDGET = 120;
 
 function rosterPoints(list){
   return (Array.isArray(list) ? list : []).reduce((sum, mon) => {

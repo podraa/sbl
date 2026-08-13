@@ -1,78 +1,32 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Free Agency</title>
 <style>
-:root{--bg:#081525;--panel:#0e2138;--panel2:#132c48;--border:#2a4a69;--text:#eef6ff;--dim:#9eb4ca;--accent:#6fa8dc;--good:#8fdbb2;--taken:#72839a}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px 'Segoe UI',Arial,sans-serif}#app{width:calc(100% - 40px);max-width:1800px;margin:auto;padding:70px 0 70px}.page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}.page-nav label{font-size:11px;color:var(--dim);font-weight:700}.page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}header{margin-bottom:22px}h1{margin:0 0 5px;font-size:30px}.sub{color:var(--dim)}.toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0}.toolbar>div{min-width:190px}.toolbar label{display:block;color:var(--dim);font-size:11px;text-transform:uppercase;font-weight:700;margin-bottom:6px}.toolbar select,.toolbar input{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px}.summary{display:flex;gap:14px;flex-wrap:wrap}.stat{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 16px}.stat b{font-size:20px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}.mon{border:1px solid var(--border);background:var(--panel2);border-radius:12px;padding:12px;cursor:pointer;transition:.12s;min-height:150px}.mon:hover{transform:translateY(-1px);border-color:var(--accent)}.mon.taken{opacity:.55;cursor:not-allowed;filter:grayscale(.5)}.mon.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(111,168,220,.18)}.mon img{width:90px;height:90px;object-fit:contain;display:block;margin:auto}.name{text-align:center;font-weight:700}.meta{text-align:center;color:var(--dim);font-size:11px;margin-top:4px}.status{text-align:center;font-size:11px;margin-top:7px}.undrafted{color:var(--good)}.taken-label{color:var(--taken)}.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px;z-index:2000}.modalbox{width:min(560px,100%);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}.modalbox h2{margin-top:0}.modalbox label{display:block;color:var(--dim);font-size:11px;text-transform:uppercase;font-weight:700;margin:12px 0 6px}.modalbox select{width:100%;padding:10px;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.btn{padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer}.btn.primary{background:var(--accent);color:#07111d;border-color:var(--accent);font-weight:700}.note{color:var(--dim);font-size:12px;line-height:1.5}@media(max-width:600px){#app{width:calc(100% - 20px);padding-top:60px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+:root{--bg:#f6f7fb;--panel:#fff;--panel2:#f0f2f7;--border:#d9ddea;--text:#202433;--dim:#697083;--accent:#5367d8;--taken:#8a8f9d;--available:#3d8c62}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}.page-nav{position:fixed;top:14px;right:18px;z-index:20;display:flex;gap:7px;align-items:center}.page-nav label{font-size:11px;font-weight:700;color:var(--dim)}.page-nav select{padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}#app{max-width:1500px;margin:auto;padding:70px 24px 40px}header{margin-bottom:22px}h1{margin:0 0 6px;font-size:28px}.sub,.note{color:var(--dim);line-height:1.5}.toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0}.toolbar>div{min-width:220px}label{display:block;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:6px}input{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--panel)}.summary{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}.stat{padding:12px 18px;background:var(--panel);border:1px solid var(--border);border-radius:10px;min-width:120px}.stat b{font-size:22px}.tier{margin:20px 0 28px}.tier-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.tier-head h2{margin:0}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px}.mon{position:relative;min-height:190px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--panel);cursor:pointer;transition:.12s}.mon:hover{transform:translateY(-1px);box-shadow:0 4px 14px #0001}.mon.taken{opacity:.52;cursor:default;background:var(--panel2)}.mon img{display:block;width:90px;height:90px;object-fit:contain;margin:0 auto 5px;image-rendering:pixelated}.name{text-align:center;font-weight:800}.points{text-align:center;margin-top:5px;color:var(--accent);font-weight:800}.status{text-align:center;margin-top:8px;font-size:11px;font-weight:700}.available{color:var(--available)}.taken-status{color:var(--taken)}.empty{padding:34px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--dim);background:var(--panel)}.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.modalbox{width:min(520px,100%);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.btn{padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);cursor:pointer}@media(max-width:650px){#app{padding:60px 12px 30px}.page-nav{top:8px;right:8px}.page-nav label{display:none}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
-</head><body>
+</head>
+<body>
 <div class="page-nav"><label for="pageNavSelect">Page</label><select id="pageNavSelect"><option value="index.html">Stats Dashboard</option><option value="rosters.html">Rosters</option><option value="team-analysis.html">Team Analysis</option><option value="free-agency.html">Free Agency</option></select></div>
-<div id="app"><header><h1>Free Agency</h1><div class="sub">Undrafted Pokémon are selectable. Pokémon currently on a roster are highlighted as taken.</div></header><div id="main"></div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+<div id="app"><header><h1>Free Agency</h1><div class="sub">The DRAFT BOARD is grouped by point tier. Pokémon currently on a published roster are shown as taken; undrafted Pokémon are selectable.</div></header><div id="main"><div class="empty">Loading Free Agency…</div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
 (()=>{
-const URL='https://dfxdkkemltukxaklhcpo.supabase.co',KEY='sb_publishable_H7iIBjJTxY77lBAcpJn2VQ_u2hAG2CN',db=window.supabase.createClient(URL,KEY);let settings={rosters:{},freeAgency:{mons:[]}};
-const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const key=s=>String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
-function entries(){const a=[];for(const [team,mons] of Object.entries(settings.rosters||{}))for(const raw of mons||[]){const m=typeof raw==='string'?{name:raw,points:0}:raw||{};if(m.name)a.push({team,name:String(m.name),points:Number(m.points)||0})}return a}
-function owner(name){const k=key(name);return entries().find(x=>key(x.name)===k)||null}
-function spriteCandidates(name){const n=String(name||'').trim().toLowerCase();const base=n.replace(/[♀♂]/g,'').replace(/['’]/g,'').replace(/\s+/g,'-');const compact=base.replace(/-/g,'');const special={'mr-mime-galar':'mrmime-galar','mr-mime':'mrmime','landorus-incarnate':'landorus','landorus-i':'landorus','landorus-t':'landorus-therian','gouging-fire':'gougingfire','scream-tail':'screamtail'};return [...new Set([special[base]||base,compact])].filter(Boolean)}
-function sprite(name){const c=spriteCandidates(name);let i=0;return `<img src="https://play.pokemonshowdown.com/sprites/gen9/${c[0]}.png" alt="${esc(name)}" data-sprite-cands="${esc(c.join('|'))}" onerror="if(this.dataset.i==='1'){this.style.visibility='hidden'}else{this.dataset.i='1';this.src='https://play.pokemonshowdown.com/sprites/gen9/'+this.dataset.spriteCands.split('|')[1]+'.png'}">`}
-function openPlanner(mon){const teams=Object.keys(settings.rosters||{}).sort();const modal=document.createElement('div');modal.className='modal';modal.innerHTML=`<div class="modalbox"><h2>${esc(mon.name)} — ${mon.points} points</h2><div class="note">This is a trade planner. Completing the actual trade is done from Admin → Trades, where the roster and all downstream pages are updated together.</div><label>Destination team</label><select id="planTeam"><option value="">Select team…</option>${teams.map(t=>`<option>${esc(t)}</option>`).join('')}</select><label>Replace Pokémon</label><select id="planReplace"><option value="">No replacement</option></select><div id="planBudget" class="note" style="margin-top:10px"></div><div class="actions"><button class="btn" id="closePlan">Cancel</button><button class="btn primary" id="openAdmin">Open Admin Trades</button></div></div>`;document.body.appendChild(modal);const ts=modal.querySelector('#planTeam'),rs=modal.querySelector('#planReplace'),bud=modal.querySelector('#planBudget');function upd(){const arr=(settings.rosters||{})[ts.value]||[];rs.innerHTML='<option value="">No replacement</option>'+arr.map(x=>{const m=typeof x==='string'?{name:x,points:0}:x;return `<option value="${esc(m.name)}">${esc(m.name)} — ${Number(m.points)||0} pts</option>`}).join('');const rep=arr.find(x=>key(typeof x==='string'?x:x.name)===key(rs.value));const spend=arr.reduce((a,x)=>a+(Number(typeof x==='string'?0:x.points)||0),0);const after=spend+mon.points-(rep?Number(rep.points)||0:0);bud.innerHTML=ts.value?`Current: ${spend} pts · After trade: ${after} pts · Remaining: ${120-after} pts`:''}ts.onchange=upd;rs.onchange=upd;modal.querySelector('#closePlan').onclick=()=>modal.remove();modal.querySelector('#openAdmin').onclick=()=>location.href='admin.html';}
-async function load(){
-  const {data,error}=await db
-    .from('replays')
-    .select('replay_data')
-    .eq('replay_id','__dashboard_state__')
-    .maybeSingle();
-
-  if(error) throw error;
-
-  const shared=data?.replay_data||{};
-  const sharedSettings=shared.settings||{};
-
-  settings={
-    ...sharedSettings,
-    rosters:sharedSettings.rosters||{}
-  };
-
-  // Free Agency is now simply part of the existing dashboard settings.
-  // There is no special Free Agency database row to fail.
-  settings.freeAgency = {
-    mons:Array.isArray(sharedSettings.freeAgency?.mons)
-      ? sharedSettings.freeAgency.mons
-      : (Array.isArray(sharedSettings.freeAgency?.pool)
-          ? sharedSettings.freeAgency.pool
-          : [])
-  };
-
-  render();
-}
-
-function render(){const mons=Array.isArray(settings.freeAgency?.mons)
-  ? settings.freeAgency.mons
-  : (Array.isArray(settings.freeAgency?.pool)
-      ? settings.freeAgency.pool
-      : []);const filter=window._filter||'';const visible=mons.filter(m=>String(m.name).toLowerCase().includes(filter.toLowerCase()));const taken=visible.filter(m=>owner(m.name)),free=visible.filter(m=>!owner(m.name));$('main').innerHTML=`<div class="panel"><div class="toolbar"><div><label>Search</label><input id="faSearch" value="${esc(filter)}" placeholder="Search Pokémon…"></div></div><div class="summary"><div class="stat"><div class="note">Available</div><b>${free.length}</b></div><div class="stat"><div class="note">Taken</div><b>${taken.length}</b></div><div class="stat"><div class="note">Total</div><b>${visible.length}</b></div></div></div><div class="panel"><h2>Free Agency</h2><div class="note" style="margin-bottom:14px">Undrafted Pokémon can be selected. Taken Pokémon remain visible so the draft pool is easy to audit.</div><div class="grid">${visible.map(m=>{const o=owner(m.name);return `<article class="mon ${o?'taken':''}" data-mon="${esc(m.name)}">${sprite(m.name)}<div class="name">${esc(m.name)}</div><div class="meta">${m.points} points</div><div class="status ${o?'taken-label':'undrafted'}">${o?'Taken — '+esc(o.team):'Undrafted · Select to plan trade'}</div></article>`}).join('')}</div></div>`;const si=$('faSearch');si.oninput=e=>{window._filter=e.target.value;render();si.focus();si.setSelectionRange(si.value.length,si.value.length)};document.querySelectorAll('.mon:not(.taken)').forEach(el=>el.onclick=()=>openPlanner(mons.find(m=>key(m.name)===key(el.dataset.mon))));}
-$('pageNavSelect').value=location.pathname.split('/').pop()||'index.html';
-$('pageNavSelect').onchange=e=>location.href=e.target.value;
-
-async function refreshFreeAgency(){
-  try{
-    await load();
-  }catch(e){
-    console.error('Free Agency refresh failed:',e);
-    $('main').innerHTML=`<div class="panel"><h2>Unable to load free agency</h2><div class="note">${esc(e.message)}</div></div>`;
-  }
-}
-
-setInterval(refreshFreeAgency,5000);
-
-document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden) refreshFreeAgency();
-});
-
-refreshFreeAgency();
+const db=window.supabase.createClient('https://dfxdkkemltukxaklhcpo.supabase.co','sb_publishable_H7iIBjJTxY77lBAcpJn2VQ_u2hAG2CN');
+let settings={rosters:{},freeAgency:{mons:[]}};let allRosters={};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const key=s=>String(s||'').trim().toLowerCase().replace(/[’']/g,'').replace(/[_\s.-]+/g,'').replace(/[^a-z0-9]/g,'');
+function normalizeRosters(raw){const out={};for(const [team,list] of Object.entries(raw||{})){if(!Array.isArray(list))continue;out[team]=list.map(x=>typeof x==='string'?{name:x,points:null}:{name:String(x?.name??x?.species??''),points:x?.points??null}).filter(x=>x.name)}return out}
+function owner(name){const k=key(name);for(const [team,list] of Object.entries(allRosters)){for(const mon of list){if(key(mon.name)===k)return team}}return null}
+function spriteCandidates(name){const n=String(name||'').trim().toLowerCase().replace(/[’']/g,'');const base=n.replace(/\s+/g,'-');const compact=base.replace(/-/g,'');const special={'mr-mime':'mrmime','mr-mime-galar':'mrmime-galar','gouging-fire':'gougingfire','scream-tail':'screamtail','landorus-incarnate':'landorus','landorus-therian':'landorus-therian','scovillain':'scovillain'};return [...new Set([special[base]||base,compact])]}
+function sprite(name){const c=spriteCandidates(name);return `<img src="https://play.pokemonshowdown.com/sprites/gen9/${c[0]}.png" alt="${esc(name)}" onerror="if(this.dataset.f==='1'){this.style.visibility='hidden'}else{this.dataset.f='1';this.src='https://play.pokemonshowdown.com/sprites/gen9/'+this.src.split('/').pop().replace('.png','')+'.png';this.src='https://play.pokemonshowdown.com/sprites/gen9/${c[1]}.png'}">`}
+function openSelection(mon){const modal=document.createElement('div');modal.className='modal';modal.innerHTML=`<div class="modalbox"><h2>${esc(mon.name)}</h2><div class="note">${mon.points} points · Undrafted</div><p class="note">This Pokémon is available because it is not currently present on any published roster. Trade execution is intentionally not included here; this selection is ready for the future trade workflow.</p><div class="actions"><button class="btn" id="close">Close</button></div></div>`;document.body.appendChild(modal);modal.querySelector('#close').onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove()}}
+async function load(){const res=await db.from('replays').select('replay_id,replay_data').in('replay_id',['__dashboard_state__','__rosters__']);if(res.error)throw res.error;for(const r of res.data||[]){if(r.replay_id==='__dashboard_state__')settings=r.replay_data?.settings||settings;if(r.replay_id==='__rosters__')allRosters=normalizeRosters(r.replay_data?.rosters||{})}if(!Object.keys(allRosters).length)allRosters=normalizeRosters(settings.rosters||{});render()}
+function render(){const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];const q=(window._q||'').toLowerCase();const visible=mons.filter(m=>String(m.name).toLowerCase().includes(q));const groups={};visible.forEach(m=>{const p=Number(m.points)||0;(groups[p]??=[]).push(m)});const tiers=Object.keys(groups).sort((a,b)=>Number(b)-Number(a));let free=0,taken=0;visible.forEach(m=>owner(m.name)?taken++:free++);$('main').innerHTML=`<div class="toolbar"><div><label>Search Pokémon</label><input id="search" value="${esc(window._q||'')}" placeholder="Search…"></div></div><div class="summary"><div class="stat"><div class="note">Available</div><b>${free}</b></div><div class="stat"><div class="note">Taken</div><b>${taken}</b></div><div class="stat"><div class="note">Total</div><b>${visible.length}</b></div></div>${tiers.length?tiers.map(p=>`<section class="tier"><div class="tier-head"><h2>${p} POINTS</h2><span class="note">${groups[p].length} Pokémon</span></div><div class="grid">${groups[p].map(m=>{const o=owner(m.name);return `<article class="mon ${o?'taken':''}" data-name="${esc(m.name)}">${sprite(m.name)}<div class="name">${esc(m.name)}</div><div class="points">${m.points} pts</div><div class="status ${o?'taken-status':'available'}">${o?'Taken — '+esc(o):'Available · Select'}</div></article>`}).join('')}</div></section>`).join(''):'<div class="empty">No Free Agency pool has been published yet.</div>'}`;const s=$('search');s.oninput=e=>{window._q=e.target.value;render();const n=$('search');n.focus();n.setSelectionRange(n.value.length,n.value.length)};document.querySelectorAll('.mon:not(.taken)').forEach(el=>el.onclick=()=>{const m=mons.find(x=>key(x.name)===key(el.dataset.name));if(m)openSelection(m)})}
+$('pageNavSelect').value='free-agency.html';$('pageNavSelect').onchange=e=>location.href=e.target.value;load().catch(e=>$('main').innerHTML=`<div class="empty">Could not load Free Agency: ${esc(e.message)}</div>`);setInterval(()=>{if(!document.hidden)load().catch(()=>{})},5000);
 })();
-</script></body></html>
+</script>
+</body></html>
