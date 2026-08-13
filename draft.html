@@ -53,28 +53,8 @@
   .clock-banner .who .amber{color:var(--amber);}
   .clock-banner .pickno{font-family:var(--mono); color:var(--text-dim); font-size:13px;}
 
-  .budget-strip{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-    gap:10px;
-    width:100%;
-    box-sizing:border-box;
-    overflow:visible;
-    padding-bottom:4px;
-  }
-  .budget-chip{
-    min-width:0;
-    width:100%;
-    box-sizing:border-box;
-    overflow:hidden;
-    background:var(--panel-alt);
-    border:1px solid var(--border);
-    border-radius:10px;
-    padding:10px 12px;
-  }
-  @media (max-width:560px){
-    .budget-strip{grid-template-columns:1fr;}
-  }
+  .budget-strip{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
+  .budget-chip{flex:0 0 auto; min-width:150px; background:var(--panel-alt); border:1px solid var(--border); border-radius:10px; padding:10px 12px;}
   .budget-chip.oc{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
   .budget-chip .team{font-weight:700; font-size:13px; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .budget-chip .amt{font-family:var(--mono); font-size:15px;}
@@ -291,11 +271,6 @@
   // used in the league draft list. Resolve the common competitive
   // / alternate-form names here, then let the <img> element try each
   // candidate until one actually loads.
-  // ---------- robust Pokémon sprites ----------
-  // Keep the Showdown forme separator (`-`), normalize common league names,
-  // and try a small candidate list before giving up.  This matters because
-  // the league data contains alternate-form names that do not always map
-  // 1:1 to a Showdown gen5 filename.
   const SPRITE_ALIASES = {
     'aegislash':'aegislash-shield',
     'darmanitan':'darmanitan',
@@ -305,17 +280,40 @@
     'terapagos':'terapagos',
     'keldeo':'keldeo-ordinary',
     'zygarde':'zygarde-50',
+    'mimikyu':'mimikyu',
     'meloetta':'meloetta-aria',
     'shaymin':'shaymin-land',
     'maushold':'maushold-four',
+    'maushold-four':'maushold-four',
+    'maushold-three':'maushold-three',
+    'tauros-paldea-combat':'tauros-paldea-combat',
+    'tauros-paldea-blaze':'tauros-paldea-blaze',
+    'tauros-paldea-aqua':'tauros-paldea-aqua',
+    'toxtricity':'toxtricity-amped',
+    'toxtricity-amped':'toxtricity-amped',
+    'toxtricity-low-key':'toxtricity-low-key',
     'dudunsparce':'dudunsparce-two-segment',
     'oricorio':'oricorio-baile',
+    'oricorio-baile':'oricorio-baile',
+    'oricorio-pom-pom':'oricorio-pom-pom',
+    'oricorio-pau':'oricorio-pau',
+    'oricorio-sensu':'oricorio-sensu',
     'minior':'minior-red-meteor',
     'tatsugiri':'tatsugiri-curly',
     'wishiwashi':'wishiwashi-solo',
     'eiscue':'eiscue-ice',
     'morpeko':'morpeko-full-belly',
+    'squawkabilly-b':'squawkabilly-blue',
+    'squawkabilly-w':'squawkabilly-white',
+    'squawkabilly-y':'squawkabilly-yellow',
+    'squawkabilly-g':'squawkabilly-green',
+    'ogerpon':'ogerpon',
+    'ogerpon-teal':'ogerpon',
+    'ogerpon-hearthflame':'ogerpon-hearthflame',
+    'ogerpon-wellspring':'ogerpon-wellspring',
+    'ogerpon-cornerstone':'ogerpon-cornerstone',
     'palafin':'palafin-zero',
+    'palafin-hero':'palafin-hero',
     'basculegion':'basculegion-male',
     'basculegion-m':'basculegion-male',
     'basculegion-f':'basculegion-female',
@@ -326,60 +324,86 @@
     'frillish-m':'frillish',
     'frillish-f':'frillish',
     'jellicent-m':'jellicent',
-    'jellicent-f':'jellicent'
+    'jellicent-f':'jellicent',
+    'indeedee-male':'indeedee-male',
+    'indeedee-female':'indeedee-female'
   };
 
-  function toShowdownId(name){
-    return String(name || '').trim().split('-')
-      .map(seg => seg.toLowerCase().replace(/[^a-z0-9]/g,''))
-      .filter(Boolean).join('-');
+  function spriteKey(name){
+    return String(name || '')
+      .trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[’']/g,'')
+      .replace(/[♀]/g,'-f')
+      .replace(/[♂]/g,'-m')
+      .replace(/[_\s]+/g,'-')
+      .replace(/[^a-z0-9-]/g,'')
+      .replace(/-+/g,'-')
+      .replace(/^-|-$/g,'');
   }
 
-  // Keep sprite resolution identical to the Free Agency page:
-  // 1) normal Showdown id, 2) fully compact id, 3) Showdown's 0 fallback.
-  // This is deliberately simple because Showdown's sprite filenames do not
-  // always line up with our league/form aliases.
-  function spriteImg(species, cls){
-    const safe = escapeHtml(species);
-    const id = toShowdownId(species);
-    const compact = id.replace(/-/g,'');
-    const urls = JSON.stringify([
-      'https://play.pokemonshowdown.com/sprites/gen5/' + id + '.png',
-      'https://play.pokemonshowdown.com/sprites/gen5/' + compact + '.png',
-      'https://play.pokemonshowdown.com/sprites/gen5/0.png'
-    ]);
-    return `<img class="${cls}" src="https://play.pokemonshowdown.com/sprites/gen5/${id}.png" alt="${safe}" loading="lazy" `+
-      `data-sprite-urls="${escapeHtml(urls)}" data-sprite-idx="0" `+
-      `onerror="(function(i){var us=JSON.parse(i.dataset.spriteUrls||'[]');var nx=Number(i.dataset.spriteIdx||0)+1;if(nx<us.length){i.dataset.spriteIdx=nx;i.src=us[nx];}else{i.onerror=null;i.style.opacity='.25';}})(this)">`;
+  function spriteCandidates(name){
+    const key = spriteKey(name);
+    const candidates = [];
+    const add = id => {
+      if(id && !candidates.includes(id)) candidates.push(id);
+    };
+
+    add(SPRITE_ALIASES[key]);
+    add(key);
+
+    // Common form-name variants.
+    if(key.endsWith('-galar')) add(key);
+    if(key.endsWith('-hisui')) add(key);
+    if(key.endsWith('-alola')) add(key);
+    if(key.endsWith('-paldea')) add(key);
+
+    // For league shorthand forms, fall back to the base Pokémon rather
+    // than displaying a broken image.
+    const base = key
+      .replace(/-paldea-(combat|blaze|aqua)$/,'')
+      .replace(/-galar(?:-zen)?$/,'')
+      .replace(/-hisui$/,'')
+      .replace(/-alola$/,'')
+      .replace(/-hearthflame$/,'')
+      .replace(/-wellspring$/,'')
+      .replace(/-cornerstone$/,'');
+    add(base);
+
+    return candidates;
   }
 
-  // Backwards-compatible helpers used by the Draft Room card markup.
   function spriteUrl(name, index=0){
-    const id = toShowdownId(name);
-    const compact = id.replace(/-/g,'');
-    const urls = [
-      'https://play.pokemonshowdown.com/sprites/gen5/' + id + '.png',
-      'https://play.pokemonshowdown.com/sprites/gen5/' + compact + '.png',
-      'https://play.pokemonshowdown.com/sprites/gen5/0.png'
-    ];
-    return urls[index] || urls[urls.length - 1];
+    const candidates = spriteCandidates(name);
+    const slug = candidates[index] || candidates[0] || '';
+    return `https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`;
   }
 
   function spriteFallback(img, name){
     const next = Number(img.dataset.spriteAttempt || 0) + 1;
-    if(next < 3){
+    const candidates = spriteCandidates(name);
+
+    if(next < candidates.length){
       img.dataset.spriteAttempt = String(next);
       img.src = spriteUrl(name, next);
-    }else{
-      img.onerror = null;
-      img.style.opacity = '.25';
+      return;
     }
+
+    // Last resort: use a generic base sprite from Showdown's gen5 set
+    // if a form-specific sprite isn't available.
+    if(!img.dataset.spriteGeneric){
+      img.dataset.spriteGeneric = '1';
+      img.src = 'https://play.pokemonshowdown.com/sprites/gen5/substitute.png';
+      return;
+    }
+
+    img.style.opacity = '0';
   }
+
   // ---------- pick flow ----------
   async function makePick(mon, team){
     requireAdmin();
     const d = STATE.settings.draft;
-    if(d.status !== 'live') throw new Error('The draft is not live. Picks are disabled after the draft is finalized.');
     mon.drafted = true;
     mon.draftedBy = team;
     mon.pickNumber = d.picks.length + 1;
@@ -411,6 +435,23 @@
   }
 
   // ---------- render ----------
+  function updatePoolFilter(){
+    const query = String(poolFilter || '').trim().toLowerCase();
+
+    document.querySelectorAll('.tier-block').forEach(tier => {
+      let anyVisible = false;
+
+      tier.querySelectorAll('.mon-card').forEach(card => {
+        const name = String(card.querySelector('.name')?.textContent || '').toLowerCase();
+        const visible = !query || name.includes(query);
+        card.style.display = visible ? '' : 'none';
+        if(visible) anyVisible = true;
+      });
+
+      tier.style.display = anyVisible ? '' : 'none';
+    });
+  }
+
   function render(){
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     const d = STATE.settings.draft;
@@ -426,7 +467,7 @@
 
     const teams = franchises();
     const oc = currentTeam();
-    const rosterTeam = isCommissioner ? null : myTeamName;
+    const rosterTeam = isCommissioner ? (oc || teams[0] || null) : myTeamName;
     const currentRoster = rosterTeam ? (STATE.settings.rosters[rosterTeam] || []) : [];
     const availableTypes = [...new Set(d.pool.flatMap(m => m.types || []))].sort((a,b) => a.localeCompare(b));
     const filtered = d.pool.filter(m => {
@@ -525,9 +566,11 @@
       catch(e){ alert(e.message); }
     });
     document.getElementById('poolSearch')?.addEventListener('input', (e) => {
+      // Keep the existing input element alive while filtering. Re-rendering
+      // here replaces the input DOM node and resets the caret, which makes
+      // normal typing appear backwards.
       poolFilter = e.target.value;
-      render();
-      document.getElementById('poolSearch')?.focus();
+      updatePoolFilter();
     });
     document.getElementById('poolTypeFilter')?.addEventListener('change', (e) => {
       poolTypeFilter = e.target.value;
