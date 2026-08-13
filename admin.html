@@ -207,6 +207,60 @@
   .player-filter{max-width:320px; margin-bottom:14px;}
 .roster-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.roster-admin-card{border:1px solid var(--border);background:var(--panel-alt);border-radius:10px;padding:12px}.roster-admin-card h3{margin:0 0 7px;font-size:14px}.roster-admin-mons{margin-top:10px;font-size:12px;line-height:1.6;color:var(--text-dim)}
 
+  /* commissioner budget overview */
+  .commissioner-budget-grid{
+    display:grid;
+    width:100%;
+    box-sizing:border-box;
+    grid-template-columns:repeat(auto-fill,minmax(clamp(145px,calc(175px * var(--budget-scale)),200px),1fr));
+    gap:calc(10px * var(--budget-scale));
+    margin-top:12px;
+    overflow:visible;
+  }
+  .commissioner-budget-grid > .commissioner-budget-card{
+    width:100%;
+    box-sizing:border-box;
+  }
+  .commissioner-budget-card{
+    min-width:0;
+    padding:calc(12px * var(--budget-scale));
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--panel-alt);
+    overflow:hidden;
+  }
+  .commissioner-budget-team{
+    font-size:calc(13px * var(--budget-scale));
+    font-weight:700;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    margin-bottom:5px;
+  }
+  .commissioner-budget-main{
+    font-family:var(--mono);
+    font-size:calc(22px * var(--budget-scale));
+    color:var(--amber);
+    line-height:1.1;
+  }
+  .commissioner-budget-meta{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    margin-top:7px;
+    font-family:var(--mono);
+    font-size:calc(10px * var(--budget-scale));
+    color:var(--text-dim);
+  }
+  .commissioner-budget-meta strong{color:var(--text);}
+  .commissioner-budget-meta .budget-over,
+  .commissioner-budget-meta .budget-over strong{color:var(--red);}
+  .commissioner-budget-override{
+    margin-top:6px;
+    font-size:calc(9px * var(--budget-scale));
+    color:var(--text-dim);
+  }
+
   /* commissioner tab */
   .status-pill{display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:.04em;}
   .status-pill.pending{color:var(--amber); background:#3a2c12; border:1px solid #5a4620;}
@@ -283,15 +337,13 @@
 
 <div id="app" style="display:none">
   <header>
-    <h1>League Damage Dashboard</h1>
-    <div class="sub">Paste replay links → auto-parsed stats → running season totals + weekly CSVs</div>
+    <h1> Admin Dashboard <span class="badge" id="seasonBadge" style="vertical-align:middle;"></span></h1>
   </header>
 
   <nav class="tabs" id="tabs">
     <button data-tab="process" class="active">Process Replays</button>
     <button data-tab="players">Replays by Player</button>
-    <button data-tab="rosters">Rosters</button>
-    <button data-tab="draft">Draft</button>
+        <button data-tab="draft">Draft</button>
     <button data-tab="freeagency">Free Agency</button>
     <button data-tab="trades">Trades</button>
     <button data-tab="commissioner">Commissioner</button>
@@ -301,7 +353,7 @@
   </nav>
 
   
-<!-- Roster management lives in the Rosters tab so there is only one upload path. -->
+<!-- Commissioner UI: budgets and administration only; franchise rosters are intentionally not shown here. -->
 
 <div id="content"></div>
 </div>
@@ -322,6 +374,13 @@
   const SUPABASE_STATE_ID = '__dashboard_state__';
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const IS_ADMIN_PAGE = true;
+  // ---------- seasons ----------
+  // Matches the DEFAULT_SEASON / seasonKey / seasonArchives contract that
+  // index.html, stats.html, rosters.html, free-agency.html and
+  // team-analysis.html already read from (see installSeasonPicker there).
+  // Admin is the only page that ever writes a season archive.
+  const DEFAULT_SEASON = 'Season 15';
+  function seasonKey(name){ return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'season'; }
   let adminUser = null;
   let loadingFromRemote = false;
 
@@ -338,7 +397,7 @@
       mode: 'manual',        // 'manual' | 'ordered'
       defaultBudget: 120,
       budgets: {},            // per-franchise override: {teamName: number}
-      pool: [],                // [{id,name,points,drafted,draftedBy,pickNumber}]
+      pool: [],                // [{id,name,points,types,drafted,draftedBy,pickNumber}]
       order: [],               // [teamName, teamName, ...] one entry per pick slot
       currentPick: 0,
       picks: [],                // [{poolId,name,points,team,pickNumber,ts}]
@@ -353,6 +412,7 @@
       id: String(m?.id ?? ''),
       name: String(m?.name ?? '').trim(),
       points: Number(m?.points) || 0,
+      types: Array.isArray(m?.types) ? m.types.map(t => String(t).trim()).filter(Boolean) : [],
       drafted: !!m?.drafted,
       draftedBy: m?.draftedBy || null,
       pickNumber: m?.pickNumber ?? null
@@ -389,12 +449,14 @@
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
       STATE.settings = Object.assign({caseInsensitiveNames:true, rosters:{}, franchises:{}, conferenceNames:{a:'Conference A',b:'Conference B'}}, (sharedState && sharedState.settings) || {}); STATE.settings.rosters=STATE.settings.rosters||{}; STATE.settings.franchises=STATE.settings.franchises||{}; STATE.settings.conferenceNames=STATE.settings.conferenceNames||{a:'Conference A',b:'Conference B'};
       STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
+      STATE.settings.activeSeason = STATE.settings.activeSeason || DEFAULT_SEASON;
+      STATE.settings.seasonArchives = (STATE.settings.seasonArchives && typeof STATE.settings.seasonArchives === 'object') ? STATE.settings.seasonArchives : {};
       loaded = true;
     }catch(e){
       console.error('Supabase load failed:', e);
       STATE.replays = {};
       STATE.teamMap = {};
-      STATE.settings = {caseInsensitiveNames:true, rosters:{}, franchises:{}, conferenceNames:{a:'Conference A',b:'Conference B'}, draft:defaultDraftState()};
+      STATE.settings = {caseInsensitiveNames:true, rosters:{}, franchises:{}, conferenceNames:{a:'Conference A',b:'Conference B'}, draft:defaultDraftState(), activeSeason:DEFAULT_SEASON, seasonArchives:{}};
       loaded = true;
       throw e;
     }finally{
@@ -468,6 +530,117 @@
     }
   }
 
+  // ---------- season archiving ----------
+  // A season archive is a full snapshot of everything that's specific to a
+  // season: the processed replays, the team map, and the season-scoped part
+  // of settings (rosters, draft, free agency, franchises, trade credits,
+  // week tracking). It's stored inside the shared settings blob itself, at
+  // settings.seasonArchives[key], in the exact shape index.html / stats.html
+  // / rosters.html / free-agency.html / team-analysis.html already expect
+  // when they resolve a `?season=` link (see installSeasonPicker on those
+  // pages) — so archived seasons are viewable there immediately.
+  //
+  // Fields that carry forward into a new season untouched: teamMap,
+  // caseInsensitiveNames, conferenceNames, seasonArchives itself. Everything
+  // else is season-scoped and gets reset when a new season starts.
+  function uniqueArchiveKey(name, archives, avoidKey){
+    const base = seasonKey(name);
+    if(!archives[base] || base === avoidKey) return base;
+    let n = 2, candidate = `${base}-${n}`;
+    while(archives[candidate] && candidate !== avoidKey){ candidate = `${base}-${(++n)}`; }
+    return candidate;
+  }
+  // Snapshot everything about the *current* live season, in the shape an
+  // archive entry needs. Excludes seasonArchives/activeSeason themselves so
+  // archives never nest inside archives.
+  function snapshotCurrentSeason(){
+    const { seasonArchives, activeSeason, ...seasonSettings } = STATE.settings;
+    return {
+      name: STATE.settings.activeSeason || DEFAULT_SEASON,
+      archivedAt: new Date().toISOString(),
+      teamMap: JSON.parse(JSON.stringify(STATE.teamMap || {})),
+      settings: JSON.parse(JSON.stringify(seasonSettings || {})),
+      replays: JSON.parse(JSON.stringify(STATE.replays || {}))
+    };
+  }
+  async function startNewSeason(){
+    requireAdmin();
+    const currentName = STATE.settings.activeSeason || DEFAULT_SEASON;
+    const replayCount = Object.keys(STATE.replays||{}).length;
+    const suggested = (()=>{
+      const m = currentName.match(/^(.*?)(\d+)\s*$/);
+      return m ? `${m[1]}${Number(m[2])+1}` : '';
+    })();
+    const nextName = prompt(
+      `Start a new season?\n\nThis archives "${currentName}" (${replayCount} replay${replayCount===1?'':'s'}, rosters, draft, and free agency as they stand right now) and clears the board for a fresh season. The archived season stays viewable and can be restored as current at any time from Settings.\n\nName the new season:`,
+      suggested
+    );
+    if(nextName === null) return;
+    const newName = nextName.trim() || currentName;
+    if(!confirm(`Archive "${currentName}" and start "${newName}"? This cannot be undone automatically for replay data still sitting unsaved in the browser — make sure everything you want kept is already saved.`)) return;
+
+    const archives = {...(STATE.settings.seasonArchives||{})};
+    const key = uniqueArchiveKey(currentName, archives);
+    archives[key] = snapshotCurrentSeason();
+
+    STATE.replays = {};
+    STATE.teamMap = {...STATE.teamMap}; // carried forward as-is
+    STATE.settings = {
+      caseInsensitiveNames: STATE.settings.caseInsensitiveNames,
+      conferenceNames: STATE.settings.conferenceNames || {a:'Conference A',b:'Conference B'},
+      franchises: {},
+      rosters: {},
+      draft: defaultDraftState(),
+      freeAgency: {mons:[]},
+      tradeCredits: {},
+      activeSeason: newName,
+      seasonArchives: archives
+    };
+
+    await deleteAllRemote();          // clear old live replay rows (safely preserved in the archive above)
+    await savePublishedRosters({});   // clear legacy published-roster fallback so it can't leak stale rosters
+    await saveReplays();              // upserts STATE.replays (empty) + saves shared state (teamMap/settings/archives)
+  }
+  async function restoreSeasonArchive(key){
+    requireAdmin();
+    const archives = STATE.settings.seasonArchives || {};
+    const archive = archives[key];
+    if(!archive) return;
+    const currentName = STATE.settings.activeSeason || DEFAULT_SEASON;
+    if(!confirm(`Make "${archive.name || key}" the current season again? Whatever is currently live ("${currentName}") will itself be archived first, so nothing is lost and this can be reversed the same way.`)) return;
+
+    const newArchives = {...archives};
+    delete newArchives[key];
+    const saveKey = uniqueArchiveKey(currentName, newArchives, key);
+    newArchives[saveKey] = snapshotCurrentSeason();
+
+    STATE.replays = JSON.parse(JSON.stringify(archive.replays || {}));
+    STATE.teamMap = JSON.parse(JSON.stringify(archive.teamMap || {}));
+    STATE.settings = Object.assign(
+      {caseInsensitiveNames:true, rosters:{}, franchises:{}, conferenceNames:{a:'Conference A',b:'Conference B'}, freeAgency:{mons:[]}, tradeCredits:{}},
+      JSON.parse(JSON.stringify(archive.settings || {}))
+    );
+    STATE.settings.rosters = STATE.settings.rosters || {};
+    STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
+    STATE.settings.activeSeason = archive.name || key;
+    STATE.settings.seasonArchives = newArchives;
+
+    await deleteAllRemote();                         // clear current live replay rows
+    await savePublishedRosters(STATE.settings.rosters||{}); // keep legacy fallback in sync with the restored season
+    await saveReplays();                             // upserts restored replays + saves shared state
+  }
+  async function deleteSeasonArchive(key){
+    requireAdmin();
+    const archives = STATE.settings.seasonArchives || {};
+    const archive = archives[key];
+    if(!archive) return;
+    if(!confirm(`Permanently delete the "${archive.name || key}" archive? This cannot be undone.`)) return;
+    const newArchives = {...archives};
+    delete newArchives[key];
+    STATE.settings.seasonArchives = newArchives;
+    await saveSharedState();
+  }
+
   async function migrateLocalData(){
     throw new Error('Legacy local-storage migration is no longer used. The admin now uses the shared Supabase database directly.');
   }
@@ -521,22 +694,66 @@
 
   // ---------- helpers ----------
   function normName(n){ return n.trim().toLowerCase().replace(/-/g,' ').replace(/_/g,' '); }
-  function toShowdownId(species){
-    // Showdown's sprite filenames keep the hyphen as a forme separator
-    // (landorus-therian.png, ho-oh.png, porygon-z.png, necrozma-dusk-mane.png)
-    // but collapse everything else — so each hyphen-delimited segment gets
-    // lowercased and stripped of spaces/punctuation, then rejoined with '-'.
-    // Stripping hyphens outright (the old behavior) turned every forme name
-    // into a 404 (e.g. "landorustherian"), which just showed the mon's actual
-    // name faded out behind a broken-image icon.
-    return species.split('-').map(part => part.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-');
+  // ---------- robust Pokémon sprites ----------
+  // Keep the Showdown forme separator (`-`), normalize common league names,
+  // and try a small candidate list before giving up.  This matters because
+  // the league data contains alternate-form names that do not always map
+  // 1:1 to a Showdown gen5 filename.
+  const SPRITE_ALIASES = {
+    'aegislash':'aegislash-shield',
+    'darmanitan':'darmanitan',
+    'darmanitan-galar':'darmanitan-galar',
+    'darmanitan-galar-zen':'darmanitan-galar-zen',
+    'terapagos-middle':'terapagos-terastal',
+    'terapagos':'terapagos',
+    'keldeo':'keldeo-ordinary',
+    'zygarde':'zygarde-50',
+    'meloetta':'meloetta-aria',
+    'shaymin':'shaymin-land',
+    'maushold':'maushold-four',
+    'dudunsparce':'dudunsparce-two-segment',
+    'oricorio':'oricorio-baile',
+    'minior':'minior-red-meteor',
+    'tatsugiri':'tatsugiri-curly',
+    'wishiwashi':'wishiwashi-solo',
+    'eiscue':'eiscue-ice',
+    'morpeko':'morpeko-full-belly',
+    'palafin':'palafin-zero',
+    'basculegion':'basculegion-male',
+    'basculegion-m':'basculegion-male',
+    'basculegion-f':'basculegion-female',
+    'indeedee-m':'indeedee-male',
+    'indeedee-f':'indeedee-female',
+    'meowstic-m':'meowstic-male',
+    'meowstic-f':'meowstic-female',
+    'frillish-m':'frillish',
+    'frillish-f':'frillish',
+    'jellicent-m':'jellicent',
+    'jellicent-f':'jellicent'
+  };
+
+  function toShowdownId(name){
+    return String(name || '').trim().split('-')
+      .map(seg => seg.toLowerCase().replace(/[^a-z0-9]/g,''))
+      .filter(Boolean).join('-');
   }
-  function spriteUrl(species){
-    return `https://play.pokemonshowdown.com/sprites/gen5/${toShowdownId(species)}.png`;
-  }
+
+  // Keep sprite resolution identical to the Free Agency page:
+  // 1) normal Showdown id, 2) fully compact id, 3) Showdown's 0 fallback.
+  // This is deliberately simple because Showdown's sprite filenames do not
+  // always line up with our league/form aliases.
   function spriteImg(species, cls){
     const safe = escapeHtml(species);
-    return `<img class="${cls}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
+    const id = toShowdownId(species);
+    const compact = id.replace(/-/g,'');
+    const urls = JSON.stringify([
+      'https://play.pokemonshowdown.com/sprites/gen5/' + id + '.png',
+      'https://play.pokemonshowdown.com/sprites/gen5/' + compact + '.png',
+      'https://play.pokemonshowdown.com/sprites/gen5/0.png'
+    ]);
+    return `<img class="${cls}" src="https://play.pokemonshowdown.com/sprites/gen5/${id}.png" alt="${safe}" loading="lazy" `+
+      `data-sprite-urls="${escapeHtml(urls)}" data-sprite-idx="0" `+
+      `onerror="(function(i){var us=JSON.parse(i.dataset.spriteUrls||'[]');var nx=Number(i.dataset.spriteIdx||0)+1;if(nx<us.length){i.dataset.spriteIdx=nx;i.src=us[nx];}else{i.onerror=null;i.style.opacity='.25';}})(this)">`;
   }
   function usernameKey(username){
     return String(username || '')
@@ -1298,13 +1515,14 @@
 
   function render(){
     document.getElementById('app').classList.toggle('wide', activeTab === 'players');
+    const seasonBadge = document.getElementById('seasonBadge');
+    if(seasonBadge) seasonBadge.textContent = loaded ? (STATE.settings.activeSeason || DEFAULT_SEASON) : '';
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     if(activeTab === 'process') return renderProcess();
     if(activeTab === 'global') return renderLeaderboards();
     if(activeTab === 'goldenfist') return renderGoldenFist();
     if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'players') return renderPlayers();
-    if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'draft') return renderDraft();
     if(activeTab === 'freeagency') return renderFreeAgency();
     if(activeTab === 'trades') return renderTrades();
@@ -1743,72 +1961,6 @@
     await savePublishedRosters(normalized);
   }
 
-  function renderRosters(){
-    const rosters=normalizeStoredRosters(STATE.settings.rosters||{});
-    const teams=Object.keys(rosters).sort();
-
-    contentEl.innerHTML=`<div class="panel"><h2>Current Rosters</h2>
-      <div class="note">Upload an Excel/CSV roster file. The attached Season 15 format (one team per sheet, points in Column A, Pokémon in Column C) is supported, as is a Team/Franchise + Pokémon/Species layout.</div>
-      <div class="row" style="align-items:flex-end;margin-top:14px">
-        <div><label>Roster file</label><input id="rosterTabFile" type="file" accept=".xlsx,.xls,.csv"></div>
-        <div style="flex:0"><button class="primary" id="importRosters">Upload roster</button></div>
-      </div>
-      <div id="rosterStatus" style="margin-top:12px"></div></div>
-      <div class="panel"><h2>Published rosters</h2>
-        ${teams.length?`<div class="roster-admin-grid">${teams.map(t=>`
-          <div class="roster-admin-card">
-            <h3>${escapeHtml(t)}</h3>
-            <div class="badge">${rosters[t].length} Pokémon</div>
-            <div class="roster-admin-mons">${rosters[t].map(rosterDisplay).join(', ')}</div>
-          </div>`).join('')}`:'<div class="empty-state">No rosters published yet.</div>'}
-      </div>`;
-
-    document.getElementById('importRosters').onclick=async()=>{
-      const file=document.getElementById('rosterTabFile').files?.[0];
-      const status=document.getElementById('rosterStatus');
-      if(!file){status.innerHTML='<div class="note danger">Choose a file first.</div>';return}
-
-      const btn=document.getElementById('importRosters');
-      btn.disabled=true;
-      status.innerHTML='<div class="note">Reading workbook…</div>';
-
-      try{
-        const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
-        const parsed=parseRosterWorkbook(wb);
-        if(!Object.keys(parsed).length){
-          throw new Error('No rosters detected. Use the Season 15 layout (one team per sheet, points in Column A, Pokémon in Column C) or Team/Franchise + Pokémon/Species columns.');
-        }
-
-        const preview=Object.entries(parsed).map(([t,a])=>
-          `<li><strong>${escapeHtml(t)}</strong>: ${a.length} — ${a.map(rosterDisplay).join(', ')}</li>`
-        ).join('');
-
-        status.innerHTML=`<div class="panel" style="padding:12px">
-          <strong>Upload successful — roster preview</strong><div class="note">The workbook has been read and is ready to publish. Publishing will replace the currently published rosters.</div><ul>${preview}</ul>
-          <button class="primary" id="confirmRoster">Publish rosters</button>
-          <button class="ghost" id="cancelRoster">Cancel</button>
-        </div>`;
-
-        document.getElementById('cancelRoster').onclick=renderRosters;
-        document.getElementById('confirmRoster').onclick=async()=>{
-          const confirmBtn=document.getElementById('confirmRoster');
-          confirmBtn.disabled=true;
-          try{
-            await publishRosters(parsed);
-            renderRosters();
-          }catch(e){
-            status.innerHTML=`<div class="note danger">${escapeHtml(e.message)}</div>`;
-          }
-        };
-      }catch(e){
-        status.innerHTML=`<div class="note danger">${escapeHtml(e.message)}</div>`;
-      }finally{
-        btn.disabled=false;
-      }
-    };
-  }
-
-
   // ---------- Draft ----------
   // Setup lives here (board, budgets, order, mode, start/reset). Making picks
   // happens on the separate draft.html "Draft Room" page, which reads/writes
@@ -1820,7 +1972,14 @@
   }
 
   function draftFranchises(){
-    return [...new Set((COMM_PROFILES || []).filter(p => p.status === 'approved' && p.team_name).map(p => p.team_name))].sort();
+    // Draft franchises come from Settings > Franchises, not commissioner
+    // profile claims. This keeps Draft Setup in sync with the league's
+    // configured franchise list (the same source used by other settings-driven
+    // league features).
+    return configuredFranchises()
+      .map(f => String(f.name || '').trim())
+      .filter(Boolean)
+      .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
   }
 
   async function saveDraft(){
@@ -1829,16 +1988,255 @@
     await saveSharedState();
   }
 
-  function renderDraft(){
-    contentEl.innerHTML = `<div class="empty-state">Loading draft data…</div>`;
-    (COMM_PROFILES ? Promise.resolve() : loadCommissionerData()).then(() => {
-      if(activeTab === 'draft') drawDraft();
-    }).catch(e => {
-      if(activeTab === 'draft'){
-        contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load franchises: ${escapeHtml(e.message)}</div></div>`;
-      }
-    });
+  // ---------- Draft Pokémon typing cache ----------
+  // Typing is resolved during Draft Setup and stored with each draft entry.
+  // The browser keeps a local cache so a Pokémon is only looked up once per
+  // browser. Existing draft data is also used to seed the cache immediately.
+
+  const DRAFT_TYPE_CACHE_KEY = 'sbl_pokemon_typing_cache_v2';
+  const DRAFT_TYPE_LOOKUP_CONCURRENCY = 24;
+
+  const POKEMON_API_ALIASES = {
+    'darmanitan-galar':'darmanitan-galar',
+    'darmanitan-galar-zen':'darmanitan-galar-zen',
+    'terapagos-middle':'terapagos',
+    'terapagos':'terapagos',
+    'aegislash':'aegislash-shield',
+    'keldeo':'keldeo-ordinary',
+    'zygarde':'zygarde-50',
+    'darmanitan':'darmanitan-standard',
+    'mimikyu':'mimikyu-disguised',
+    'meloetta':'meloetta-aria',
+    'shaymin':'shaymin-land',
+    'maushold':'maushold-family-of-four',
+    'tauros-paldea-aqua':'tauros-paldea-aqua-breed',
+    'tauros-paldea-blaze':'tauros-paldea-blaze-breed',
+    'tauros-paldea-combat':'tauros-paldea-combat-breed',
+    'toxtricity':'toxtricity-amped',
+    'dudunsparce':'dudunsparce-two-segment',
+    'oricorio':'oricorio-baile',
+    'oricorio-baile':'oricorio-baile',
+    'oricorio-pom-pom':'oricorio-pom-pom',
+    'oricorio-pau':'oricorio-pau',
+    'oricorio-sensu':'oricorio-sensu',
+    'minior':'minior-red-meteor',
+    'tatsugiri':'tatsugiri-curly',
+    'wishiwashi':'wishiwashi-solo',
+    'eiscue':'eiscue-ice',
+    'morpeko':'morpeko-full-belly',
+    'squawkabilly-b':'squawkabilly-blue-plumage',
+    'squawkabilly-w':'squawkabilly-white-plumage',
+    'squawkabilly-y':'squawkabilly-yellow-plumage',
+    'squawkabilly-g':'squawkabilly-green-plumage'
+  };
+
+  // These are only used when the league's display name does not have a
+  // directly usable API form. They are cached just like API results.
+  const POKEMON_TYPE_FALLBACKS = {
+    'darmanitan-galar':['Ice'],
+    'terapagos-middle':['Normal'],
+    'aegislash':['Steel','Ghost'],
+    'keldeo':['Water','Fighting'],
+    'zygarde':['Dragon','Ground'],
+    'darmanitan':['Fire'],
+    'mimikyu':['Ghost','Fairy'],
+    'meloetta':['Normal','Psychic'],
+    'shaymin':['Grass'],
+    'maushold':['Normal'],
+    'tauros-paldea-aqua':['Fighting','Water'],
+    'tauros-paldea-blaze':['Fighting','Fire'],
+    'tauros-paldea-combat':['Fighting'],
+    'toxtricity':['Electric','Poison'],
+    'dudunsparce':['Normal'],
+    'jellicent':['Water','Ghost'],
+    'frillish':['Water','Ghost'],
+    'oricorio':['Fire','Flying'],
+    'oricorio-baile':['Fire','Flying'],
+    'oricorio-pom-pom':['Electric','Flying'],
+    'oricorio-pau':['Psychic','Flying'],
+    'oricorio-sensu':['Ghost','Flying'],
+    'minior':['Rock','Flying'],
+    'tatsugiri':['Dragon','Water'],
+    'wishiwashi':['Water'],
+    'eiscue':['Ice'],
+    'morpeko':['Electric','Dark'],
+    'pyroar':['Fire','Normal'],
+    'squawkabilly-b':['Normal','Flying'],
+    'squawkabilly-w':['Normal','Flying'],
+    'squawkabilly-y':['Normal','Flying'],
+    'squawkabilly-g':['Normal','Flying'],
+    'ogerpon':['Grass'],
+    'ogerpon-teal':['Grass'],
+    'ogerpon-hearthflame':['Grass','Fire'],
+    'ogerpon-wellspring':['Grass','Water'],
+    'ogerpon-cornerstone':['Grass','Rock']
+  };
+
+  function draftTypeKey(name){
+    return String(name || '')
+      .trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[’']/g,'')
+      .replace(/[.]/g,'')
+      .replace(/[♀]/g,'-f')
+      .replace(/[♂]/g,'-m')
+      .replace(/[_\s]+/g,'-')
+      .replace(/-+/g,'-')
+      .replace(/^-|-$/g,'');
   }
+
+  function draftApiSlug(name){
+    const key=draftTypeKey(name);
+    return POKEMON_API_ALIASES[key] || key;
+  }
+
+  function loadDraftTypeCache(){
+    try{
+      const raw=localStorage.getItem(DRAFT_TYPE_CACHE_KEY);
+      const parsed=raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed==='object' ? parsed : {};
+    }catch(e){
+      return {};
+    }
+  }
+
+  let DRAFT_TYPE_CACHE=loadDraftTypeCache();
+
+  function saveDraftTypeCache(){
+    try{
+      localStorage.setItem(DRAFT_TYPE_CACHE_KEY, JSON.stringify(DRAFT_TYPE_CACHE));
+    }catch(e){
+      // localStorage can be unavailable/full; the draft still works.
+    }
+  }
+
+  function cacheDraftTypes(name, types){
+    const key=draftTypeKey(name);
+    if(!key || !Array.isArray(types) || !types.length) return;
+    DRAFT_TYPE_CACHE[key]=types.slice();
+  }
+
+  function seedDraftTypeCache(pool){
+    let changed=false;
+    for(const mon of (Array.isArray(pool) ? pool : [])){
+      if(Array.isArray(mon?.types) && mon.types.length){
+        const key=draftTypeKey(mon.name);
+        if(key && !DRAFT_TYPE_CACHE[key]){
+          DRAFT_TYPE_CACHE[key]=mon.types.slice();
+          changed=true;
+        }
+      }
+    }
+    if(changed) saveDraftTypeCache();
+  }
+
+  function getCachedDraftTypes(name){
+    const key=draftTypeKey(name);
+    const cached=DRAFT_TYPE_CACHE[key];
+    return Array.isArray(cached) && cached.length ? cached.slice() : null;
+  }
+
+  async function fetchPokemonTypesUncached(name){
+    const original=String(name || '').trim();
+    const key=draftTypeKey(original);
+
+    if(POKEMON_TYPE_FALLBACKS[key]){
+      return POKEMON_TYPE_FALLBACKS[key].slice();
+    }
+
+    const slug=draftApiSlug(original);
+    if(!slug) throw new Error(`Could not determine typing for ${original}.`);
+
+    const response=await fetch(
+      `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(slug)}`
+    );
+
+    if(!response.ok){
+      throw new Error(`Could not determine typing for ${original}.`);
+    }
+
+    const data=await response.json();
+    const types=(data.types || [])
+      .sort((a,b)=>Number(a.slot||0)-Number(b.slot||0))
+      .map(t=>String(t.type?.name||''))
+      .filter(Boolean)
+      .map(t=>t.charAt(0).toUpperCase()+t.slice(1));
+
+    if(!types.length){
+      throw new Error(`Could not determine typing for ${original}.`);
+    }
+
+    return types;
+  }
+
+  async function resolveDraftTypes(names,statusEl){
+    const unique=[];
+    const seen=new Set();
+
+    for(const name of names){
+      const key=draftTypeKey(name);
+      if(key && !seen.has(key)){
+        seen.add(key);
+        unique.push({name,key});
+      }
+    }
+
+    const missing=unique.filter(x=>!getCachedDraftTypes(x.name));
+    const cachedCount=unique.length-missing.length;
+
+    if(statusEl){
+      statusEl.innerHTML=`<div class="note">Typing cache: ${cachedCount} cached, ${missing.length} to look up…</div>`;
+    }
+
+    const failures=[];
+    let completed=0;
+
+    // Resolve missing entries concurrently, but cap concurrency so the API
+    // isn't flooded. Cached entries never make a network request.
+    let cursor=0;
+    async function worker(){
+      while(cursor<missing.length){
+        const item=missing[cursor++];
+        try{
+          const types=await fetchPokemonTypesUncached(item.name);
+          cacheDraftTypes(item.name,types);
+        }catch(error){
+          failures.push({name:item.name,error});
+        }
+        completed++;
+        if(statusEl){
+          statusEl.innerHTML=`<div class="note">Assigning typings… ${cachedCount+completed}/${unique.length} (${missing.length} new lookups)</div>`;
+        }
+      }
+    }
+
+    const workers=Array.from({length:Math.min(DRAFT_TYPE_LOOKUP_CONCURRENCY,missing.length)},()=>worker());
+    await Promise.all(workers);
+
+    saveDraftTypeCache();
+
+    if(failures.length){
+      throw new Error(`Could not determine typing for: ${failures.map(x=>x.name).join(', ')}`);
+    }
+
+    return new Map(unique.map(x=>[x.key,getCachedDraftTypes(x.name)]));
+  }
+
+  async function assignDraftTypes(pool,statusEl){
+    seedDraftTypeCache(pool);
+
+    const typeMap=await resolveDraftTypes(
+      pool.map(m=>m.name),
+      statusEl
+    );
+
+    return pool.map(mon=>({
+      ...mon,
+      types:typeMap.get(draftTypeKey(mon.name)) || []
+    }));
+  }
+
+  function renderDraft(){ return drawDraft(); }
 
   function drawDraft(){
     const d = STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
@@ -1864,6 +2262,8 @@
         <div class="foot-actions">
           <a class="ghost" href="draft.html" target="_blank" rel="noopener" style="text-decoration:none; display:inline-flex; align-items:center;">Open Draft Room ↗</a>
           ${d.status === 'setup' ? `<button class="primary" id="startDraftBtn">Start draft</button>` : ''}
+          ${d.status === 'live' ? `<button class="primary danger-btn" id="endDraftBtn">End draft &amp; finalize rosters</button>` : ''}
+
           ${d.status !== 'setup' ? `<button class="ghost danger-btn" id="resetDraftBtn">Reset draft</button>` : ''}
         </div>
         <div class="note danger" id="draftStatusErr"></div>
@@ -1885,10 +2285,11 @@
         <div id="draftBoardStatus" style="margin-top:8px"></div>
         ` : ''}
         <div style="max-height:420px;overflow:auto;margin-top:12px">
-          ${d.pool.length ? `<table><thead><tr><th>Pokémon</th><th class="num">Points</th><th>Status</th>${editable ? '<th></th>' : ''}</tr></thead><tbody>
+          ${d.pool.length ? `<table><thead><tr><th>Pokémon</th><th>Types</th><th class="num">Points</th><th>Status</th>${editable ? '<th></th>' : ''}</tr></thead><tbody>
             ${[...d.pool].sort((a,b)=>b.points-a.points||a.name.localeCompare(b.name)).map(m => `
               <tr>
                 <td>${escapeHtml(m.name)}</td>
+                <td>${(m.types || []).map(escapeHtml).join(' / ') || '<span class="note" style="margin:0">—</span>'}</td>
                 <td class="num">${m.points}</td>
                 <td>${m.drafted ? `<span class="badge">→ ${escapeHtml(m.draftedBy || '')}</span>` : '<span class="note" style="margin:0">Available</span>'}</td>
                 ${editable ? `<td><button class="ghost small danger-btn" data-remove-mon="${escapeHtml(m.id)}">Remove</button></td>` : ''}
@@ -1928,9 +2329,11 @@
         ${editable ? `
         <div class="row" style="align-items:flex-end">
           <div><label>Add franchise to round order</label>
-            <select id="orderRoundSelect">${franchises.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}</select>
+            <select id="orderRoundSelect">
+              ${franchises.filter(t => !DRAFT_ROUND_BUILDER.includes(t)).map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
+            </select>
           </div>
-          <div style="flex:0"><button class="ghost" id="addToRoundBtn">Add</button></div>
+          <div style="flex:0"><button class="ghost" id="addToRoundBtn" ${franchises.filter(t => !DRAFT_ROUND_BUILDER.includes(t)).length ? '' : 'disabled'}>Add</button></div>
           <div style="flex:0"><button class="ghost" id="clearRoundBtn">Clear round</button></div>
         </div>
         <div id="roundOrderList" class="note">${DRAFT_ROUND_BUILDER.length ? DRAFT_ROUND_BUILDER.map((t,i)=>`${i+1}. ${escapeHtml(t)}`).join(' · ') : 'No franchises added to the round yet.'}</div>
@@ -1961,6 +2364,20 @@
         drawDraft();
       }catch(e){ err.textContent = e.message; }
     });
+    document.getElementById('endDraftBtn')?.addEventListener('click', async () => {
+      const err = document.getElementById('draftStatusErr');
+      err.textContent = '';
+      if(!confirm('End the draft and finalize the current rosters? This cannot be undone without resetting the draft.')) return;
+      try{
+        d.status = 'complete';
+        d.currentPick = d.order.length ? Math.min(d.currentPick, d.order.length) : d.currentPick;
+        d.updatedAt = new Date().toISOString();
+        await saveDraft();
+        // Publish the roster snapshot immediately so the public roster page is finalized.
+        await savePublishedRosters(STATE.settings.rosters || {});
+        drawDraft();
+      }catch(e){ err.textContent = e.message; }
+    });
     document.getElementById('resetDraftBtn')?.addEventListener('click', async () => {
       const err = document.getElementById('draftStatusErr');
       if(!confirm('Reset the draft? This clears every pick made so far. Pokémon return to the board as available. The draft board, budgets, and order stay as configured.')) return;
@@ -1969,6 +2386,10 @@
         d.picks = [];
         d.currentPick = 0;
         d.status = 'setup';
+
+        // Reset wipes the working rosters and the public roster snapshot.
+        STATE.settings.rosters = {};
+        await savePublishedRosters({});
         await saveDraft();
         drawDraft();
       }catch(e){ err.textContent = e.message; }
@@ -1984,7 +2405,23 @@
         const wb = XLSX.read(await file.arrayBuffer(), {type:'array'});
         const parsed = parseFreeAgencyWorkbook(wb); // same "DRAFT BOARD" sheet format
         if(d.pool.some(m => m.drafted) === false && d.pool.length && !confirm(`Replace the current board (${d.pool.length} Pokémon) with ${parsed.length} from this workbook?`)) return;
-        d.pool = parsed.map(m => ({id: genDraftId(), name: m.name, points: Number(m.points) || 0, drafted:false, draftedBy:null, pickNumber:null}));
+
+        // Preserve all typings already known from the current board before
+        // replacing it. This makes re-imports nearly instantaneous.
+        seedDraftTypeCache(d.pool);
+
+        const importedPool = parsed.map(m => ({
+          id: genDraftId(),
+          name: m.name,
+          points: Number(m.points) || 0,
+          types: [],
+          drafted: false,
+          draftedBy: null,
+          pickNumber: null
+        }));
+
+        status.innerHTML = `<div class="note">Assigning Pokémon typings… 0/${importedPool.length}</div>`;
+        d.pool = await assignDraftTypes(importedPool, status);
         await saveDraft();
         drawDraft();
       }catch(e){
@@ -1998,7 +2435,17 @@
       if(!name || !Number.isFinite(points)){ status.innerHTML = '<div class="note danger">Enter a name and a numeric point value.</div>'; return; }
       if(d.pool.some(m => m.name.toLowerCase() === name.toLowerCase())){ status.innerHTML = '<div class="note danger">That Pokémon is already on the board.</div>'; return; }
       try{
-        d.pool.push({id: genDraftId(), name, points, drafted:false, draftedBy:null, pickNumber:null});
+        status.innerHTML = `<div class="note">Finding typing for ${escapeHtml(name)}…</div>`;
+        const types = await fetchPokemonTypes(name);
+        d.pool.push({
+          id: genDraftId(),
+          name,
+          points,
+          types,
+          drafted: false,
+          draftedBy: null,
+          pickNumber: null
+        });
         await saveDraft();
         drawDraft();
       }catch(e){ status.innerHTML = `<div class="note danger">${escapeHtml(e.message)}</div>`; }
@@ -2054,7 +2501,7 @@
     });
     document.getElementById('addToRoundBtn')?.addEventListener('click', () => {
       const sel = document.getElementById('orderRoundSelect');
-      if(sel && sel.value) DRAFT_ROUND_BUILDER.push(sel.value);
+      if(sel && sel.value && !DRAFT_ROUND_BUILDER.includes(sel.value)) DRAFT_ROUND_BUILDER.push(sel.value);
       drawDraft();
     });
     document.getElementById('clearRoundBtn')?.addEventListener('click', () => {
@@ -2515,12 +2962,51 @@
     const pending = COMM_PROFILES.filter(p=>p.status==='pending');
     const approved = COMM_PROFILES.filter(p=>p.status==='approved');
     const rejected = COMM_PROFILES.filter(p=>p.status==='rejected');
+    const draft = normalizeDraftState(STATE.settings.draft);
+    const franchises = draftFranchises();
+    const spentByTeam = {};
+    draft.picks.forEach(p => {
+      spentByTeam[p.team] = (spentByTeam[p.team] || 0) + (Number(p.points) || 0);
+    });
+
+    // Scale the budget cards as the league grows.  The cards remain readable,
+    // but large leagues do not consume the entire commissioner page.
+    const budgetScale = Math.max(0.72, Math.min(1, 1 - Math.max(0, franchises.length - 8) * 0.035));
 
     contentEl.innerHTML = `
       <div class="panel">
         <h2>Commissioner / Admin</h2>
-        <div class="note">User approvals and commissioner permissions only. Trade management has its own tab.</div>
+        <div class="note">Commissioner controls only. Franchise rosters are not displayed on this page; budgets remain visible for every franchise. Trade management has its own tab.</div>
       </div>
+
+      <div class="panel commissioner-only-ui" data-commissioner-ui="budgets-no-rosters">
+        <div class="section-head-row">
+          <h2>Franchise Budgets <span class="badge">${franchises.length}</span></h2>
+          <span class="badge">${escapeHtml(STATE.settings.activeSeason || DEFAULT_SEASON)}</span>
+        </div>
+        ${franchises.length ? `
+          <div class="commissioner-budget-grid" style="--budget-scale:${budgetScale}">
+            ${franchises.map(team => {
+              const cap = Number.isFinite(Number(draft.budgets[team]))
+                ? Number(draft.budgets[team])
+                : Number(draft.defaultBudget) || 0;
+              const spent = spentByTeam[team] || 0;
+              const remaining = cap - spent;
+              return `<div class="commissioner-budget-card">
+                <div class="commissioner-budget-team" title="${escapeHtml(team)}">${escapeHtml(team)}</div>
+                <div class="commissioner-budget-main">${cap}</div>
+                <div class="commissioner-budget-meta">
+                  <span>Spent <strong>${spent}</strong></span>
+                  <span class="${remaining < 0 ? 'budget-over' : ''}">Remaining <strong>${remaining}</strong></span>
+                </div>
+                ${draft.budgets[team] != null ? '<div class="commissioner-budget-override">Custom budget</div>' : '<div class="commissioner-budget-override">League default</div>'}
+              </div>`;
+            }).join('')}
+          </div>
+          <div class="note">Each franchise shows its full budget, amount spent, and amount remaining. Custom franchise budgets are marked separately.</div>
+        ` : '<div class="empty-state">No approved franchises yet.</div>'}
+      </div>
+
       <div class="panel">
         <h2>Pending Team Claims <span class="badge">${pending.length}</span></h2>
         ${pending.length ? pending.map(p=>commClaimRow(p,true)).join('') : '<div class="empty-state">No pending claims.</div>'}
@@ -2563,11 +3049,22 @@
     });
   }
 
+  // Franchise names are derived from the Player -> Team name mapping.
+  // The value on the right side of each mapping is the canonical franchise name.
+  // This keeps Draft Setup, budgets, ordering, and Commissioner views in sync
+  // with the league's existing player/team mapping instead of maintaining a
+  // second franchise list in Settings.
   function configuredFranchises(){
-    const rosters = STATE.settings.rosters || {};
-    const rosterNames = Object.keys(rosters || {}).map(String).filter(Boolean);
-    const configured = STATE.settings.franchises && typeof STATE.settings.franchises === 'object' ? STATE.settings.franchises : {};
-    const names = [...new Set([...rosterNames, ...Object.keys(configured)])].sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+    const names = [...new Set(
+      Object.values(STATE.teamMap || {})
+        .map(v => String(v || '').trim())
+        .filter(Boolean)
+    )].sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+
+    const configured = STATE.settings.franchises && typeof STATE.settings.franchises === 'object'
+      ? STATE.settings.franchises
+      : {};
+
     return names.map(name => ({ name, conference: configured[name] || '' }));
   }
 
@@ -2583,7 +3080,28 @@
     const conferenceA = conferenceMap.a || 'Conference A';
     const conferenceB = conferenceMap.b || 'Conference B';
     contentEl.invisible;
+    const seasonArchives = STATE.settings.seasonArchives || {};
+    const archiveEntries = Object.entries(seasonArchives).sort((a,b)=> (b[1].archivedAt||'').localeCompare(a[1].archivedAt||''));
     contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Season</h2>
+        <div class="note">Current season: <strong>${escapeHtml(STATE.settings.activeSeason || DEFAULT_SEASON)}</strong> — ${Object.keys(STATE.replays||{}).length} replay${Object.keys(STATE.replays||{}).length===1?'':'s'} processed.</div>
+        <div class="foot-actions">
+          <button class="primary" id="newSeasonBtn">Start new season…</button>
+        </div>
+        <div class="note" style="margin-top:10px;">Starting a new season archives every replay, roster, draft, and free-agency pool exactly as it stands right now, then clears the board so you can start drafting fresh. Nothing is deleted — archived seasons stay viewable and any one of them can be set back as current below.</div>
+        <div id="seasonArchiveRows" style="margin-top:16px;">
+          ${archiveEntries.length ? archiveEntries.map(([key,a])=>`
+            <div class="map-row" style="align-items:center;">
+              <div style="flex:1;">
+                <div style="font-weight:600;">${escapeHtml(a.name||key)}</div>
+                <div class="note" style="margin:2px 0 0;">${Object.keys(a.replays||{}).length} replay${Object.keys(a.replays||{}).length===1?'':'s'} · archived ${a.archivedAt ? new Date(a.archivedAt).toLocaleDateString() : '—'}</div>
+              </div>
+              <button class="ghost small" data-restore-season="${escapeHtml(key)}">Set as current</button>
+              <button class="ghost small danger-btn" data-delete-season="${escapeHtml(key)}">Delete</button>
+            </div>`).join('') : '<div class="empty-state">No archived seasons yet.</div>'}
+        </div>
+      </div>
       <div class="panel">
         <h2>Franchise Conferences</h2>
         <div class="note">Every franchise from the published roster is listed below. Click its conference dropdown to assign it. This setting is stored in Admin only and does not change the roster data.</div>
@@ -2601,12 +3119,12 @@
                 <option value="a" ${f.conference==='a'?'selected':''}>${escapeHtml(conferenceA)}</option>
                 <option value="b" ${f.conference==='b'?'selected':''}>${escapeHtml(conferenceB)}</option>
               </select>
-            </div>`).join('') : '<div class="empty-state">No published rosters found yet. Publish the rosters first, then every franchise will appear here.</div>'}
+            </div>`).join('') : '<div class="empty-state">No franchise names found in Player → Team name mapping yet. Add mappings below, and each unique team name will appear here.</div>'}
         </div>
       </div>
       <div class="panel">
         <h2>Player → Team name mapping</h2>
-        <div class="note">Map each Showdown username to your league's team/trainer name, so stats group correctly. Unmapped usernames just show as-is.</div>
+        <div class="note">Map each Showdown username to your league's team/trainer name, so stats group correctly. These mapped team names are also the source for the league's franchise list used by Draft Setup, ordering, and budgets.</div>
         <div class="row" style="margin-top:12px; align-items:center;">
           <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
             <input type="checkbox" id="caseInsensitiveToggle" ${STATE.settings.caseInsensitiveNames ? 'checked' : ''}>
@@ -2663,6 +3181,44 @@
       });
     }
     drawMap();
+
+    document.getElementById('newSeasonBtn').addEventListener('click', async ()=>{
+      const btn = document.getElementById('newSeasonBtn');
+      btn.disabled = true;
+      try{
+        await startNewSeason();
+        renderTicker();
+        render();
+      }catch(err){
+        alert('Could not start a new season: ' + err.message);
+        btn.disabled = false;
+      }
+    });
+    document.querySelectorAll('[data-restore-season]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true;
+        try{
+          await restoreSeasonArchive(btn.dataset.restoreSeason);
+          renderTicker();
+          render();
+        }catch(err){
+          alert('Could not restore that season: ' + err.message);
+          btn.disabled = false;
+        }
+      });
+    });
+    document.querySelectorAll('[data-delete-season]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true;
+        try{
+          await deleteSeasonArchive(btn.dataset.deleteSeason);
+          render();
+        }catch(err){
+          alert('Could not delete that archive: ' + err.message);
+          btn.disabled = false;
+        }
+      });
+    });
 
     document.getElementById('saveConferenceNames').addEventListener('click', async ()=>{
       const a = document.getElementById('conferenceNameA').value.trim() || 'Conference A';

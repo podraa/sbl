@@ -53,13 +53,40 @@
   .clock-banner .who .amber{color:var(--amber);}
   .clock-banner .pickno{font-family:var(--mono); color:var(--text-dim); font-size:13px;}
 
-  .budget-strip{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
-  .budget-chip{flex:0 0 auto; min-width:150px; background:var(--panel-alt); border:1px solid var(--border); border-radius:10px; padding:10px 12px;}
+  .budget-strip{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:10px;
+    width:100%;
+    box-sizing:border-box;
+    overflow:visible;
+    padding-bottom:4px;
+  }
+  .budget-chip{
+    min-width:0;
+    width:100%;
+    box-sizing:border-box;
+    overflow:hidden;
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  @media (max-width:560px){
+    .budget-strip{grid-template-columns:1fr;}
+  }
   .budget-chip.oc{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
   .budget-chip .team{font-weight:700; font-size:13px; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .budget-chip .amt{font-family:var(--mono); font-size:15px;}
   .budget-chip .amt.neg{color:var(--red);}
   .budget-chip .amt.pos{color:var(--teal);}
+  .section-head-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
+  .section-head-row h2{margin:0;}
+  .roster-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
+  .roster-chip{display:flex;align-items:center;gap:9px;flex:0 0 auto;min-width:150px;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
+  .roster-chip img{width:42px;height:42px;object-fit:contain;image-rendering:auto;}
+  .roster-name{font-weight:700;font-size:13px;white-space:nowrap;}
+  .roster-points{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:2px;}
 
   .pool-toolbar{display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
   .pool-toolbar input{flex:1; min-width:200px;}
@@ -74,6 +101,8 @@
   .mon-card:hover{border-color:var(--amber);}
   .mon-card.taken{opacity:.4; cursor:default;}
   .mon-card.taken:hover{border-color:var(--border);}
+  .mon-card.view-only{cursor:default;}
+  .mon-card.view-only:hover{border-color:var(--border);}
   .mon-card img{width:56px; height:56px; object-fit:contain; image-rendering:pixelated;}
   .mon-card .name{font-size:12px; font-weight:700;}
   .mon-card .pts{font-size:11px; color:var(--amber); font-family:var(--mono);}
@@ -142,7 +171,7 @@
 <div id="app" style="display:none">
   <header>
     <h1>Draft Room</h1>
-    <div class="sub">Make picks live. Every pick updates budgets and published rosters immediately. <span id="seasonLabel" class="badge">Current season</span></div>
+    <div class="sub"><span id="draftSubText">Live draft board.</span> <span id="seasonLabel" class="badge">Current season</span></div>
   </header>
   <div id="content"></div>
 </div>
@@ -160,11 +189,14 @@
   let PROFILES = [];
   let loaded = false;
   let poolFilter = '';
+  let poolTypeFilter = 'all';
+  let isCommissioner = false;
+  let myTeamName = null;
   const contentEl = document.getElementById('content');
 
   const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
-  function requireAdmin(){ if(!adminUser) throw new Error('Admin login required to make picks.'); }
+  function requireAdmin(){ if(!isCommissioner) throw new Error('Only commissioners can make draft picks.'); }
 
   function defaultDraftState(){
     return { status:'setup', mode:'manual', defaultBudget:120, budgets:{}, pool:[], order:[], currentPick:0, picks:[], updatedAt:null };
@@ -174,6 +206,7 @@
     d.budgets = d.budgets && typeof d.budgets === 'object' ? d.budgets : {};
     d.pool = Array.isArray(d.pool) ? d.pool.map(m => ({
       id: String(m?.id ?? ''), name: String(m?.name ?? '').trim(), points: Number(m?.points) || 0,
+      types: Array.isArray(m?.types) ? m.types.map(t => String(t).trim()).filter(Boolean) : [],
       drafted: !!m?.drafted, draftedBy: m?.draftedBy || null, pickNumber: m?.pickNumber ?? null
     })).filter(m => m.id && m.name) : [];
     d.order = Array.isArray(d.order) ? d.order.map(String) : [];
@@ -254,24 +287,99 @@
   }
 
   // ---------- sprites ----------
-  function spriteCandidates(name){
-    const raw = String(name || '').trim().toLowerCase().replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m');
-    const hyphenated = raw.replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
-    const compact = hyphenated.replace(/-/g,'');
-    const candidates = [];
-    const add = id => { if(id && !candidates.includes(id)) candidates.push(id); };
-    add(hyphenated); add(compact);
-    return candidates;
-  }
-  function spriteUrl(name){
-    const c = spriteCandidates(name)[0] || '';
-    return `https://play.pokemonshowdown.com/sprites/gen5/${c}.png`;
+  // Pokémon Showdown sprite filenames don't always match the names
+  // used in the league draft list. Resolve the common competitive
+  // / alternate-form names here, then let the <img> element try each
+  // candidate until one actually loads.
+  // ---------- robust Pokémon sprites ----------
+  // Keep the Showdown forme separator (`-`), normalize common league names,
+  // and try a small candidate list before giving up.  This matters because
+  // the league data contains alternate-form names that do not always map
+  // 1:1 to a Showdown gen5 filename.
+  const SPRITE_ALIASES = {
+    'aegislash':'aegislash-shield',
+    'darmanitan':'darmanitan',
+    'darmanitan-galar':'darmanitan-galar',
+    'darmanitan-galar-zen':'darmanitan-galar-zen',
+    'terapagos-middle':'terapagos-terastal',
+    'terapagos':'terapagos',
+    'keldeo':'keldeo-ordinary',
+    'zygarde':'zygarde-50',
+    'meloetta':'meloetta-aria',
+    'shaymin':'shaymin-land',
+    'maushold':'maushold-four',
+    'dudunsparce':'dudunsparce-two-segment',
+    'oricorio':'oricorio-baile',
+    'minior':'minior-red-meteor',
+    'tatsugiri':'tatsugiri-curly',
+    'wishiwashi':'wishiwashi-solo',
+    'eiscue':'eiscue-ice',
+    'morpeko':'morpeko-full-belly',
+    'palafin':'palafin-zero',
+    'basculegion':'basculegion-male',
+    'basculegion-m':'basculegion-male',
+    'basculegion-f':'basculegion-female',
+    'indeedee-m':'indeedee-male',
+    'indeedee-f':'indeedee-female',
+    'meowstic-m':'meowstic-male',
+    'meowstic-f':'meowstic-female',
+    'frillish-m':'frillish',
+    'frillish-f':'frillish',
+    'jellicent-m':'jellicent',
+    'jellicent-f':'jellicent'
+  };
+
+  function toShowdownId(name){
+    return String(name || '').trim().split('-')
+      .map(seg => seg.toLowerCase().replace(/[^a-z0-9]/g,''))
+      .filter(Boolean).join('-');
   }
 
+  // Keep sprite resolution identical to the Free Agency page:
+  // 1) normal Showdown id, 2) fully compact id, 3) Showdown's 0 fallback.
+  // This is deliberately simple because Showdown's sprite filenames do not
+  // always line up with our league/form aliases.
+  function spriteImg(species, cls){
+    const safe = escapeHtml(species);
+    const id = toShowdownId(species);
+    const compact = id.replace(/-/g,'');
+    const urls = JSON.stringify([
+      'https://play.pokemonshowdown.com/sprites/gen5/' + id + '.png',
+      'https://play.pokemonshowdown.com/sprites/gen5/' + compact + '.png',
+      'https://play.pokemonshowdown.com/sprites/gen5/0.png'
+    ]);
+    return `<img class="${cls}" src="https://play.pokemonshowdown.com/sprites/gen5/${id}.png" alt="${safe}" loading="lazy" `+
+      `data-sprite-urls="${escapeHtml(urls)}" data-sprite-idx="0" `+
+      `onerror="(function(i){var us=JSON.parse(i.dataset.spriteUrls||'[]');var nx=Number(i.dataset.spriteIdx||0)+1;if(nx<us.length){i.dataset.spriteIdx=nx;i.src=us[nx];}else{i.onerror=null;i.style.opacity='.25';}})(this)">`;
+  }
+
+  // Backwards-compatible helpers used by the Draft Room card markup.
+  function spriteUrl(name, index=0){
+    const id = toShowdownId(name);
+    const compact = id.replace(/-/g,'');
+    const urls = [
+      'https://play.pokemonshowdown.com/sprites/gen5/' + id + '.png',
+      'https://play.pokemonshowdown.com/sprites/gen5/' + compact + '.png',
+      'https://play.pokemonshowdown.com/sprites/gen5/0.png'
+    ];
+    return urls[index] || urls[urls.length - 1];
+  }
+
+  function spriteFallback(img, name){
+    const next = Number(img.dataset.spriteAttempt || 0) + 1;
+    if(next < 3){
+      img.dataset.spriteAttempt = String(next);
+      img.src = spriteUrl(name, next);
+    }else{
+      img.onerror = null;
+      img.style.opacity = '.25';
+    }
+  }
   // ---------- pick flow ----------
   async function makePick(mon, team){
     requireAdmin();
     const d = STATE.settings.draft;
+    if(d.status !== 'live') throw new Error('The draft is not live. Picks are disabled after the draft is finalized.');
     mon.drafted = true;
     mon.draftedBy = team;
     mon.pickNumber = d.picks.length + 1;
@@ -311,14 +419,21 @@
       contentEl.innerHTML = `<div class="panel">
         <h2>Draft not started</h2>
         <div class="note">Set up the draft board, budgets, and order in the Admin Dashboard's Draft tab, then start the draft from there.</div>
-        <div class="foot-actions"><a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Go to Admin Dashboard ↗</a></div>
+        ${isCommissioner ? `<div class="foot-actions"><a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Go to Admin Dashboard ↗</a></div>` : ''}
       </div>`;
       return;
     }
 
     const teams = franchises();
     const oc = currentTeam();
-    const filtered = d.pool.filter(m => !poolFilter || m.name.toLowerCase().includes(poolFilter.toLowerCase()));
+    const rosterTeam = isCommissioner ? null : myTeamName;
+    const currentRoster = rosterTeam ? (STATE.settings.rosters[rosterTeam] || []) : [];
+    const availableTypes = [...new Set(d.pool.flatMap(m => m.types || []))].sort((a,b) => a.localeCompare(b));
+    const filtered = d.pool.filter(m => {
+      const matchesSearch = !poolFilter || m.name.toLowerCase().includes(poolFilter.toLowerCase());
+      const matchesType = poolTypeFilter === 'all' || (m.types || []).some(t => t.toLowerCase() === poolTypeFilter.toLowerCase());
+      return matchesSearch && matchesType;
+    });
     const groups = {};
     filtered.forEach(m => { (groups[m.points] ??= []).push(m); });
     const tiers = Object.keys(groups).map(Number).sort((a,b) => b - a);
@@ -330,26 +445,49 @@
             ${d.status === 'complete'
               ? `<div class="who">Draft complete</div>`
               : d.mode === 'ordered'
-                ? `<div class="who">On the clock: <span class="amber">${oc ? esc(oc) : '—'}</span></div><div class="pickno">Pick #${d.currentPick + 1} of ${d.order.length}</div>`
-                : `<div class="who">Manual mode</div><div class="pickno">Pick a Pokémon, then choose the franchise</div>`}
+                ? `<div class="who">Current Pick: <span class="amber">${oc ? esc(oc) : '—'}</span></div><div class="pickno">Pick #${d.currentPick + 1} of ${d.order.length}</div>`
+                : `<div class="who">Current Pick: <span class="amber">Manual</span></div><div class="pickno">Pick a Pokémon, then choose the franchise</div>`}
           </div>
           <div class="foot-actions" style="margin-top:0">
-            ${d.picks.length ? `<button class="ghost danger-btn" id="undoBtn">Undo last pick</button>` : ''}
-            <a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Draft setup ↗</a>
+            ${isCommissioner && d.picks.length ? `<button class="ghost danger-btn" id="undoBtn">Undo last pick</button>` : ''}
+            ${isCommissioner ? `<a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Draft setup ↗</a>` : ''}
           </div>
         </div>
       </div>
 
+      ${rosterTeam ? `
       <div class="panel">
-        <h2>Budgets</h2>
+        <div class="section-head-row">
+          <h2>${isCommissioner ? 'Current roster' : 'My roster'}</h2>
+          <span class="badge">${esc(rosterTeam)}</span>
+        </div>
+        ${currentRoster.length ? `
+          <div class="roster-strip">
+            ${currentRoster.map(mon => `
+              <div class="roster-chip">
+                <img src="${spriteUrl(mon.name)}" alt="${esc(mon.name)}" loading="lazy" data-sprite-attempt="0" onerror="spriteFallback(this, '${esc(mon.name).replace("'","\\'")}')">
+                <div>
+                  <div class="roster-name">${esc(mon.name)}</div>
+                  ${mon.points != null ? `<div class="roster-points">${Number(mon.points) || 0} pts</div>` : ''}
+                </div>
+              </div>`).join('')}
+          </div>
+        ` : `<div class="empty-state">No Pokémon drafted yet.</div>`}
+      </div>` : ''}
+
+      <div class="panel">
+        <h2>${isCommissioner ? 'Budgets' : 'My budget'}</h2>
         <div class="budget-strip">
-          ${teams.length ? teams.map(t => {
-            const spent = draftSpent(t), budget = draftBudget(t), remain = budget - spent;
-            return `<div class="budget-chip ${t === oc ? 'oc' : ''}">
-              <div class="team">${esc(t)}</div>
-              <div class="amt ${remain < 0 ? 'neg' : 'pos'}">${remain} / ${budget} pts</div>
-            </div>`;
-          }).join('') : '<div class="empty-state">No approved franchises found.</div>'}
+          ${(() => {
+            const budgetTeams = isCommissioner ? teams : (myTeamName ? [myTeamName] : []);
+            return budgetTeams.length ? budgetTeams.map(t => {
+              const spent = draftSpent(t), budget = draftBudget(t), remain = budget - spent;
+              return `<div class="budget-chip ${t === oc ? 'oc' : ''}">
+                <div class="team">${esc(t)}</div>
+                <div class="amt ${remain < 0 ? 'neg' : 'pos'}">${remain} / ${budget} pts</div>
+              </div>`;
+            }).join('') : '<div class="empty-state">No franchise assigned.</div>';
+          })()}
         </div>
       </div>
 
@@ -357,6 +495,10 @@
         <h2>Draft board</h2>
         <div class="pool-toolbar">
           <input type="text" id="poolSearch" placeholder="Search Pokémon…" value="${esc(poolFilter)}">
+          <select id="poolTypeFilter" style="max-width:180px">
+            <option value="all">All Types</option>
+            ${availableTypes.map(type => `<option value="${esc(type)}" ${poolTypeFilter.toLowerCase() === type.toLowerCase() ? 'selected' : ''}>${esc(type)}</option>`).join('')}
+          </select>
           <span class="badge">${d.pool.filter(m=>!m.drafted).length} available</span>
           <span class="badge">${d.pool.filter(m=>m.drafted).length} drafted</span>
         </div>
@@ -365,10 +507,11 @@
             <div class="tier-title">${pts} points</div>
             <div class="mon-grid">
               ${groups[pts].sort((a,b)=>a.name.localeCompare(b.name)).map(m => `
-                <div class="mon-card ${m.drafted ? 'taken' : ''}" ${m.drafted ? '' : `data-pick="${esc(m.id)}"`}>
-                  <img src="${spriteUrl(m.name)}" alt="${esc(m.name)}" loading="lazy" onerror="this.style.opacity=.2">
+                <div class="mon-card ${m.drafted ? 'taken' : ''} ${!isCommissioner ? 'view-only' : ''}" ${m.drafted || !isCommissioner ? '' : `data-pick="${esc(m.id)}"`}>
+                  <img src="${spriteUrl(m.name)}" alt="${esc(m.name)}" loading="lazy" data-sprite-attempt="0" onerror="spriteFallback(this, '${esc(m.name).replace("'","\\'")}')">
                   <div class="name">${esc(m.name)}</div>
                   <div class="pts">${m.points} pts</div>
+                  ${m.types?.length ? `<div class="note" style="margin:0;font-size:10px">${m.types.map(esc).join(' / ')}</div>` : ''}
                   ${m.drafted ? `<div class="taken-to">→ ${esc(m.draftedBy || '')}</div>` : ''}
                 </div>`).join('')}
             </div>
@@ -385,6 +528,10 @@
       poolFilter = e.target.value;
       render();
       document.getElementById('poolSearch')?.focus();
+    });
+    document.getElementById('poolTypeFilter')?.addEventListener('change', (e) => {
+      poolTypeFilter = e.target.value;
+      render();
     });
     contentEl.querySelectorAll('[data-pick]').forEach(card => {
       card.addEventListener('click', () => openPickModal(card.dataset.pick));
@@ -465,7 +612,7 @@
       showAdminLogin();
       return false;
     }
-    const {data:profile, error:profErr} = await supabase.from('profiles').select('team_name').eq('id', data.session.user.id).maybeSingle();
+    const {data:profile, error:profErr} = await supabase.from('profiles').select('team_name,is_commissioner').eq('id', data.session.user.id).maybeSingle();
     if(profErr) throw profErr;
     if(!profile?.team_name){
       // Logged in but hasn't claimed/been assigned a team yet — no access to the
@@ -474,6 +621,10 @@
       return false;
     }
     adminUser = data.session.user;
+    myTeamName = profile.team_name;
+    isCommissioner = profile.is_commissioner === true;
+    const sub = document.getElementById('draftSubText');
+    if(sub) sub.textContent = isCommissioner ? 'Make picks live. Every pick updates budgets and published rosters immediately.' : 'Live draft board. Search and filter Pokémon by type; drafting is commissioner-only.';
     document.getElementById('app').style.display = '';
     return true;
   }
