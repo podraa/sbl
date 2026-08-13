@@ -263,7 +263,6 @@
   const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
   const SUPABASE_STATE_ID = '__dashboard_state__';
-  const SUPABASE_FREE_AGENCY_ID = '__free_agency__';
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const IS_ADMIN_PAGE = true;
   let adminUser = null;
@@ -285,7 +284,7 @@
           sharedState = row.replay_data || {};
           continue;
         }
-        // __rosters__ is a separate published-roster record, not a replay.
+        // __rosters__ and __free_agency__ are separate published records, not replays.
         // Never load it into STATE.replays or the dashboard aggregation will
         // try to treat its roster payload as replay data.
         if(row.replay_id === '__rosters__') continue;
@@ -357,7 +356,7 @@
     requireAdmin();
     const {data, error} = await supabase.from('replays').select('replay_id');
     if(error) throw error;
-    const ids = (data||[]).map(r=>r.replay_id).filter(id=>id && id!==SUPABASE_STATE_ID && id!=='__rosters__');
+    const ids = (data||[]).map(r=>r.replay_id).filter(id=>id && id!==SUPABASE_STATE_ID && id!=='__rosters__' && id!=='__free_agency__');
     if(ids.length){
       const {error: delErr}=await supabase.from('replays').delete().in('replay_id',ids);
       if(delErr) throw delErr;
@@ -368,7 +367,7 @@
     requireAdmin();
     const {data, error} = await supabase.from('replays').select('replay_id');
     if(error) throw error;
-    const stale = (data || []).map(r=>r.replay_id).filter(id => id !== SUPABASE_STATE_ID && id !== '__rosters__' && !STATE.replays[id]);
+    const stale = (data || []).map(r=>r.replay_id).filter(id => id !== SUPABASE_STATE_ID && id !== '__rosters__' && id !== '__free_agency__' && !STATE.replays[id]);
     if(stale.length){
       const {error: delErr} = await supabase.from('replays').delete().in('replay_id', stale);
       if(delErr) throw delErr;
@@ -1738,6 +1737,7 @@
   function normalizeFreeAgencyName(name){
     return String(name ?? '')
       .replace(/[’']/g, '')
+      .replace(/[_]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1756,30 +1756,28 @@
     const sheetName =
       wb.SheetNames.find(
         n => String(n).trim().toLowerCase() === 'draft board'
-      ) || wb.SheetNames[0];
+      );
 
-    const ws = wb.Sheets[sheetName];
-    if(!ws) throw new Error(`Could not open the "${sheetName}" sheet.`);
+    if(!sheetName){
+      throw new Error('Could not find a "DRAFT BOARD" sheet in the workbook.');
+    }
 
     const rows = XLSX.utils.sheet_to_json(
-      ws,
+      wb.Sheets[sheetName],
       {header:1, defval:''}
     );
 
     if(!rows.length){
-      throw new Error(`The "${sheetName}" sheet is empty.`);
+      throw new Error('The DRAFT BOARD sheet is empty.');
     }
 
-    // Find the header row rather than assuming it is row 1.
     let headerIndex = -1;
 
-    for(let r=0; r<Math.min(rows.length, 10); r++){
+    for(let r=0; r<Math.min(rows.length, 15); r++){
       const row = rows[r] || [];
-      const hasPointsHeader = row.some(cell =>
+      if(row.some(cell =>
         /^\s*\d+\s*POINTS?\s*$/i.test(String(cell ?? ''))
-      );
-
-      if(hasPointsHeader){
+      )){
         headerIndex = r;
         break;
       }
@@ -1787,19 +1785,17 @@
 
     if(headerIndex < 0){
       throw new Error(
-        `Could not find point columns in the "${sheetName}" sheet. ` +
-        `Expected headers such as "20 POINTS", "19 POINTS", etc.`
+        'Could not find point columns. Expected headers such as "20 POINTS", "19 POINTS", etc.'
       );
     }
 
-    const header = rows[headerIndex] || [];
     const pool = [];
     const seen = new Set();
 
-    for(let c=0; c<header.length; c++){
+    for(let c=0; c<(rows[headerIndex] || []).length; c++){
 
       const headerText =
-        String(header[c] ?? '').trim();
+        String(rows[headerIndex]?.[c] ?? '').trim();
 
       const match =
         headerText.match(/^\s*(\d+)\s*POINTS?\s*$/i);
@@ -1807,98 +1803,77 @@
       if(!match) continue;
 
       const points = Number(match[1]);
-
       if(!Number.isFinite(points)) continue;
 
-      for(let r=headerIndex + 1; r<rows.length; r++){
-
-        const raw =
-          String(rows[r]?.[c] ?? '').trim();
-
-        if(!raw) continue;
+      for(let r=headerIndex+1; r<rows.length; r++){
 
         const name =
-          normalizeFreeAgencyName(raw);
+          normalizeFreeAgencyName(rows[r]?.[c]);
 
         if(!name) continue;
 
         if(
-          /^(pokemon|pokémon|species|name|pick|roster)$/i
-            .test(name)
+          /^(pokemon|pokémon|species|name|pick|roster)$/i.test(name)
         ) continue;
 
-        const key =
-          freeAgencyKey(name);
-
+        const key = freeAgencyKey(name);
         if(!key || seen.has(key)) continue;
 
         seen.add(key);
-
-        pool.push({
-          name,
-          points
-        });
+        pool.push({name, points});
       }
     }
 
     if(!pool.length){
-      throw new Error(
-        `No Pokémon were found under the point columns in "${sheetName}".`
-      );
+      throw new Error('No Pokémon were found under the DRAFT BOARD point columns.');
     }
 
     return pool.sort(
       (a,b) =>
-        b.points - a.points ||
+        b.points-a.points ||
         a.name.localeCompare(b.name)
     );
   }
 
-  async function savePublishedFreeAgency(pool, sourceName){
+  async function publishFreeAgency(pool, sourceName){
+
     requireAdmin();
 
-    const mons = (Array.isArray(pool) ? pool : []).map(mon => ({
-      name: String(mon?.name ?? '').trim(),
-      points: Number(mon?.points) || 0
-    })).filter(mon => mon.name);
+    const mons = pool
+      .map(mon => ({
+        name:String(mon.name || '').trim(),
+        points:Number(mon.points) || 0
+      }))
+      .filter(mon => mon.name);
 
     if(!mons.length){
       throw new Error('Free Agency pool is empty.');
     }
 
-    const payload = {
+    // Keep a copy in shared settings for backups/compatibility.
+    STATE.settings = STATE.settings || {};
+    STATE.settings.freeAgency = {
       mons,
-      source: String(sourceName || 'DRAFT BOARD'),
-      updatedAt: new Date().toISOString()
+      source:String(sourceName || 'DRAFT BOARD'),
+      updatedAt:new Date().toISOString()
     };
 
+    // Dedicated public contract for free-agency.html.
     const {error} = await supabase
       .from('replays')
       .upsert([{
-        replay_id: SUPABASE_FREE_AGENCY_ID,
-        replay_data: payload,
-        updated_at: new Date().toISOString()
+        replay_id:'__free_agency__',
+        replay_data:{
+          mons,
+          source:String(sourceName || 'DRAFT BOARD'),
+          updatedAt:new Date().toISOString()
+        },
+        updated_at:new Date().toISOString()
       }], {onConflict:'replay_id'});
 
     if(error) throw error;
-  }
 
-  async function saveFreeAgencyPool(pool, sourceName){
-    STATE.settings = STATE.settings || {};
-
-    STATE.settings.freeAgency = {
-      mons: pool.map(mon => ({
-        name: String(mon.name),
-        points: Number(mon.points) || 0
-      })),
-      source: String(sourceName || 'DRAFT BOARD'),
-      updatedAt: new Date().toISOString()
-    };
-
-    // Dedicated public Free Agency row. This is what free-agency.html reads.
-    await savePublishedFreeAgency(pool, sourceName);
-
-    // Keep the copy in shared settings so backups still contain Free Agency.
+    // Persist the settings copy as well.
     await saveSharedState();
   }
 
@@ -1916,13 +1891,14 @@
         <h2>Free Agency</h2>
 
         <div class="note">
-          Import the <strong>DRAFT BOARD</strong> sheet from the
-          Season 15 Tier List workbook. Pokémon receive the point
-          value of the column they appear under.
+          Upload the Tier List workbook containing the
+          <strong>DRAFT BOARD</strong> sheet. The point value is
+          taken from the column each Pokémon appears under.
         </div>
 
-        <div class="row"
-             style="align-items:flex-end;margin-top:14px">
+        <div
+          class="row"
+          style="align-items:flex-end;margin-top:14px">
 
           <div>
 
@@ -1944,7 +1920,7 @@
               class="primary"
               id="importFreeAgency"
             >
-              Preview DRAFT BOARD
+              Import / Preview DRAFT BOARD
             </button>
 
           </div>
@@ -1962,9 +1938,7 @@
 
         <h2>
           Published Free Agency Pool
-          <span class="badge">
-            ${current.length} Pokémon
-          </span>
+          <span class="badge">${current.length} Pokémon</span>
         </h2>
 
         ${
@@ -1993,28 +1967,23 @@
                  )
                  .map(mon => `
                    <div class="roster-admin-card">
-
-                     <h3>
-                       ${escapeHtml(mon.name)}
-                     </h3>
-
+                     <h3>${escapeHtml(mon.name)}</h3>
                      <div class="badge">
-                       ${Number(mon.points) || 0} points
+                       ${Number(mon.points)||0} points
                      </div>
-
                    </div>
-                 `)
-                 .join('')
+                 `).join('')
              }
 
            </div>`
           :
           `<div class="empty-state">
-             No Free Agency pool has been published yet.
+             No Free Agency pool published yet.
            </div>`
         }
 
       </div>
+
     `;
 
     const fileInput =
@@ -2026,206 +1995,169 @@
     const status =
       document.getElementById('freeAgencyStatus');
 
-    importBtn.addEventListener(
-      'click',
-      async ()=>{
+    importBtn.addEventListener('click', async ()=>{
 
-        const file =
-          fileInput?.files?.[0];
+      const file =
+        fileInput?.files?.[0];
 
-        if(!file){
-
-          status.innerHTML =
-            `<div class="note danger">
-               Choose the Tier List workbook first.
-             </div>`;
-
-          return;
-        }
-
-        importBtn.disabled = true;
+      if(!file){
 
         status.innerHTML =
-          `<div class="note">
-             Reading DRAFT BOARD…
+          `<div class="note danger">
+             Choose the Tier List Excel workbook first.
            </div>`;
 
-        try{
+        return;
+      }
 
-          const buffer =
-            await file.arrayBuffer();
+      importBtn.disabled = true;
 
-          const wb =
-            XLSX.read(
-              buffer,
-              {
-                type:'array',
-                cellDates:false
-              }
-            );
+      status.innerHTML =
+        `<div class="note">
+           Reading DRAFT BOARD…
+         </div>`;
 
-          const pool =
-            parseFreeAgencyDraftBoard(wb);
+      try{
 
-          status.innerHTML = `
-
-            <div
-              class="panel"
-              style="padding:14px">
-
-              <strong>
-                DRAFT BOARD ready
-              </strong>
-
-              <div
-                class="note"
-                style="margin-top:6px">
-
-                Found
-                <strong>${pool.length}</strong>
-                Pokémon.
-
-                ${
-                  wb.SheetNames.find(
-                    n =>
-                      String(n).trim().toLowerCase()
-                      === 'draft board'
-                  )
-                  ? 'Using the DRAFT BOARD sheet.'
-                  : `Using "${escapeHtml(
-                      wb.SheetNames[0]
-                    )}" as the first worksheet.`
-                }
-
-              </div>
-
-              <div
-                style="
-                  max-height:420px;
-                  overflow:auto;
-                  margin-top:12px;
-                ">
-
-                <table>
-
-                  <thead>
-                    <tr>
-                      <th>Pokémon</th>
-                      <th>Points</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-
-                    ${
-                      pool.map(mon => `
-                        <tr>
-                          <td>
-                            ${escapeHtml(mon.name)}
-                          </td>
-                          <td class="num">
-                            ${mon.points}
-                          </td>
-                        </tr>
-                      `).join('')
-                    }
-
-                  </tbody>
-
-                </table>
-
-              </div>
-
-              <div
-                class="foot-actions"
-                style="margin-top:14px">
-
-                <button
-                  class="primary"
-                  id="publishFreeAgency"
-                >
-                  Publish Free Agency Pool
-                </button>
-
-                <button
-                  class="ghost"
-                  id="cancelFreeAgency"
-                >
-                  Cancel
-                </button>
-
-              </div>
-
-            </div>
-          `;
-
-          document
-            .getElementById('cancelFreeAgency')
-            .addEventListener(
-              'click',
-              renderFreeAgency
-            );
-
-          document
-            .getElementById('publishFreeAgency')
-            .addEventListener(
-              'click',
-              async ()=>{
-
-                const publishBtn =
-                  document.getElementById(
-                    'publishFreeAgency'
-                  );
-
-                publishBtn.disabled = true;
-
-                try{
-
-                  await saveFreeAgencyPool(
-                    pool,
-                    file.name
-                  );
-
-                  renderFreeAgency();
-
-                }catch(err){
-
-                  console.error(err);
-
-                  status.innerHTML =
-                    `<div class="note danger">
-                       Could not publish Free Agency:
-                       ${escapeHtml(err.message)}
-                     </div>`;
-
-                  publishBtn.disabled = false;
-                }
-
-              }
-            );
-
-        }catch(err){
-
-          console.error(
-            'Free Agency import failed:',
-            err
+        const wb =
+          XLSX.read(
+            await file.arrayBuffer(),
+            {type:'array', cellDates:false}
           );
 
-          status.innerHTML =
-            `<div class="note danger">
-               <strong>Import failed:</strong>
-               ${escapeHtml(err.message)}
-             </div>`;
+        const pool =
+          parseFreeAgencyDraftBoard(wb);
 
-        }finally{
+        status.innerHTML = `
 
-          importBtn.disabled = false;
+          <div
+            class="panel"
+            style="padding:14px">
 
-        }
+            <strong>
+              DRAFT BOARD imported successfully
+            </strong>
+
+            <div class="note" style="margin-top:6px">
+              Found
+              <strong>${pool.length}</strong>
+              Pokémon.
+            </div>
+
+            <div
+              style="
+                max-height:420px;
+                overflow:auto;
+                margin-top:12px;
+              ">
+
+              <table>
+
+                <thead>
+                  <tr>
+                    <th>Pokémon</th>
+                    <th>Points</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  ${
+                    pool.map(mon => `
+                      <tr>
+                        <td>${escapeHtml(mon.name)}</td>
+                        <td class="num">${mon.points}</td>
+                      </tr>
+                    `).join('')
+                  }
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+            <div
+              class="foot-actions"
+              style="margin-top:14px">
+
+              <button
+                class="primary"
+                id="publishFreeAgency"
+              >
+                Publish Free Agency Pool
+              </button>
+
+              <button
+                class="ghost"
+                id="cancelFreeAgency"
+              >
+                Cancel
+              </button>
+
+            </div>
+
+          </div>
+        `;
+
+        document
+          .getElementById('cancelFreeAgency')
+          .onclick = renderFreeAgency;
+
+        document
+          .getElementById('publishFreeAgency')
+          .onclick = async ()=>{
+
+            const btn =
+              document.getElementById('publishFreeAgency');
+
+            btn.disabled = true;
+
+            try{
+
+              await publishFreeAgency(
+                pool,
+                file.name
+              );
+
+              renderFreeAgency();
+
+            }catch(err){
+
+              console.error(err);
+
+              status.innerHTML =
+                `<div class="note danger">
+                   Could not publish Free Agency:
+                   ${escapeHtml(err.message)}
+                 </div>`;
+
+              btn.disabled = false;
+
+            }
+
+          };
+
+      }catch(err){
+
+        console.error(
+          'Free Agency import failed:',
+          err
+        );
+
+        status.innerHTML =
+          `<div class="note danger">
+             <strong>Import failed:</strong>
+             ${escapeHtml(err.message)}
+           </div>`;
+
+      }finally{
+
+        importBtn.disabled = false;
 
       }
-    );
 
+    });
   }
 
   function renderSettings(){

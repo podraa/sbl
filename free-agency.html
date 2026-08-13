@@ -34,8 +34,8 @@ async function load(){
     ? payload.mons
     : (Array.isArray(payload.pool) ? payload.pool : []);
 
-  // Load roster data separately. A roster failure must never blank Free Agency.
   let rosters={};
+
   try{
     const rosterResult=await db
       .from('replays')
@@ -47,14 +47,12 @@ async function load(){
       rosters=rosterResult.data?.replay_data?.rosters||{};
     }
   }catch(e){
-    console.warn('Free Agency roster lookup failed; continuing without roster ownership:',e);
+    console.warn('Free Agency roster lookup failed:',e);
   }
 
   settings={
     rosters,
-    freeAgency:{
-      mons
-    },
+    freeAgency:{mons},
     freeAgencySource:payload.source||''
   };
 
