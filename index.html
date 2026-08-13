@@ -248,8 +248,15 @@
       const {data, error} = await supabase.auth.signUp({email, password});
       btn.disabled = false;
       if(error){ setMsg(error.message, true); return; }
-      if(data.session){ session = data.session; await boot(); }
-      else{ setMsg('Account created — check your email to confirm, then log in.', false); }
+      if(data.session){
+        session = data.session;
+        await boot();
+      }else{
+        const login = await supabase.auth.signInWithPassword({ email, password });
+        if(login.error){ setMsg(login.error.message, true); return; }
+        session = login.data.session;
+        await boot();
+      }
     };
   }
 
