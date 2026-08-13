@@ -610,6 +610,7 @@
     await deleteAllRemote();          // clear old live replay rows (safely preserved in the archive above)
     await savePublishedRosters({});   // clear legacy published-roster fallback so it can't leak stale rosters
     await saveReplays();              // upserts STATE.replays (empty) + saves shared state (teamMap/settings/archives)
+    await logAdminAction('start_new_season', `Started new season "${newName}" after archiving "${currentName}".`, {from:currentName, to:newName, archivedReplayCount:replayCount});
   }
   async function restoreSeasonArchive(key){
     requireAdmin();
@@ -638,6 +639,7 @@
     await deleteAllRemote();                         // clear current live replay rows
     await savePublishedRosters(STATE.settings.rosters||{}); // keep legacy fallback in sync with the restored season
     await saveReplays();                             // upserts restored replays + saves shared state
+    await logAdminAction('restore_season', `Restored archived season "${archive.name || key}" as the current season.`, {archiveKey:key, season:archive.name || key, previousSeason:currentName});
   }
   async function deleteSeasonArchive(key){
     requireAdmin();
@@ -649,6 +651,7 @@
     delete newArchives[key];
     STATE.settings.seasonArchives = newArchives;
     await saveSharedState();
+    await logAdminAction('delete_season_archive', `Permanently deleted season archive "${archive.name || key}".`, {archiveKey:key, season:archive.name || key});
   }
 
   async function migrateLocalData(){
@@ -1253,6 +1256,11 @@
       await saveSettings();
       await saveReplays();
     }
+    await logAdminAction(
+      'process_replays',
+      `Processed replays: ${added} added, ${skipped} skipped, ${invalid} invalid, ${failed} failed.`,
+      {added, skipped, invalid, failed}
+    );
     appendLog(logEl, `Done. ${added} added, ${skipped} already had, ${invalid} invalid, ${failed} failed.`, false);
     renderTicker();
     render();
@@ -1615,6 +1623,11 @@
       await saveSettings();
       await saveReplays();
     }
+    await logAdminAction(
+      'reprocess_replays',
+      `Reprocessed all replays: ${ok} updated, ${failed} failed.`,
+      {updated: ok, failed}
+    );
     appendLog(logEl, `Reprocess complete. ${ok} updated, ${failed} failed.`, false);
     renderTicker();
     render();
@@ -1645,6 +1658,7 @@
           replay.week = week;
           replay.weekOverride = true;
           await saveReplays();
+          await logAdminAction('set_replay_week', `Set replay ${id} to ${week} (manual week override).`, {replayId:id, week});
           renderTicker();
           render();
         });
@@ -1658,6 +1672,7 @@
           replay.week = automaticWeekForReplay(replay);
           assignAutomaticWeeks();
           await saveReplays();
+          await logAdminAction('restore_replay_auto_week', `Restored automatic week assignment for replay ${id}.`, {replayId:id, week:replay.week});
           renderTicker();
           render();
         });
@@ -1665,8 +1680,13 @@
       document.querySelectorAll('[data-remove]').forEach(btn=>{
         btn.addEventListener('click', async ()=>{
           const id = btn.dataset.remove;
+          const replay = STATE.replays[id];
           delete STATE.replays[id];
           await deleteReplayRemote(id);
+          await logAdminAction('remove_replay', `Removed processed replay ${id}.`, {
+            replayId:id,
+            players: replay?.players || null
+          });
           renderTicker();
           render();
         });
@@ -1970,6 +1990,11 @@
     // all admin settings, while __rosters__ is the public roster-page contract.
     await saveSharedState();
     await savePublishedRosters(normalized);
+    await logAdminAction(
+      'publish_rosters',
+      `Published rosters for ${Object.keys(normalized).length} franchise${Object.keys(normalized).length===1?'':'s'}.`,
+      {franchises:Object.keys(normalized), rosterCounts:Object.fromEntries(Object.entries(normalized).map(([team,list])=>[team,list.length]))}
+    );
   }
 
   // ---------- Draft ----------
@@ -2371,6 +2396,7 @@
         d.status = 'live';
         d.currentPick = 0;
         await saveDraft();
+        await logAdminAction('start_draft', 'Started the draft.', {status:d.status});
         drawDraft();
       }catch(e){ err.textContent = e.message; }
     });
@@ -2385,6 +2411,7 @@
         await saveDraft();
         // Publish the roster snapshot immediately so the public roster page is finalized.
         await savePublishedRosters(STATE.settings.rosters || {});
+        await logAdminAction('end_draft', 'Ended the draft and finalized the current rosters.', {status:d.status, picks:d.picks?.length || 0});
         drawDraft();
       }catch(e){ err.textContent = e.message; }
     });
@@ -2397,6 +2424,7 @@
         d.currentPick = 0;
         d.status = 'setup';
         await saveDraft();
+        await logAdminAction('reset_draft', 'Reset the draft; all picks were cleared.', {status:d.status});
         drawDraft();
       }catch(e){ err.textContent = e.message; }
     });
@@ -2429,6 +2457,7 @@
         status.innerHTML = `<div class="note">Assigning Pokémon typings… 0/${importedPool.length}</div>`;
         d.pool = await assignDraftTypes(importedPool, status);
         await saveDraft();
+        await logAdminAction('import_draft_board', `Imported ${d.pool.length} Pokémon into the draft board.`, {count:d.pool.length, source:file.name});
         drawDraft();
       }catch(e){
         status.innerHTML = `<div class="note danger">${escapeHtml(e.message)}</div>`;
@@ -2453,6 +2482,7 @@
           pickNumber: null
         });
         await saveDraft();
+        await logAdminAction('add_draft_pokemon', `Added ${name} to the draft board for ${points} points.`, {name, points});
         drawDraft();
       }catch(e){ status.innerHTML = `<div class="note danger">${escapeHtml(e.message)}</div>`; }
     });
@@ -2460,8 +2490,10 @@
       btn.addEventListener('click', async () => {
         const status = document.getElementById('draftBoardStatus');
         try{
+          const removed = d.pool.find(m => m.id === btn.dataset.removeMon);
           d.pool = d.pool.filter(m => m.id !== btn.dataset.removeMon);
           await saveDraft();
+          await logAdminAction('remove_draft_pokemon', `Removed ${removed?.name || btn.dataset.removeMon} from the draft board.`, {id:btn.dataset.removeMon, name:removed?.name || null});
           drawDraft();
         }catch(e){ if(status) status.innerHTML = `<div class="note danger">${escapeHtml(e.message)}</div>`; }
       });
@@ -2475,6 +2507,7 @@
       try{
         d.defaultBudget = val;
         await saveDraft();
+        await logAdminAction('set_default_draft_budget', `Set the default draft budget to ${val}.`, {budget:val});
         drawDraft();
       }catch(e){ err.textContent = e.message; }
     });
@@ -2492,6 +2525,7 @@
       try{
         d.budgets = next;
         await saveDraft();
+        await logAdminAction('set_draft_budget_overrides', `Updated custom draft budgets for ${Object.keys(next).length} franchise${Object.keys(next).length===1?'':'s'}.`, {budgets:next});
         drawDraft();
       }catch(e){ err.textContent = e.message; }
     });
@@ -2502,6 +2536,7 @@
       try{
         d.mode = e.target.checked ? 'ordered' : 'manual';
         await saveDraft();
+        await logAdminAction('set_draft_mode', `Changed draft mode to ${d.mode}.`, {mode:d.mode});
         drawDraft();
       }catch(e2){ err.textContent = e2.message; }
     });
@@ -2528,6 +2563,7 @@
         }
         d.order = order;
         await saveDraft();
+        await logAdminAction('generate_draft_order', `Generated a ${rounds}-round${rounds===1?'':'s'} ${snake?'snake':'straight'} draft order with ${order.length} picks.`, {rounds, snake, order});
         drawDraft();
       }catch(e){ err.textContent = e.message; }
     });
@@ -2536,6 +2572,7 @@
       try{
         d.order = [];
         await saveDraft();
+        await logAdminAction('clear_draft_order', 'Cleared the draft order.', {});
         drawDraft();
       }catch(e){ err.textContent = e.message; }
     });
@@ -2597,6 +2634,7 @@
     STATE.settings=STATE.settings||{};
     STATE.settings.freeAgency={mons,source:String(sourceName||'DRAFT BOARD'),updatedAt:new Date().toISOString()};
     await saveSharedState();
+    await logAdminAction('publish_free_agency', `Published Free Agency with ${mons.length} Pokémon from ${String(sourceName||'DRAFT BOARD')}.`, {count:mons.length, source:String(sourceName||'DRAFT BOARD')});
   }
 
   function renderFreeAgency(){
@@ -2869,6 +2907,7 @@
         STATE.settings.tradeCredits[playerId] = before + amount;
         await saveManualTradeCredits();
         const after = STATE.settings.tradeCredits[playerId];
+        await logAdminAction('manual_trade_credit', `Credited ${amount} trade${amount===1?'':'s'} to ${player.team_name || player.email}. Total manual credits: ${after}.`, {profileId:playerId, team:player.team_name || null, amount, total:after});
         if(statusEl){statusEl.className='note';statusEl.textContent=`Credited ${amount} trade${amount===1?'':'s'} to ${player.team_name || player.email}. Total manual credits: ${after}.`;}
         drawTrades();
       }catch(e){
@@ -2905,6 +2944,7 @@
         try{
           const {error}=await supabase.rpc('commissioner_set_trade_limits',{p_team_name:team,p_team_trade_limit:teamLimit,p_free_agency_trade_limit:faLimit});
           if(error) throw error;
+          await logAdminAction('set_trade_limits', `Set trade limits for ${team}: ${teamLimit} team trades, ${faLimit} Free Agency trades.`, {team, teamLimit, freeAgencyLimit:faLimit});
           await loadCommissionerData();
           if(activeTab==='trades') drawTrades();
         }catch(e){if(errEl)errEl.textContent=e.message;btn.disabled=false;}
@@ -2953,6 +2993,10 @@
             const {error} = await supabase.rpc('commissioner_revert_trade', { trade_id:id });
             if(error) throw error;
           }
+          const trade = COMM_TRADES.find(t => Number(t.id) === id);
+          await logAdminAction('commissioner_trade_action', `Commissioner ${action} action on trade #${id}.`, {
+            tradeId:id, action, proposerTeam:trade?.proposer_team || null, targetTeam:trade?.target_team || null
+          });
           await loadCommissionerData();
           if(activeTab === 'trades') drawTrades();
         }catch(e){
@@ -2966,13 +3010,16 @@
 
   async function logAdminAction(actionType, message, metadata={}){
     try{
-      const user = (await supabase.auth.getUser()).data?.user;
+      const user = adminUser || (await supabase.auth.getUser()).data?.user;
       const {error} = await supabase.from('admin_logs').insert({
         admin_id: user?.id || null,
         admin_email: user?.email || null,
         action_type: actionType,
         message,
-        metadata
+        metadata: Object.assign({
+          season: STATE.settings?.activeSeason || DEFAULT_SEASON,
+          page: 'admin.html'
+        }, metadata || {})
       });
       if(error) console.warn('Admin log write failed:', error);
     }catch(e){ console.warn('Admin log write failed:', e); }
@@ -3096,6 +3143,10 @@
           if(patch){
             const {error}=await supabase.from('profiles').update(patch).eq('id',id);
             if(error) throw error;
+            const profile = (COMM_PROFILES || []).find(p => String(p.id) === String(id));
+            await logAdminAction('commissioner_profile_action', `Changed ${profile?.email || id}: ${action}.`, {
+              profileId:id, action, team:profile?.team_name || null
+            });
           }
           await loadCommissionerData();
           if(activeTab==='commissioner') drawCommissioner();
@@ -3232,8 +3283,10 @@
         </div>`).join('');
       mapRows.querySelectorAll('[data-del]').forEach(btn=>{
         btn.addEventListener('click', async ()=>{
+          const removedTeam = STATE.teamMap[btn.dataset.del];
           delete STATE.teamMap[btn.dataset.del];
           await saveTeamMap();
+          await logAdminAction('remove_player_mapping', `Removed player → team mapping for ${btn.dataset.del}.`, {username:btn.dataset.del, team:removedTeam || null});
           drawMap();
           render();
         });
@@ -3286,6 +3339,7 @@
       const current = STATE.settings.franchises && typeof STATE.settings.franchises === 'object' ? STATE.settings.franchises : {};
       STATE.settings.franchises = current;
       await saveSettings();
+      await logAdminAction('set_conference_names', `Set conference names to "${a}" and "${b}".`, {conferenceA:a, conferenceB:b});
       renderSettings();
     });
 
@@ -3297,6 +3351,7 @@
         else delete map[franchise];
         try{
           await saveFranchiseConferences(map);
+          await logAdminAction('set_franchise_conference', `Set ${franchise} to ${select.value ? (select.value==='a' ? conferenceA : conferenceB) : 'Unassigned'}.`, {franchise, conference:select.value || null});
         }catch(err){
           alert('Could not save conference assignment: ' + err.message);
           renderSettings();
@@ -3324,6 +3379,7 @@
           const canonicalTeam = STATE.teamMap[g.canonical.toLowerCase()] || g.canonical;
           mergePlayerGroup(g.usernames, canonicalTeam);
           await saveTeamMap();
+          await logAdminAction('merge_duplicate_players', `Merged ${g.usernames.length} player-name variants under "${canonicalTeam}".`, {usernames:g.usernames, canonicalTeam});
           drawMap();
           drawDupPlayers();
           render();
@@ -3350,6 +3406,7 @@
           const usernames = [...usernamesForTeamLabel(p.bigger), ...usernamesForTeamLabel(p.smaller)];
           mergePlayerGroup(usernames, p.bigger);
           await saveTeamMap();
+          await logAdminAction('merge_duplicate_teams', `Merged duplicate team mappings into "${p.bigger}".`, {smaller:p.smaller, bigger:p.bigger, overlap:p.overlap, usernames});          
           drawMap();
           drawDupPlayers();
           drawDupTeams();
@@ -3362,6 +3419,7 @@
     document.getElementById('caseInsensitiveToggle').addEventListener('change', async (e)=>{
       STATE.settings.caseInsensitiveNames = e.target.checked;
       await saveSettings();
+      await logAdminAction('set_case_insensitive_names', `Case-insensitive team grouping ${e.target.checked ? 'enabled' : 'disabled'}.`, {enabled:e.target.checked});
       render();
     });
     document.getElementById('addMap').addEventListener('click', async ()=>{
@@ -3371,6 +3429,7 @@
       if(!u || !t) return;
       STATE.teamMap[u] = t;
       await saveTeamMap();
+      await logAdminAction('add_player_mapping', `Mapped ${rawUser} to team "${t}".`, {username:rawUser, team:t});
       document.getElementById('newUser').value='';
       document.getElementById('newTeam').value='';
       drawMap();
@@ -3380,6 +3439,7 @@
       STATE.replays = {};
       await deleteAllRemote();
       await saveSharedState();
+      await logAdminAction('clear_all_season_data', 'Cleared all processed replay data for the current season.', {season:STATE.settings.activeSeason || DEFAULT_SEASON});
       renderTicker();
       render();
     });
@@ -3410,6 +3470,7 @@
         await saveReplays();
         await saveTeamMap();
         await saveSettings();
+        await logAdminAction('restore_backup', `Restored dashboard state from backup with ${Object.keys(STATE.replays).length} replays.`, {replayCount:Object.keys(STATE.replays).length});
         renderTicker();
         render();
       }catch(err){
