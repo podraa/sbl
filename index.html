@@ -156,11 +156,12 @@
 <div class="page-nav">
   <label for="pageNavSelect">Page</label>
   <select id="pageNavSelect" aria-label="Choose page">
+    <option value="index.html">My Team</option>
     <option value="stats.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="index.html" selected>My Team</option>
+    <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
 
@@ -179,14 +180,12 @@
   const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
   const SUPABASE_STATE_ID = '__dashboard_state__';
   const ROSTER_BUDGET = 115; // keep in sync with the `budget` constant in accept_trade()
+  function currentSeason(){ return new Date().getFullYear(); }
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const appEl = document.getElementById('app');
   const contentEl = document.getElementById('content');
 
-  document.getElementById('pageNavSelect').addEventListener('change', e=>{
-    if(e.target.value) location.href = e.target.value;
-  });
 
   let session = null;
   let profile = null;
@@ -308,14 +307,22 @@
   }
 
   async function loadTrades(){
-    const [{data, error}, {data:limits, error:limitErr}] = await Promise.all([
-      supabase.from('trade_requests').select('*').order('created_at', {ascending:false}),
-      supabase.from('franchise_trade_limits').select('*').eq('season', new Date().getFullYear())
-    ]);
+    // Trade history is required. Franchise limits are an optional enhancement,
+    // so a missing/unmigrated limits table must NOT take down the entire Trades tab.
+    const {data, error} = await supabase.from('trade_requests').select('*').order('created_at', {ascending:false});
     if(error) throw error;
-    if(limitErr) throw limitErr;
     trades = data || [];
-    tradeLimits = limits || [];
+
+    const {data:limits, error:limitErr} = await supabase
+      .from('franchise_trade_limits')
+      .select('*')
+      .eq('season', new Date().getFullYear());
+    if(limitErr){
+      console.warn('Franchise trade limits unavailable; using 8-trade defaults:', limitErr.message);
+      tradeLimits = [];
+    }else{
+      tradeLimits = limits || [];
+    }
   }
 
   function tradeLimitFor(team, kind){
@@ -336,7 +343,11 @@
   function tradeAllowance(team, kind='team'){
     const limit=tradeLimitFor(team,kind);
     const used=completedTradeCount(team,kind);
-    return {limit,used,remaining:Math.max(0,limit-used)};
+    // Commissioner-granted credits belong to the player account. They are
+    // shown on the player's dashboard and added to the normal allowance.
+    // For a franchise-level display we leave the franchise limit itself intact.
+    const credits = profile?.team_name === team ? Math.max(0, Number(profile?.trade_credits) || 0) : 0;
+    return {limit,used,credits,remaining:Math.max(0,limit+credits-used)};
   }
 
   async function refreshAll(){
@@ -587,7 +598,6 @@
       return Array.from(set).reduce((s,name)=>{ const m = pool.find(x=>x.name===name); return s + (m ? (Number(m.points)||0) : 0); }, 0);
     }
 
-    function currentSeason(){ return new Date().getFullYear(); }
     function tradeLimitMessage(team, kind='team'){
       const a = tradeAllowance(team, kind);
       const label = kind === 'freeagency' ? 'Free Agency trades' : 'team-to-team trades';
@@ -863,7 +873,7 @@
     contentEl.innerHTML = `
       <div class="panel" id="proposePanel"></div>
       <div class="panel">
-        <div class="trade-tab-head"><div><h2>Your Trade Allowance</h2><div class="note">Your franchise has two separate trade pools. The numbers below are your actual current allowance for this season.</div></div></div>
+        <div class="trade-tab-head"><div><h2>Your Trade Allowance</h2><div class="note">Your franchise has two separate trade pools. The numbers below are your actual current allowance for this season. Commissioner credits are shown separately.</div></div></div>
         <div class="trade-cols" style="margin-top:12px;">
           <div class="trade-col">
             <h4>Team-to-team trades</h4>
@@ -1085,6 +1095,40 @@
       if(event === 'SIGNED_OUT'){ session=null; profile=null; trades=[]; render(); }
     });
   })();
+})();
+</script>
+<script>
+(function(){
+  const select=document.getElementById('pageNavSelect');
+  if(!select) return;
+  const ADMIN='admin.html';
+  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
+  if(current===ADMIN) select.value=ADMIN;
+  else if(Array.from(select.options).some(o=>o.value===current)) select.value=current;
+
+  async function setupCommissionerNav(){
+    try{
+      const client=window.supabase?.createClient(
+        'https://dfxdkkemltukxaklhcpo.supabase.co',
+        'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
+      );
+      if(!client) return;
+      const {data:{session}}=await client.auth.getSession();
+      if(!session?.user) return;
+      const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
+      if(error) throw error;
+      if(profile?.is_commissioner){
+        const opt=select.querySelector('option[data-admin-only]');
+        if(opt) opt.hidden=false;
+      }
+      if(current===ADMIN) select.value=ADMIN;
+    }catch(err){ console.warn('Commissioner navigation check failed:',err); }
+  }
+
+  select.addEventListener('change',e=>{
+    if(e.target.value) location.href=e.target.value;
+  });
+  setupCommissionerNav();
 })();
 </script>
 </body>

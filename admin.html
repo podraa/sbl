@@ -236,11 +236,12 @@
 <div class="page-nav">
   <label for="pageNavSelect">Page</label>
   <select id="pageNavSelect" aria-label="Choose page">
+    <option value="index.html">My Team</option>
     <option value="stats.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="index.html">My Team</option>
+    <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
 
@@ -2011,19 +2012,19 @@
       const teamLimit = Math.max(0, Number(row.team_trade_limit) || 0);
       const faLimit = Math.max(0, Number(row.free_agency_trade_limit) || 0);
       return `<tr>
-        <td><strong>${escapeHtml(team)}</strong></td>
-        <td class="num">${teamUsed} / <input class="trade-limit-input" type="number" min="0" step="1" id="teamLimit-${encodeURIComponent(team)}" value="${teamLimit}"></td>
-        <td class="num"><strong>${Math.max(0,teamLimit-teamUsed)}</strong></td>
-        <td class="num">${faUsed} / <input class="trade-limit-input" type="number" min="0" step="1" id="faLimit-${encodeURIComponent(team)}" value="${faLimit}"></td>
-        <td class="num"><strong>${Math.max(0,faLimit-faUsed)}</strong></td>
+        <td><strong>${escapeHtml(team)}</strong><div class="note">${escapeHtml(((COMM_PROFILES||[]).find(p=>p.team_name===team)?.email)||'')}</div></td>
+        <td class="num"><span>${teamUsed} used</span></td>
+        <td class="num"><input class="trade-limit-input" type="number" min="0" step="1" id="teamRemaining-${encodeURIComponent(team)}" value="${Math.max(0,teamLimit-teamUsed)}" aria-label="${escapeHtml(team)} team trades remaining"></td>
+        <td class="num"><span>${faUsed} used</span></td>
+        <td class="num"><input class="trade-limit-input" type="number" min="0" step="1" id="faRemaining-${encodeURIComponent(team)}" value="${Math.max(0,faLimit-faUsed)}" aria-label="${escapeHtml(team)} Free Agency trades remaining"></td>
         <td><button class="primary small" data-save-trade-limits="${escapeHtml(team)}">Save</button><div class="note danger" id="tradeLimitErr-${encodeURIComponent(team)}"></div></td>
       </tr>`;
     }).join('');
     return `<div class="panel">
       <h2>Trade Manager</h2>
-      <div class="note">Each franchise has <strong>two separate allowances</strong>: team-to-team trades and Free Agency trades. Both default to 8. Used counts come from completed/reverted trades for the current season. Edit the allowance itself when you need to make an exception.</div>
+      <div class="note">Each franchise has <strong>two separate allowances</strong>: 8 team-to-team trades and 8 Free Agency trades by default. Edit the <strong>trades remaining</strong> directly below for each player/franchise; the underlying total allowance is adjusted automatically to preserve that remaining number after trades already used.</div>
       <div style="overflow:auto;margin-top:14px;">
-        ${rows ? `<table><thead><tr><th>Franchise</th><th class="num">Team trades used / limit</th><th class="num">Team remaining</th><th class="num">FA trades used / limit</th><th class="num">FA remaining</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty-state">No approved franchises yet.</div>'}
+        ${rows ? `<table><thead><tr><th>Player / Franchise</th><th class="num">Team trades used</th><th class="num">Team trades remaining</th><th class="num">FA trades used</th><th class="num">FA trades remaining</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty-state">No approved franchises yet.</div>'}
       </div>
     </div>`;
   }
@@ -2091,11 +2092,25 @@
       btn.addEventListener('click', async ()=>{
         const team = btn.dataset.saveTradeLimits;
         const key = encodeURIComponent(team);
-        const teamLimit = Number(document.getElementById(`teamLimit-${key}`)?.value);
-        const faLimit = Number(document.getElementById(`faLimit-${key}`)?.value);
+        const teamRemaining = Number(document.getElementById(`teamRemaining-${key}`)?.value);
+        const faRemaining = Number(document.getElementById(`faRemaining-${key}`)?.value);
+        const teamUsed = COMM_TRADES.filter(t=>
+          (t.status==='accepted' || t.status==='reverted') &&
+          t.target_team!==null &&
+          (t.proposer_team===team || t.target_team===team) &&
+          new Date(t.created_at).getFullYear()===new Date().getFullYear()
+        ).length;
+        const faUsed = COMM_TRADES.filter(t=>
+          (t.status==='accepted' || t.status==='reverted') &&
+          t.target_team===null &&
+          t.proposer_team===team &&
+          new Date(t.created_at).getFullYear()===new Date().getFullYear()
+        ).length;
+        const teamLimit = teamUsed + teamRemaining;
+        const faLimit = faUsed + faRemaining;
         const errEl = document.getElementById(`tradeLimitErr-${key}`);
         if(errEl){errEl.textContent='';errEl.className='note danger';}
-        if(!Number.isInteger(teamLimit)||teamLimit<0||!Number.isInteger(faLimit)||faLimit<0){if(errEl)errEl.textContent='Enter whole numbers 0 or greater.';return;}
+        if(!Number.isInteger(teamRemaining)||teamRemaining<0||!Number.isInteger(faRemaining)||faRemaining<0){if(errEl)errEl.textContent='Enter whole numbers 0 or greater for trades remaining.';return;}
         btn.disabled=true;
         try{
           const {error}=await supabase.rpc('commissioner_set_trade_limits',{p_team_name:team,p_team_trade_limit:teamLimit,p_free_agency_trade_limit:faLimit});
@@ -2417,14 +2432,35 @@
 <script>
 (function(){
   const select=document.getElementById('pageNavSelect');
-  if(!select)return;
-  const current=location.pathname.split('/').pop()||'admin.html';
-  // Admin is not one of the public-page choices; keep the selector on Stats Dashboard
-  // when navigating back from the public pages.
-  select.value='index.html';
-  select.addEventListener('change',function(){
-    if(this.value) location.href=this.value;
+  if(!select) return;
+  const ADMIN='admin.html';
+  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
+  if(current===ADMIN) select.value=ADMIN;
+  else if(Array.from(select.options).some(o=>o.value===current)) select.value=current;
+
+  async function setupCommissionerNav(){
+    try{
+      const client=window.supabase?.createClient(
+        'https://dfxdkkemltukxaklhcpo.supabase.co',
+        'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
+      );
+      if(!client) return;
+      const {data:{session}}=await client.auth.getSession();
+      if(!session?.user) return;
+      const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
+      if(error) throw error;
+      if(profile?.is_commissioner){
+        const opt=select.querySelector('option[data-admin-only]');
+        if(opt) opt.hidden=false;
+      }
+      if(current===ADMIN) select.value=ADMIN;
+    }catch(err){ console.warn('Commissioner navigation check failed:',err); }
+  }
+
+  select.addEventListener('change',e=>{
+    if(e.target.value) location.href=e.target.value;
   });
+  setupCommissionerNav();
 })();
 </script>
 </body>
