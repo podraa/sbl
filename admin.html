@@ -1951,6 +1951,53 @@
     </div>`;
   }
 
+  function usedTradesFor(team){
+    const season = new Date().getFullYear();
+    return (COMM_TRADES || []).filter(t =>
+      (t.proposer_team === team || t.target_team === team) &&
+      (t.status === 'accepted' || t.status === 'reverted') &&
+      new Date(t.created_at).getFullYear() === season
+    ).length;
+  }
+
+  function tradeAllowanceFor(profile){
+    const base = 8;
+    const credits = Math.max(0, Number(profile?.trade_credits) || 0);
+    const used = usedTradesFor(profile?.team_name);
+    return { credits, used, remaining: Math.max(0, base + credits - used) };
+  }
+
+  function drawManualTradeCredits(){
+    const profiles = (COMM_PROFILES || []).filter(p => p.status === 'approved');
+    return `
+      <div class="panel">
+        <h2>Manual Trade Credits</h2>
+        <div class="note">Add extra trades directly to a player's account. These credits are stored on <strong>profiles.trade_credits</strong> and are used by the player's dashboard.</div>
+        <div class="row" style="margin-top:14px;align-items:end;">
+          <div>
+            <label for="manualTradePlayer">Player</label>
+            <select id="manualTradePlayer" style="width:100%;">
+              <option value="">Select a player…</option>
+              ${profiles.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.team_name || p.email || p.id)}${p.email ? ` — ${escapeHtml(p.email)}` : ''}</option>`).join('')}
+            </select>
+          </div>
+          <div style="max-width:180px;">
+            <label for="manualTradeAmount">Trades to credit</label>
+            <input id="manualTradeAmount" type="number" min="1" step="1" value="1" style="width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;">
+          </div>
+          <div style="flex:0 0 auto;">
+            <button class="primary" id="creditManualTrades">Credit trades</button>
+          </div>
+        </div>
+        <div id="manualTradeCreditStatus" class="note"></div>
+        <div style="margin-top:16px;">
+          ${profiles.length ? `<table><thead><tr><th>Player</th><th>Team</th><th class="num">Used</th><th class="num">Extra Credits</th><th class="num">Trades Remaining</th></tr></thead><tbody>
+            ${profiles.map(p=>{ const a=tradeAllowanceFor(p); return `<tr><td>${escapeHtml(p.email || p.id)}</td><td>${escapeHtml(p.team_name || '—')}</td><td class="num">${a.used}/8</td><td class="num">${a.credits}</td><td class="num"><strong>${a.remaining}</strong></td></tr>`; }).join('')}
+          </tbody></table>` : '<div class="empty-state">No approved players found.</div>'}
+        </div>
+      </div>`;
+  }
+
   function drawTrades(){
     const filteredTrades = COMM_TRADES.filter(t=>{
       if(COMM_TRADE_FILTER === 'pending') return t.status === 'pending';
@@ -1961,6 +2008,7 @@
     const pendingFA = COMM_TRADES.filter(t=>t.target_team === null && t.status === 'pending').length;
 
     contentEl.innerHTML = `
+      ${drawManualTradeCredits()}
       <div class="panel">
         <div class="trade-tab-head">
           <div>
@@ -1980,6 +2028,35 @@
           ${filteredTrades.length ? filteredTrades.map(commTradeRow).join('') : '<div class="empty-state">No trades in this view.</div>'}
         </div>
       </div>`;
+
+    document.getElementById('creditManualTrades')?.addEventListener('click', async ()=>{
+      const playerId = document.getElementById('manualTradePlayer')?.value;
+      const amount = Number(document.getElementById('manualTradeAmount')?.value);
+      const statusEl = document.getElementById('manualTradeCreditStatus');
+      if(statusEl){ statusEl.className='note'; statusEl.textContent=''; }
+      if(!playerId){ if(statusEl){statusEl.className='note danger';statusEl.textContent='Select a player first.';} return; }
+      if(!Number.isInteger(amount) || amount < 1){ if(statusEl){statusEl.className='note danger';statusEl.textContent='Enter a whole number of trades to credit.';} return; }
+      const player = (COMM_PROFILES || []).find(p => String(p.id) === String(playerId));
+      if(!player) throw new Error('Player not found.');
+      const btn=document.getElementById('creditManualTrades');
+      btn.disabled=true;
+      try{
+        const {data:newCredits, error} = await supabase.rpc('commissioner_add_trade_credits', {
+          p_user_id: playerId,
+          p_amount: amount
+        });
+        if(error) throw error;
+        await loadCommissionerData();
+        const refreshed = (COMM_PROFILES || []).find(p => String(p.id) === String(playerId));
+        const allowance = tradeAllowanceFor(refreshed);
+        if(statusEl){statusEl.className='note';statusEl.textContent=`Credited ${amount} trade${amount===1?'':'s'} to ${player.team_name || player.email}. Extra credits: ${Number(newCredits)||0}. Trades remaining: ${allowance.remaining}.`;}
+        drawTrades();
+      }catch(e){
+        if(statusEl){statusEl.className='note danger';statusEl.textContent='Could not credit trades: ' + e.message;}
+      }finally{
+        const b=document.getElementById('creditManualTrades'); if(b) b.disabled=false;
+      }
+    });
 
     document.getElementById('commTradeFilter')?.addEventListener('change', e=>{
       COMM_TRADE_FILTER = e.target.value;

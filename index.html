@@ -445,6 +445,11 @@
             <div class="budget-bar"><div class="budget-fill${pts>ROSTER_BUDGET?' over':''}" style="width:${pct}%"></div></div>
             <div class="budget-row"><span>Remaining</span><span class="budget-value">${Math.max(0, ROSTER_BUDGET-pts)} pts</span></div>
           </div>
+          <div class="budget-card">
+            <div class="budget-row"><span>Trades remaining</span><span class="budget-value">${tradeAllowance(profile.team_name).remaining}</span></div>
+            <div class="budget-row"><span>Season allowance</span><span>${8 + tradeAllowance(profile.team_name).credits}</span></div>
+            ${tradeAllowance(profile.team_name).credits ? `<div class="note">Includes ${tradeAllowance(profile.team_name).credits} commissioner credit${tradeAllowance(profile.team_name).credits===1?'':'s'}.</div>` : ''}
+          </div>
         </div>
       </div>
 
@@ -569,9 +574,17 @@
         new Date(t.created_at).getFullYear()===season
       ).length;
     }
-    function tradeLimitMessage(team){
+    function tradeAllowance(team){
+      const isMine = team === profile?.team_name;
+      const credits = isMine ? Math.max(0, Number(profile?.trade_credits) || 0) : 0;
       const used = completedTradeCount(team);
-      return `${escapeHtml(team)} has used ${used}/8 trades this season (${8-used} remaining)`;
+      const remaining = Math.max(0, 8 + credits - used);
+      return {used, credits, remaining};
+    }
+
+    function tradeLimitMessage(team){
+      const a = tradeAllowance(team);
+      return `${escapeHtml(team)} has used ${a.used}/${8 + a.credits} trades this season (${a.remaining} remaining${a.credits ? ` · ${a.credits} extra credited` : ''})`;
     }
 
     function updateTradeSummary(){
@@ -658,10 +671,10 @@
       // Each team gets 8 completed trades per season. Team trades consume a
       // slot for both teams; Free Agency trades consume a slot for the team
       // making the pickup. Pending trades do not consume a slot.
-      const proposerUsed = completedTradeCount(profile.team_name);
-      if(proposerUsed >= 8){
+      const proposerAllowance = tradeAllowance(profile.team_name);
+      if(proposerAllowance.remaining <= 0){
         msgEl.className='note danger';
-        msgEl.textContent=`Trade limit reached: ${profile.team_name} has used all 8 trades for ${currentSeason()}.`;
+        msgEl.textContent=`Trade limit reached: ${profile.team_name} has no trades remaining for ${currentSeason()}.`;
         return;
       }
 
@@ -680,11 +693,11 @@
       if(!targetIsFA){
         const targetAfter = (targetRoster||[]).length - draft.requested.size + draft.offered.size;
         const targetPointsAfter = rosterPoints(targetRoster||[]) - reqPts + offPts;
-        const targetUsed = completedTradeCount(draft.target);
+        const targetAllowance = tradeAllowance(draft.target);
 
-        if(targetUsed >= 8){
+        if(targetAllowance.remaining <= 0){
           msgEl.className='note danger';
-          msgEl.textContent=`Invalid trade: ${draft.target} has used all 8 trades for ${currentSeason()}.`;
+          msgEl.textContent=`Invalid trade: ${draft.target} has no trades remaining for ${currentSeason()}.`;
           return;
         }
 
