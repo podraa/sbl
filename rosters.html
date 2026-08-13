@@ -151,17 +151,12 @@ h1{
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const supabase = window.supabase.createClient(
-  'https://dfxdkkemltukxaklhcpo.supabase.co',
-  'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-);
+const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
 
+const content = document.getElementById('content');
 const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({
-  '&':'&amp;',
-  '<':'&lt;',
-  '>':'&gt;',
-  "'":'&#39;',
-  '"':'&quot;'
+  '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'
 }[c]));
 
 const sid = s => String(s || '')
@@ -171,96 +166,98 @@ const sid = s => String(s || '')
   .join('-');
 
 const sprite = s => `
-  <img
-    src="https://play.pokemonshowdown.com/sprites/gen5/${sid(s)}.png"
-    alt="${esc(s)}"
-    onerror="this.style.opacity='.2'"
-  >`;
+  <img src="https://play.pokemonshowdown.com/sprites/gen5/${sid(s)}.png"
+       alt="${esc(s)}" loading="lazy"
+       onerror="this.onerror=null;this.style.opacity='.2'">`;
 
-function renderPokemon(team, mon){
-  return `
-    <div class="mon">
-      ${sprite(mon.name)}
-
-      <div class="mon-info">
-        <div class="mon-name">${esc(mon.name)}</div>
-        <div class="mon-team">${esc(team)}</div>
-        <div class="mon-points">${mon.points} pts</div>
-      </div>
-    </div>`;
+function normalizeRosters(raw){
+  const out = {};
+  for(const [team, list] of Object.entries(raw || {})){
+    if(!Array.isArray(list)) continue;
+    const mons = list.map(mon => typeof mon === 'string'
+      ? {name: mon, points: null}
+      : {name: String(mon?.name ?? ''), points: mon?.points ?? null}
+    ).filter(mon => mon.name);
+    if(mons.length) out[String(team)] = mons;
+  }
+  return out;
 }
 
-(async () => {
-  const content = document.getElementById('content');
+function renderPokemon(team, mon){
+  const points = mon.points == null || mon.points === '' ? '' : `<div class="mon-points">${esc(mon.points)} pts</div>`;
+  return `<div class="mon">${sprite(mon.name)}<div class="mon-info"><div class="mon-name">${esc(mon.name)}</div><div class="mon-team">${esc(team)}</div>${points}</div></div>`;
+}
+
+function showError(message){
+  content.innerHTML = `<div class="empty">${esc(message)}</div>`;
+}
+
+async function withTimeout(promise, ms, label){
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(label + ' timed out. Check that Supabase is reachable and try refreshing.')), ms);
+  });
+  try { return await Promise.race([promise, timeout]); }
+  finally { clearTimeout(timer); }
+}
+
+async function loadRosters(){
+  if(!window.supabase){
+    showError('Roster service could not start because the Supabase library did not load.');
+    return;
+  }
+
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   try{
-    // Published rosters normally live in __rosters__. The dashboard-state
-    // fallback makes the page resilient if an older admin deployment only
-    // wrote settings.rosters.
-    const { data: rosterRow, error: rosterError } = await supabase
-      .from('replays')
-      .select('replay_data')
-      .eq('replay_id', '__rosters__')
-      .maybeSingle();
+    // Read dashboard state first. Admin publishes the roster there as part of
+    // normal settings, so this is the most reliable source. __rosters__ remains
+    // supported for compatibility with older published data.
+    let rosters = {};
 
-    if(rosterError) throw rosterError;
-
-    let rosters = rosterRow?.replay_data?.rosters || {};
+    const stateResult = await withTimeout(
+      supabase.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle(),
+      8000,
+      'Loading the roster data'
+    );
+    if(stateResult.error) throw stateResult.error;
+    rosters = normalizeRosters(stateResult.data?.replay_data?.settings?.rosters || {});
 
     if(!Object.keys(rosters).length){
-      const { data: stateRow, error: stateError } = await supabase
-        .from('replays')
-        .select('replay_data')
-        .eq('replay_id', '__dashboard_state__')
-        .maybeSingle();
-
-      if(stateError) throw stateError;
-      rosters = stateRow?.replay_data?.settings?.rosters || {};
+      const publishedResult = await withTimeout(
+        supabase.from('replays').select('replay_data').eq('replay_id','__rosters__').maybeSingle(),
+        8000,
+        'Loading the published rosters'
+      );
+      if(publishedResult.error) throw publishedResult.error;
+      rosters = normalizeRosters(publishedResult.data?.replay_data?.rosters || {});
     }
 
-    // Accept both the current {name, points} format and older string-only
-    // roster data without changing the page's display contract.
-    rosters = Object.fromEntries(Object.entries(rosters).map(([team, list]) => [
-      team,
-      (Array.isArray(list) ? list : []).map(mon =>
-        typeof mon === 'string' ? {name:mon, points:null} : {
-          name:String(mon?.name ?? ''),
-          points:mon?.points ?? null
-        }
-      ).filter(mon => mon.name)
-    ]));
-    const teams = Object.keys(rosters).sort();
-
+    const teams = Object.keys(rosters).sort((a,b)=>a.localeCompare(b));
     if(!teams.length){
-      content.innerHTML = `
-        <div class="empty">No rosters have been uploaded yet.</div>`;
+      content.innerHTML = '<div class="empty">No rosters have been uploaded yet.</div>';
       return;
     }
 
-    content.innerHTML = `
-      <div class="grid">
-        ${teams.map(team => `
-          <section class="card">
-            <div class="head">
-              <h2>${esc(team)}</h2>
-              <span class="count">${rosters[team].length} Pokémon</span>
-            </div>
-
-            <div class="mons">
-              ${rosters[team].map(mon => renderPokemon(team, mon)).join('')}
-            </div>
-          </section>`).join('')}
-      </div>`;
-
+    content.innerHTML = `<div class="grid">${teams.map(team => `
+      <section class="card">
+        <div class="head"><h2>${esc(team)}</h2><span class="count">${rosters[team].length} Pokémon</span></div>
+        <div class="mons">${rosters[team].map(mon => renderPokemon(team, mon)).join('')}</div>
+      </section>`).join('')}</div>`;
   }catch(err){
-    console.error(err);
-
-    content.innerHTML = `
-      <div class="empty">
-        Could not load rosters:<br>${esc(err.message)}
-      </div>`;
+    console.error('Roster load failed:', err);
+    showError(`Could not load rosters: ${err?.message || err}`);
   }
-})();
+}
+
+// Never leave visitors staring at the initial loading message forever.
+const hardTimeout = setTimeout(() => {
+  if(content.textContent.includes('Loading rosters')){
+    showError('Roster loading is taking too long. Please refresh the page.');
+  }
+}, 12000);
+
+loadRosters().finally(() => clearTimeout(hardTimeout));
 </script>
 
 </body>

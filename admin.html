@@ -1591,7 +1591,7 @@
       <div class="note">Upload an Excel/CSV roster file. The attached Season 15 format (one team per sheet, points in Column A, Pokémon in Column C) is supported, as is a Team/Franchise + Pokémon/Species layout.</div>
       <div class="row" style="align-items:flex-end;margin-top:14px">
         <div><label>Roster file</label><input id="rosterTabFile" type="file" accept=".xlsx,.xls,.csv"></div>
-        <div style="flex:0"><button class="primary" id="importRosters">Preview import</button></div>
+        <div style="flex:0"><button class="primary" id="importRosters">Upload roster</button></div>
       </div>
       <div id="rosterStatus" style="margin-top:12px"></div></div>
       <div class="panel"><h2>Published rosters</h2>
@@ -1624,7 +1624,7 @@
         ).join('');
 
         status.innerHTML=`<div class="panel" style="padding:12px">
-          <strong>Preview</strong><ul>${preview}</ul>
+          <strong>Upload successful — roster preview</strong><div class="note">The workbook has been read and is ready to publish. Publishing will replace the currently published rosters.</div><ul>${preview}</ul>
           <button class="primary" id="confirmRoster">Publish rosters</button>
           <button class="ghost" id="cancelRoster">Cancel</button>
         </div>`;
