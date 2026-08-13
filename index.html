@@ -161,7 +161,7 @@
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
     <option value="index.html" selected>My Team</option>
-  <option value="__admin_dashboard__" data-admin-only="true" hidden>Admin Dashboard</option></select>
+  </select>
 </div>
 
 <div id="app">
@@ -184,10 +184,15 @@
   const appEl = document.getElementById('app');
   const contentEl = document.getElementById('content');
 
+  document.getElementById('pageNavSelect').addEventListener('change', e=>{
+    if(e.target.value) location.href = e.target.value;
+  });
+
   let session = null;
   let profile = null;
   let DASH = { teamMap:{}, settings:{ rosters:{}, freeAgency:{ mons:[] } }, replays:{} };
   let trades = [];
+  let tradeLimits = [];
   let activeTab = 'myteam';
   let draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
   let statusMsg = '';
@@ -303,9 +308,35 @@
   }
 
   async function loadTrades(){
-    const {data, error} = await supabase.from('trade_requests').select('*').order('created_at', {ascending:false});
+    const [{data, error}, {data:limits, error:limitErr}] = await Promise.all([
+      supabase.from('trade_requests').select('*').order('created_at', {ascending:false}),
+      supabase.from('franchise_trade_limits').select('*').eq('season', new Date().getFullYear())
+    ]);
     if(error) throw error;
+    if(limitErr) throw limitErr;
     trades = data || [];
+    tradeLimits = limits || [];
+  }
+
+  function tradeLimitFor(team, kind){
+    const row = tradeLimits.find(x => x.team_name === team);
+    if(!row) return 8;
+    return kind === 'freeagency' ? Math.max(0, Number(row.free_agency_trade_limit) || 0) : Math.max(0, Number(row.team_trade_limit) || 0);
+  }
+
+  function completedTradeCount(team, kind='team'){
+    const season = currentSeason();
+    return trades.filter(t=>
+      (t.status==='accepted' || t.status==='reverted') &&
+      new Date(t.created_at).getFullYear()===season &&
+      (kind==='freeagency' ? t.target_team===null && t.proposer_team===team : t.target_team!==null && (t.proposer_team===team || t.target_team===team))
+    ).length;
+  }
+
+  function tradeAllowance(team, kind='team'){
+    const limit=tradeLimitFor(team,kind);
+    const used=completedTradeCount(team,kind);
+    return {limit,used,remaining:Math.max(0,limit-used)};
   }
 
   async function refreshAll(){
@@ -557,17 +588,10 @@
     }
 
     function currentSeason(){ return new Date().getFullYear(); }
-    function completedTradeCount(team){
-      const season = currentSeason();
-      return trades.filter(t=>
-        (t.proposer_team===team || t.target_team===team) &&
-        (t.status==='accepted' || t.status==='reverted') &&
-        new Date(t.created_at).getFullYear()===season
-      ).length;
-    }
-    function tradeLimitMessage(team){
-      const used = completedTradeCount(team);
-      return `${escapeHtml(team)} has used ${used}/8 trades this season (${8-used} remaining)`;
+    function tradeLimitMessage(team, kind='team'){
+      const a = tradeAllowance(team, kind);
+      const label = kind === 'freeagency' ? 'Free Agency trades' : 'team-to-team trades';
+      return `${escapeHtml(team)} has used ${a.used}/${a.limit} ${label} this season (${a.remaining} remaining)`;
     }
 
     function updateTradeSummary(){
@@ -579,10 +603,10 @@
       const pointDelta = reqPts - offPts;
       const bits = [`Give ${offPts} pts / Get ${reqPts} pts${pointDelta===0 ? ' — balanced' : pointDelta>0 ? ` — you gain ${pointDelta} pts` : ` — you lose ${Math.abs(pointDelta)} pts`}`];
       bits.push(`Your roster after: ${proposerAfter}${proposerAfter<10?' (below 10 minimum)':''}`);
-      bits.push(`${tradeLimitMessage(profile.team_name)}`);
+      bits.push(`${tradeLimitMessage(profile.team_name, targetIsFA ? 'freeagency' : 'team')}`);
       if(!targetIsFA){
         bits.push(`${escapeHtml(draft.target)} roster after: ${targetAfter}${targetAfter<10?' (below 10 minimum)':''}`);
-        bits.push(`${tradeLimitMessage(draft.target)}`);
+        bits.push(`${tradeLimitMessage(draft.target, 'team')}`);
       }
       summaryEl.textContent = bits.join(' · ');
     }
@@ -654,10 +678,10 @@
       // Each team gets 8 completed trades per season. Team trades consume a
       // slot for both teams; Free Agency trades consume a slot for the team
       // making the pickup. Pending trades do not consume a slot.
-      const proposerUsed = completedTradeCount(profile.team_name);
-      if(proposerUsed >= 8){
+      const proposerAllowance = tradeAllowance(profile.team_name, targetIsFA ? 'freeagency' : 'team');
+      if(proposerAllowance.remaining <= 0){
         msgEl.className='note danger';
-        msgEl.textContent=`Trade limit reached: ${profile.team_name} has used all 8 trades for ${currentSeason()}.`;
+        msgEl.textContent=`Trade limit reached: ${profile.team_name} has no ${targetIsFA ? 'Free Agency' : 'team-to-team'} trades remaining for ${currentSeason()}.`;
         return;
       }
 
@@ -676,11 +700,11 @@
       if(!targetIsFA){
         const targetAfter = (targetRoster||[]).length - draft.requested.size + draft.offered.size;
         const targetPointsAfter = rosterPoints(targetRoster||[]) - reqPts + offPts;
-        const targetUsed = completedTradeCount(draft.target);
+        const targetAllowance = tradeAllowance(draft.target, 'team');
 
-        if(targetUsed >= 8){
+        if(targetAllowance.remaining <= 0){
           msgEl.className='note danger';
-          msgEl.textContent=`Invalid trade: ${draft.target} has used all 8 trades for ${currentSeason()}.`;
+          msgEl.textContent=`Invalid trade: ${draft.target} has no team-to-team trades remaining for ${currentSeason()}.`;
           return;
         }
 
@@ -838,6 +862,26 @@
 
     contentEl.innerHTML = `
       <div class="panel" id="proposePanel"></div>
+      <div class="panel">
+        <div class="trade-tab-head"><div><h2>Your Trade Allowance</h2><div class="note">Your franchise has two separate trade pools. The numbers below are your actual current allowance for this season.</div></div></div>
+        <div class="trade-cols" style="margin-top:12px;">
+          <div class="trade-col">
+            <h4>Team-to-team trades</h4>
+            <div class="budget-value">${tradeAllowance(myTeam,'team').remaining} remaining</div>
+            <div class="note">${tradeAllowance(myTeam,'team').used} used · ${tradeAllowance(myTeam,'team').limit} total allowance</div>
+          </div>
+          <div class="trade-col">
+            <h4>Free Agency trades</h4>
+            <div class="budget-value">${tradeAllowance(myTeam,'freeagency').remaining} remaining</div>
+            <div class="note">${tradeAllowance(myTeam,'freeagency').used} used · ${tradeAllowance(myTeam,'freeagency').limit} total allowance</div>
+          </div>
+          ${profile?.trade_credits ? `<div class="trade-col">
+            <h4>Commissioner credits</h4>
+            <div class="budget-value">${Number(profile.trade_credits)||0}</div>
+            <div class="note">Extra trades granted directly to your account</div>
+          </div>` : ''}
+        </div>
+      </div>
       <div class="panel trade-filter-panel">
         <div class="trade-tab-head">
           <div>
@@ -1041,17 +1085,6 @@
       if(event === 'SIGNED_OUT'){ session=null; profile=null; trades=[]; render(); }
     });
   })();
-})();
-</script>
-<script>
-(function(){
- const s=document.getElementById('pageNavSelect'); if(!s)return;
- let o=s.querySelector('option[data-admin-only]');
- if(!o){o=document.createElement('option');o.value='__admin_dashboard__';o.textContent='Admin Dashboard';o.dataset.adminOnly='true';o.hidden=true;s.appendChild(o);}
- const client=window.supabase?window.supabase.createClient('https://dfxdkkemltukxaklhcpo.supabase.co','sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'):null;
- async function init(){try{if(!client)return;const {data:{session}}=await client.auth.getSession();if(session?.user){const {data:p}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();if(p?.is_commissioner)o.hidden=false;}}catch(e){console.warn('Admin nav check failed',e)} setCurrent();}
- function setCurrent(){const cur=location.pathname.split('/').pop()||'index.html';s.value=cur==='admin.html'?'__admin_dashboard__':(Array.from(s.options).some(x=>x.value===cur)?cur:s.value);}
- s.addEventListener('change',()=>location.href=s.value==='__admin_dashboard__'?'admin.html':s.value); init();
 })();
 </script>
 </body>

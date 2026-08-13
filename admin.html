@@ -93,6 +93,7 @@
   td{padding:8px 10px; border-bottom:1px solid var(--border);}
   tr:last-child td{border-bottom:none;}
   td.num, th.num{text-align:right; font-family:var(--mono);}
+  .trade-limit-input{width:72px;background:var(--panel-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 7px;font-family:var(--mono);}
   .rank{color:var(--text-dim); font-family:var(--mono); width:26px;}
   .pname{font-weight:600;}
   .dealt{color:var(--amber);}
@@ -240,7 +241,7 @@
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
     <option value="index.html">My Team</option>
-  <option value="__admin_dashboard__" data-admin-only="true" hidden>Admin Dashboard</option></select>
+  </select>
 </div>
 
 <div id="app">
@@ -1857,15 +1858,20 @@
   let COMM_TRADES = null;
   let COMM_TRADE_FILTER = 'pending';
 
+  let COMM_TRADE_LIMITS = [];
+
   async function loadCommissionerData(){
-    const [{data:profilesData, error:profErr}, {data:tradesData, error:tradeErr}] = await Promise.all([
+    const [{data:profilesData, error:profErr}, {data:tradesData, error:tradeErr}, {data:limitsData, error:limitErr}] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', {ascending:false}),
-      supabase.from('trade_requests').select('*').order('created_at', {ascending:false})
+      supabase.from('trade_requests').select('*').order('created_at', {ascending:false}),
+      supabase.from('franchise_trade_limits').select('*').eq('season', new Date().getFullYear()).order('team_name')
     ]);
     if(profErr) throw profErr;
     if(tradeErr) throw tradeErr;
+    if(limitErr) throw limitErr;
     COMM_PROFILES = profilesData || [];
     COMM_TRADES = tradesData || [];
+    COMM_TRADE_LIMITS = limitsData || [];
   }
 
   function renderCommissioner(){
@@ -1995,6 +2001,33 @@
       </div>`;
   }
 
+  function tradeManagerRows(){
+    const season = new Date().getFullYear();
+    const teams = [...new Set((COMM_PROFILES||[]).filter(p=>p.status==='approved' && p.team_name).map(p=>p.team_name))].sort();
+    const rows = teams.map(team=>{
+      const row = COMM_TRADE_LIMITS.find(x=>x.team_name===team) || {team_name:team, team_trade_limit:8, free_agency_trade_limit:8};
+      const teamUsed = COMM_TRADES.filter(t=>t.status==='accepted' || t.status==='reverted').filter(t=>t.target_team!==null && (t.proposer_team===team || t.target_team===team) && new Date(t.created_at).getFullYear()===season).length;
+      const faUsed = COMM_TRADES.filter(t=>t.status==='accepted' || t.status==='reverted').filter(t=>t.target_team===null && t.proposer_team===team && new Date(t.created_at).getFullYear()===season).length;
+      const teamLimit = Math.max(0, Number(row.team_trade_limit) || 0);
+      const faLimit = Math.max(0, Number(row.free_agency_trade_limit) || 0);
+      return `<tr>
+        <td><strong>${escapeHtml(team)}</strong></td>
+        <td class="num">${teamUsed} / <input class="trade-limit-input" type="number" min="0" step="1" id="teamLimit-${encodeURIComponent(team)}" value="${teamLimit}"></td>
+        <td class="num"><strong>${Math.max(0,teamLimit-teamUsed)}</strong></td>
+        <td class="num">${faUsed} / <input class="trade-limit-input" type="number" min="0" step="1" id="faLimit-${encodeURIComponent(team)}" value="${faLimit}"></td>
+        <td class="num"><strong>${Math.max(0,faLimit-faUsed)}</strong></td>
+        <td><button class="primary small" data-save-trade-limits="${escapeHtml(team)}">Save</button><div class="note danger" id="tradeLimitErr-${encodeURIComponent(team)}"></div></td>
+      </tr>`;
+    }).join('');
+    return `<div class="panel">
+      <h2>Trade Manager</h2>
+      <div class="note">Each franchise has <strong>two separate allowances</strong>: team-to-team trades and Free Agency trades. Both default to 8. Used counts come from completed/reverted trades for the current season. Edit the allowance itself when you need to make an exception.</div>
+      <div style="overflow:auto;margin-top:14px;">
+        ${rows ? `<table><thead><tr><th>Franchise</th><th class="num">Team trades used / limit</th><th class="num">Team remaining</th><th class="num">FA trades used / limit</th><th class="num">FA remaining</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="empty-state">No approved franchises yet.</div>'}
+      </div>
+    </div>`;
+  }
+
   function drawTrades(){
     const filteredTrades = COMM_TRADES.filter(t=>{
       if(COMM_TRADE_FILTER === 'pending') return t.status === 'pending';
@@ -2006,6 +2039,7 @@
 
     contentEl.innerHTML = `
       ${drawManualTradeCredits()}
+      ${tradeManagerRows()}
       <div class="panel">
         <div class="trade-tab-head">
           <div>
@@ -2051,6 +2085,25 @@
       }finally{
         const b=document.getElementById('creditManualTrades'); if(b) b.disabled=false;
       }
+    });
+
+    contentEl.querySelectorAll('button[data-save-trade-limits]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const team = btn.dataset.saveTradeLimits;
+        const key = encodeURIComponent(team);
+        const teamLimit = Number(document.getElementById(`teamLimit-${key}`)?.value);
+        const faLimit = Number(document.getElementById(`faLimit-${key}`)?.value);
+        const errEl = document.getElementById(`tradeLimitErr-${key}`);
+        if(errEl){errEl.textContent='';errEl.className='note danger';}
+        if(!Number.isInteger(teamLimit)||teamLimit<0||!Number.isInteger(faLimit)||faLimit<0){if(errEl)errEl.textContent='Enter whole numbers 0 or greater.';return;}
+        btn.disabled=true;
+        try{
+          const {error}=await supabase.rpc('commissioner_set_trade_limits',{p_team_name:team,p_team_trade_limit:teamLimit,p_free_agency_trade_limit:faLimit});
+          if(error) throw error;
+          await loadCommissionerData();
+          if(activeTab==='trades') drawTrades();
+        }catch(e){if(errEl)errEl.textContent=e.message;btn.disabled=false;}
+      });
     });
 
     document.getElementById('commTradeFilter')?.addEventListener('change', e=>{
@@ -2372,17 +2425,6 @@
   select.addEventListener('change',function(){
     if(this.value) location.href=this.value;
   });
-})();
-</script>
-<script>
-(function(){
- const s=document.getElementById('pageNavSelect'); if(!s)return;
- let o=s.querySelector('option[data-admin-only]');
- if(!o){o=document.createElement('option');o.value='__admin_dashboard__';o.textContent='Admin Dashboard';o.dataset.adminOnly='true';o.hidden=true;s.appendChild(o);}
- const client=window.supabase?window.supabase.createClient('https://dfxdkkemltukxaklhcpo.supabase.co','sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'):null;
- async function init(){try{if(!client)return;const {data:{session}}=await client.auth.getSession();if(session?.user){const {data:p}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();if(p?.is_commissioner)o.hidden=false;}}catch(e){console.warn('Admin nav check failed',e)} setCurrent();}
- function setCurrent(){const cur=location.pathname.split('/').pop()||'index.html';s.value=cur==='admin.html'?'__admin_dashboard__':(Array.from(s.options).some(x=>x.value===cur)?cur:s.value);}
- s.addEventListener('change',()=>location.href=s.value==='__admin_dashboard__'?'admin.html':s.value); init();
 })();
 </script>
 </body>
