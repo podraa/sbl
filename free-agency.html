@@ -20,8 +20,74 @@ function owner(name){const k=key(name);return entries().find(x=>key(x.name)===k)
 function spriteCandidates(name){const n=String(name||'').trim().toLowerCase();const base=n.replace(/[♀♂]/g,'').replace(/['’]/g,'').replace(/\s+/g,'-');const compact=base.replace(/-/g,'');const special={'mr-mime-galar':'mrmime-galar','mr-mime':'mrmime','landorus-incarnate':'landorus','landorus-i':'landorus','landorus-t':'landorus-therian','gouging-fire':'gougingfire','scream-tail':'screamtail'};return [...new Set([special[base]||base,compact])].filter(Boolean)}
 function sprite(name){const c=spriteCandidates(name);let i=0;return `<img src="https://play.pokemonshowdown.com/sprites/gen9/${c[0]}.png" alt="${esc(name)}" data-sprite-cands="${esc(c.join('|'))}" onerror="if(this.dataset.i==='1'){this.style.visibility='hidden'}else{this.dataset.i='1';this.src='https://play.pokemonshowdown.com/sprites/gen9/'+this.dataset.spriteCands.split('|')[1]+'.png'}">`}
 function openPlanner(mon){const teams=Object.keys(settings.rosters||{}).sort();const modal=document.createElement('div');modal.className='modal';modal.innerHTML=`<div class="modalbox"><h2>${esc(mon.name)} — ${mon.points} points</h2><div class="note">This is a trade planner. Completing the actual trade is done from Admin → Trades, where the roster and all downstream pages are updated together.</div><label>Destination team</label><select id="planTeam"><option value="">Select team…</option>${teams.map(t=>`<option>${esc(t)}</option>`).join('')}</select><label>Replace Pokémon</label><select id="planReplace"><option value="">No replacement</option></select><div id="planBudget" class="note" style="margin-top:10px"></div><div class="actions"><button class="btn" id="closePlan">Cancel</button><button class="btn primary" id="openAdmin">Open Admin Trades</button></div></div>`;document.body.appendChild(modal);const ts=modal.querySelector('#planTeam'),rs=modal.querySelector('#planReplace'),bud=modal.querySelector('#planBudget');function upd(){const arr=(settings.rosters||{})[ts.value]||[];rs.innerHTML='<option value="">No replacement</option>'+arr.map(x=>{const m=typeof x==='string'?{name:x,points:0}:x;return `<option value="${esc(m.name)}">${esc(m.name)} — ${Number(m.points)||0} pts</option>`}).join('');const rep=arr.find(x=>key(typeof x==='string'?x:x.name)===key(rs.value));const spend=arr.reduce((a,x)=>a+(Number(typeof x==='string'?0:x.points)||0),0);const after=spend+mon.points-(rep?Number(rep.points)||0:0);bud.innerHTML=ts.value?`Current: ${spend} pts · After trade: ${after} pts · Remaining: ${120-after} pts`:''}ts.onchange=upd;rs.onchange=upd;modal.querySelector('#closePlan').onclick=()=>modal.remove();modal.querySelector('#openAdmin').onclick=()=>location.href='admin.html';}
-async function load(){const {data,error}=await db.from('replays').select('replay_id,replay_data').in('replay_id',['__dashboard_state__','__rosters__']);if(error)throw error;for(const r of data||[]){if(r.replay_id==='__dashboard_state__')settings=r.replay_data?.settings||settings;if(r.replay_id==='__rosters__'&&r.replay_data?.rosters)settings.rosters=r.replay_data.rosters}render()}
-function render(){const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];const filter=window._filter||'';const visible=mons.filter(m=>String(m.name).toLowerCase().includes(filter.toLowerCase()));const taken=visible.filter(m=>owner(m.name)),free=visible.filter(m=>!owner(m.name));$('main').innerHTML=`<div class="panel"><div class="toolbar"><div><label>Search</label><input id="faSearch" value="${esc(filter)}" placeholder="Search Pokémon…"></div></div><div class="summary"><div class="stat"><div class="note">Available</div><b>${free.length}</b></div><div class="stat"><div class="note">Taken</div><b>${taken.length}</b></div><div class="stat"><div class="note">Total</div><b>${visible.length}</b></div></div></div><div class="panel"><h2>Free Agency</h2><div class="note" style="margin-bottom:14px">Undrafted Pokémon can be selected. Taken Pokémon remain visible so the draft pool is easy to audit.</div><div class="grid">${visible.map(m=>{const o=owner(m.name);return `<article class="mon ${o?'taken':''}" data-mon="${esc(m.name)}">${sprite(m.name)}<div class="name">${esc(m.name)}</div><div class="meta">${m.points} points</div><div class="status ${o?'taken-label':'undrafted'}">${o?'Taken — '+esc(o.team):'Undrafted · Select to plan trade'}</div></article>`}).join('')}</div></div>`;const si=$('faSearch');si.oninput=e=>{window._filter=e.target.value;render();si.focus();si.setSelectionRange(si.value.length,si.value.length)};document.querySelectorAll('.mon:not(.taken)').forEach(el=>el.onclick=()=>openPlanner(mons.find(m=>key(m.name)===key(el.dataset.mon))));}
-$('pageNavSelect').value=location.pathname.split('/').pop()||'index.html';$('pageNavSelect').onchange=e=>location.href=e.target.value;load().catch(e=>$('main').innerHTML=`<div class="panel"><h2>Unable to load free agency</h2><div class="note">${esc(e.message)}</div></div>`)
+async function load(){
+  const stateResult = await db
+    .from('replays')
+    .select('replay_data')
+    .eq('replay_id','__dashboard_state__')
+    .maybeSingle();
+
+  if(stateResult.error) throw stateResult.error;
+
+  const rosterResult = await db
+    .from('replays')
+    .select('replay_data')
+    .eq('replay_id','__rosters__')
+    .maybeSingle();
+
+  // A published roster row is optional for Free Agency.
+  if(rosterResult.error && rosterResult.error.code !== 'PGRST116'){
+    throw rosterResult.error;
+  }
+
+  const sharedSettings =
+    stateResult.data?.replay_data?.settings || {};
+
+  settings = Object.assign(
+    {rosters:{},freeAgency:{mons:[]}},
+    sharedSettings
+  );
+
+  settings.rosters = settings.rosters || {};
+
+  const publishedRosters =
+    rosterResult.data?.replay_data?.rosters;
+
+  // The dedicated published roster row is the public source of truth when
+  // available. Fall back to dashboard settings otherwise.
+  if(
+    publishedRosters &&
+    typeof publishedRosters === 'object'
+  ){
+    settings.rosters = publishedRosters;
+  }
+
+  render();
+}
+
+function render(){const mons=Array.isArray(settings.freeAgency?.mons)
+  ? settings.freeAgency.mons
+  : (Array.isArray(settings.freeAgency?.pool)
+      ? settings.freeAgency.pool
+      : []);const filter=window._filter||'';const visible=mons.filter(m=>String(m.name).toLowerCase().includes(filter.toLowerCase()));const taken=visible.filter(m=>owner(m.name)),free=visible.filter(m=>!owner(m.name));$('main').innerHTML=`<div class="panel"><div class="toolbar"><div><label>Search</label><input id="faSearch" value="${esc(filter)}" placeholder="Search Pokémon…"></div></div><div class="summary"><div class="stat"><div class="note">Available</div><b>${free.length}</b></div><div class="stat"><div class="note">Taken</div><b>${taken.length}</b></div><div class="stat"><div class="note">Total</div><b>${visible.length}</b></div></div></div><div class="panel"><h2>Free Agency</h2><div class="note" style="margin-bottom:14px">Undrafted Pokémon can be selected. Taken Pokémon remain visible so the draft pool is easy to audit.</div><div class="grid">${visible.map(m=>{const o=owner(m.name);return `<article class="mon ${o?'taken':''}" data-mon="${esc(m.name)}">${sprite(m.name)}<div class="name">${esc(m.name)}</div><div class="meta">${m.points} points</div><div class="status ${o?'taken-label':'undrafted'}">${o?'Taken — '+esc(o.team):'Undrafted · Select to plan trade'}</div></article>`}).join('')}</div></div>`;const si=$('faSearch');si.oninput=e=>{window._filter=e.target.value;render();si.focus();si.setSelectionRange(si.value.length,si.value.length)};document.querySelectorAll('.mon:not(.taken)').forEach(el=>el.onclick=()=>openPlanner(mons.find(m=>key(m.name)===key(el.dataset.mon))));}
+$('pageNavSelect').value=location.pathname.split('/').pop()||'index.html';
+$('pageNavSelect').onchange=e=>location.href=e.target.value;
+
+async function refreshFreeAgency(){
+  try{
+    await load();
+  }catch(e){
+    console.error('Free Agency refresh failed:',e);
+    $('main').innerHTML=`<div class="panel"><h2>Unable to load free agency</h2><div class="note">${esc(e.message)}</div></div>`;
+  }
+}
+
+setInterval(refreshFreeAgency,5000);
+
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden) refreshFreeAgency();
+});
+
+refreshFreeAgency();
 })();
 </script></body></html>
