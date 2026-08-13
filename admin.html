@@ -286,6 +286,7 @@
   .admin-log-message{font-size:13px;overflow-wrap:anywhere}
   @media(max-width:800px){.admin-log-row{grid-template-columns:1fr;gap:5px}}
 
+.admin-log-admin-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:2px}
 </style>
 <script>
 // Site-wide theme: picked on the My Team page's Account tab, saved to
@@ -2982,33 +2983,38 @@
     let loadError = '';
     try{
       const {data, error} = await supabase.from('admin_logs')
-        .select('*')
-        .order('created_at', {ascending:false})
-        .limit(200);
+        .select('*').order('created_at', {ascending:false}).limit(500);
       if(error) throw error;
       logs = data || [];
     }catch(e){ loadError = e.message || 'Could not load admin log.'; }
-
+    const actions = [...new Set(logs.map(log => String(log.action_type || 'action')).filter(Boolean))].sort();
     contentEl.innerHTML = `
       <div class="panel">
         <div class="section-head-row">
-          <div>
-            <h2>Admin Log</h2>
-            <div class="note">Commissioner and administrative actions.</div>
+          <div><h2>Admin Log</h2><div class="note">Commissioner and administrative actions.</div></div>
+          <div class="foot-actions">
+            <select id="adminLogActionFilter" class="input">
+              <option value="all">All actions</option>
+              ${actions.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('')}
+            </select>
+            <button class="ghost" id="refreshAdminLogBtn">Refresh</button>
           </div>
-          <button class="ghost" id="refreshAdminLogBtn">Refresh</button>
         </div>
         ${loadError ? `<div class="note danger">${escapeHtml(loadError)}</div>` : ''}
         ${!loadError && !logs.length ? '<div class="empty-state">No admin actions have been logged yet.</div>' : ''}
         ${logs.length ? `<div class="admin-log-list">${logs.map(log => `
-          <div class="admin-log-row">
+          <div class="admin-log-row" data-action="${escapeHtml(log.action_type || 'action')}">
             <div class="admin-log-time">${escapeHtml(new Date(log.created_at).toLocaleString())}</div>
             <div class="admin-log-action"><strong>${escapeHtml(log.action_type || 'action')}</strong></div>
             <div class="admin-log-message">${escapeHtml(log.message || '')}</div>
-            <div class="admin-log-admin">${escapeHtml(log.admin_email || '')}</div>
+            <div class="admin-log-admin"><span class="admin-log-admin-label">Admin</span><strong>${escapeHtml(log.admin_email || log.admin_id || 'Unknown admin')}</strong></div>
           </div>`).join('')}</div>` : ''}
       </div>`;
     document.getElementById('refreshAdminLogBtn')?.addEventListener('click', drawAdminLog);
+    document.getElementById('adminLogActionFilter')?.addEventListener('change', e => {
+      const selected=e.target.value;
+      document.querySelectorAll('.admin-log-row').forEach(row => row.style.display = selected==='all'||row.dataset.action===selected ? '' : 'none');
+    });
   }
 
   function drawCommissioner(){
