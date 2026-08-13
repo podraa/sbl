@@ -278,7 +278,15 @@
   .trade-col h4{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin:0 0 4px;}
   button.danger{border:1px solid var(--red); color:var(--red); background:none; border-radius:8px; padding:5px 10px; font-size:11px; cursor:pointer;}
   button.teal{background:var(--teal); color:#062521; border:none; border-radius:8px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer;}
-  </style>
+  
+  .admin-log-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .admin-log-row{display:grid;grid-template-columns:170px 150px 1fr 220px;gap:12px;align-items:start;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-alt)}
+  .admin-log-time,.admin-log-admin{font-size:12px;color:var(--text-dim)}
+  .admin-log-action{font-size:13px}
+  .admin-log-message{font-size:13px;overflow-wrap:anywhere}
+  @media(max-width:800px){.admin-log-row{grid-template-columns:1fr;gap:5px}}
+
+</style>
 <script>
 // Site-wide theme: picked on the My Team page's Account tab, saved to
 // localStorage, and applied here so every page matches once a choice is made.
@@ -347,6 +355,7 @@
     <button data-tab="freeagency">Free Agency</button>
     <button data-tab="trades">Trades</button>
     <button data-tab="commissioner">Commissioner</button>
+    <button data-tab="admin-log">Admin Log</button>
     <button data-tab="settings">Settings</button>
 
 
@@ -1527,6 +1536,7 @@
     if(activeTab === 'freeagency') return renderFreeAgency();
     if(activeTab === 'trades') return renderTrades();
     if(activeTab === 'commissioner') return renderCommissioner();
+    if(activeTab === 'admin-log') return drawAdminLog();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
@@ -2263,7 +2273,6 @@
           <a class="ghost" href="draft.html" target="_blank" rel="noopener" style="text-decoration:none; display:inline-flex; align-items:center;">Open Draft Room ↗</a>
           ${d.status === 'setup' ? `<button class="primary" id="startDraftBtn">Start draft</button>` : ''}
           ${d.status === 'live' ? `<button class="primary danger-btn" id="endDraftBtn">End draft &amp; finalize rosters</button>` : ''}
-
           ${d.status !== 'setup' ? `<button class="ghost danger-btn" id="resetDraftBtn">Reset draft</button>` : ''}
         </div>
         <div class="note danger" id="draftStatusErr"></div>
@@ -2386,10 +2395,6 @@
         d.picks = [];
         d.currentPick = 0;
         d.status = 'setup';
-
-        // Reset wipes the working rosters and the public roster snapshot.
-        STATE.settings.rosters = {};
-        await savePublishedRosters({});
         await saveDraft();
         drawDraft();
       }catch(e){ err.textContent = e.message; }
@@ -2956,6 +2961,54 @@
         }
       });
     });
+  }
+
+  async function logAdminAction(actionType, message, metadata={}){
+    try{
+      const user = (await supabase.auth.getUser()).data?.user;
+      const {error} = await supabase.from('admin_logs').insert({
+        admin_id: user?.id || null,
+        admin_email: user?.email || null,
+        action_type: actionType,
+        message,
+        metadata
+      });
+      if(error) console.warn('Admin log write failed:', error);
+    }catch(e){ console.warn('Admin log write failed:', e); }
+  }
+
+  async function drawAdminLog(){
+    let logs = [];
+    let loadError = '';
+    try{
+      const {data, error} = await supabase.from('admin_logs')
+        .select('*')
+        .order('created_at', {ascending:false})
+        .limit(200);
+      if(error) throw error;
+      logs = data || [];
+    }catch(e){ loadError = e.message || 'Could not load admin log.'; }
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <div class="section-head-row">
+          <div>
+            <h2>Admin Log</h2>
+            <div class="note">Commissioner and administrative actions.</div>
+          </div>
+          <button class="ghost" id="refreshAdminLogBtn">Refresh</button>
+        </div>
+        ${loadError ? `<div class="note danger">${escapeHtml(loadError)}</div>` : ''}
+        ${!loadError && !logs.length ? '<div class="empty-state">No admin actions have been logged yet.</div>' : ''}
+        ${logs.length ? `<div class="admin-log-list">${logs.map(log => `
+          <div class="admin-log-row">
+            <div class="admin-log-time">${escapeHtml(new Date(log.created_at).toLocaleString())}</div>
+            <div class="admin-log-action"><strong>${escapeHtml(log.action_type || 'action')}</strong></div>
+            <div class="admin-log-message">${escapeHtml(log.message || '')}</div>
+            <div class="admin-log-admin">${escapeHtml(log.admin_email || '')}</div>
+          </div>`).join('')}</div>` : ''}
+      </div>`;
+    document.getElementById('refreshAdminLogBtn')?.addEventListener('click', drawAdminLog);
   }
 
   function drawCommissioner(){
