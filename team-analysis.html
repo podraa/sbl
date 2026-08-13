@@ -149,6 +149,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
+    <option value="draft.html" data-admin-only hidden>Draft Room</option>
+    <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
 
@@ -173,6 +175,26 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
 const SUPABASE_KEY='sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
 const STATE_ID='__dashboard_state__';
+  const DEFAULT_SEASON = 'Season 15';
+  function seasonKey(name){ return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'season'; }
+  function selectedSeasonSnapshot(shared){
+    const settings=shared?.settings||{}, archives=settings.seasonArchives||{}, requested=new URLSearchParams(location.search).get('season');
+    if(requested && archives[requested]){ const a=archives[requested]; return {name:a.name||requested,key:requested,teamMap:a.teamMap||{},settings:a.settings||{},replays:a.replays||{},archived:true,archives}; }
+    return {name:settings.activeSeason||DEFAULT_SEASON,key:'',teamMap:shared?.teamMap||{},settings,replays:null,archived:false,archives};
+  }
+  function installSeasonPicker(shared){
+    const snap=selectedSeasonSnapshot(shared), entries=Object.entries(snap.archives||{}).sort((a,b)=>String(b[1]?.archivedAt||'').localeCompare(String(a[1]?.archivedAt||'')));
+    let box=document.getElementById('seasonPicker');
+    if(!box){box=document.createElement('div');box.id='seasonPicker';box.style.cssText='position:fixed;top:14px;left:18px;z-index:1000;display:flex;align-items:center;gap:7px;';document.body.appendChild(box);}
+    box.innerHTML='<label style="font-size:11px;color:var(--text-dim);font-weight:700">Season</label><select id="seasonSelect" style="font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)"></select>';
+    const sel=box.querySelector('#seasonSelect'),opts=[{value:'',label:`${snap.name}${snap.archived?' (Archived)':''}`}];
+    entries.forEach(([key,a])=>opts.push({value:key,label:`${a.name} (Archived)`}));
+    sel.innerHTML=opts.map(o=>`<option value="${o.value}" ${o.value===(snap.archived?snap.key:'')?'selected':''}>${o.label}</option>`).join('');
+    sel.onchange=()=>{const u=new URL(location.href);if(sel.value)u.searchParams.set('season',sel.value);else u.searchParams.delete('season');location.href=u.toString();};
+    if(snap.archived){const note=document.createElement('div');note.style.cssText='position:fixed;top:50px;left:18px;z-index:999;font-size:10px;color:var(--amber);';note.textContent='Archived season — read only';document.body.appendChild(note);}
+    return snap;
+  }
+
 const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let STATE={replays:{},teamMap:{},settings:{caseInsensitiveNames:true,rosters:{}},speedSort:'speed-desc',profileTeam:'',compareOpponent:'',comparePokemon:'',setPokemon:''};
 const $=id=>document.getElementById(id);
@@ -907,11 +929,13 @@ async function load(){
     for(const row of data||[]){
       if(row.replay_id===STATE_ID){
         const shared=row.replay_data||{};
-        STATE.teamMap=shared.teamMap||{};
-        STATE.settings=Object.assign(STATE.settings,shared.settings||{});
+        const snap=installSeasonPicker(shared);
+        STATE.teamMap=snap.teamMap;
+        STATE.settings=Object.assign(STATE.settings,snap.settings||{});
         STATE.settings.rosters=STATE.settings.rosters||{};
-        if(shared.replays && typeof shared.replays==='object'){
-          for(const [id,replay] of Object.entries(shared.replays)) if(id && replay) STATE.replays[id]=replay;
+        const seasonReplays=snap.archived ? snap.replays : shared.replays;
+        if(seasonReplays && typeof seasonReplays==='object'){
+          for(const [id,replay] of Object.entries(seasonReplays)) if(id && replay) STATE.replays[id]=replay;
         }
       }else if(row.replay_id==='__rosters__'){
         const published=row.replay_data?.rosters;
@@ -979,12 +1003,34 @@ load();
 <script>
 (function(){
   const select=document.getElementById('pageNavSelect');
-  if(!select)return;
-  const current=location.pathname.split('/').pop()||'index.html';
-  select.value=['index.html','rosters.html','team-analysis.html','free-agency.html'].includes(current)?current:'index.html';
-  select.addEventListener('change',function(){
-    if(this.value) location.href=this.value;
+  if(!select) return;
+  const ADMIN='admin.html';
+  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
+  if(current===ADMIN) select.value=ADMIN;
+  else if(Array.from(select.options).some(o=>o.value===current)) select.value=current;
+
+  async function setupCommissionerNav(){
+    try{
+      const client=window.supabase?.createClient(
+        'https://dfxdkkemltukxaklhcpo.supabase.co',
+        'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
+      );
+      if(!client) return;
+      const {data:{session}}=await client.auth.getSession();
+      if(!session?.user) return;
+      const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
+      if(error) throw error;
+      if(profile?.is_commissioner){
+        select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
+      }
+      if(current===ADMIN) select.value=ADMIN;
+    }catch(err){ console.warn('Commissioner navigation check failed:',err); }
+  }
+
+  select.addEventListener('change',e=>{
+    if(e.target.value) location.href=e.target.value;
   });
+  setupCommissionerNav();
 })();
 </script>
 </body>

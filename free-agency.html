@@ -146,6 +146,7 @@ input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
+    <option value="draft.html" data-admin-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -164,6 +165,22 @@ input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent
 const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
 const SUPABASE_KEY='sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const DEFAULT_SEASON='Season 15';
+function selectedSeasonSnapshot(shared){
+  const settings=shared?.settings||{},archives=settings.seasonArchives||{},requested=new URLSearchParams(location.search).get('season');
+  if(requested&&archives[requested]){const a=archives[requested];return{name:a.name||requested,key:requested,settings:a.settings||{},archived:true,archives};}
+  return{name:settings.activeSeason||DEFAULT_SEASON,key:'',settings,archived:false,archives};
+}
+function installSeasonPicker(shared){
+  const snap=selectedSeasonSnapshot(shared),entries=Object.entries(snap.archives||{}).sort((a,b)=>String(b[1]?.archivedAt||'').localeCompare(String(a[1]?.archivedAt||'')));
+  let box=document.getElementById('seasonPicker');if(!box){box=document.createElement('div');box.id='seasonPicker';box.style.cssText='position:fixed;top:14px;left:18px;z-index:1000;display:flex;align-items:center;gap:7px;';document.body.appendChild(box);}
+  box.innerHTML='<label style="font-size:11px;color:var(--dim);font-weight:700">Season</label><select id="seasonSelect" style="font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)"></select>';
+  const sel=box.querySelector('#seasonSelect'),opts=[{value:'',label:`${snap.name}${snap.archived?' (Archived)':''}`}];entries.forEach(([key,a])=>opts.push({value:key,label:`${a.name} (Archived)`}));
+  sel.innerHTML=opts.map(o=>`<option value="${o.value}" ${o.value===(snap.archived?snap.key:'')?'selected':''}>${o.label}</option>`).join('');
+  sel.onchange=()=>{const u=new URL(location.href);if(sel.value)u.searchParams.set('season',sel.value);else u.searchParams.delete('season');location.href=u.toString();};
+  return snap;
+}
+
 
 let settings={rosters:{},freeAgency:{mons:[]}};
 let allRosters={};
@@ -326,8 +343,12 @@ async function load(){
     .in('replay_id',['__dashboard_state__','__rosters__']);
   if(res.error) throw res.error;
   for(const r of res.data||[]){
-    if(r.replay_id==='__dashboard_state__') settings=r.replay_data?.settings||settings;
-    if(r.replay_id==='__rosters__') allRosters=normalizeRosters(r.replay_data?.rosters||{});
+    if(r.replay_id==='__dashboard_state__'){
+      const snap=installSeasonPicker(r.replay_data||{});
+      settings=snap.settings||settings;
+      if(snap.archived) allRosters=normalizeRosters(settings.rosters||{});
+    }
+    if(r.replay_id==='__rosters__' && !Object.keys(allRosters).length && !new URLSearchParams(location.search).get('season')) allRosters=normalizeRosters(r.replay_data?.rosters||{});
   }
   if(!Object.keys(allRosters).length) allRosters=normalizeRosters(settings.rosters||{});
   const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
@@ -510,8 +531,7 @@ setInterval(()=>{if(!document.hidden)load().catch(()=>{});},5000);
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
-        const opt=select.querySelector('option[data-admin-only]');
-        if(opt) opt.hidden=false;
+        select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
       }
       if(current===ADMIN) select.value=ADMIN;
     }catch(err){ console.warn('Commissioner navigation check failed:',err); }

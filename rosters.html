@@ -254,6 +254,7 @@ h1{
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
+    <option value="draft.html" data-admin-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -279,6 +280,23 @@ h1{
 <script>
 const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
+const DEFAULT_SEASON='Season 15';
+function seasonKey(name){return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'season';}
+function selectedSeasonSnapshot(shared){
+  const settings=shared?.settings||{},archives=settings.seasonArchives||{},requested=new URLSearchParams(location.search).get('season');
+  if(requested&&archives[requested]){const a=archives[requested];return{name:a.name||requested,key:requested,settings:a.settings||{},teamMap:a.teamMap||{},replays:a.replays||{},archived:true,archives};}
+  return{name:settings.activeSeason||DEFAULT_SEASON,key:'',settings,teamMap:shared?.teamMap||{},replays:null,archived:false,archives};
+}
+function installSeasonPicker(shared){
+  const snap=selectedSeasonSnapshot(shared),entries=Object.entries(snap.archives||{}).sort((a,b)=>String(b[1]?.archivedAt||'').localeCompare(String(a[1]?.archivedAt||'')));
+  let box=document.getElementById('seasonPicker');if(!box){box=document.createElement('div');box.id='seasonPicker';box.style.cssText='position:fixed;top:14px;left:18px;z-index:1000;display:flex;align-items:center;gap:7px;';document.body.appendChild(box);}
+  box.innerHTML='<label style="font-size:11px;color:var(--text-dim);font-weight:700">Season</label><select id="seasonSelect" style="font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)"></select>';
+  const sel=box.querySelector('#seasonSelect'),opts=[{value:'',label:`${snap.name}${snap.archived?' (Archived)':''}`}];entries.forEach(([key,a])=>opts.push({value:key,label:`${a.name} (Archived)`}));
+  sel.innerHTML=opts.map(o=>`<option value="${o.value}" ${o.value===(snap.archived?snap.key:'')?'selected':''}>${o.label}</option>`).join('');
+  sel.onchange=()=>{const u=new URL(location.href);if(sel.value)u.searchParams.set('season',sel.value);else u.searchParams.delete('season');location.href=u.toString();};
+  return snap;
+}
+
 
 const content = document.getElementById('content');
 const toolbar = document.getElementById('toolbar');
@@ -397,7 +415,13 @@ function normalizeRosters(raw){
   return out;
 }
 
-const ROSTER_BUDGET = 120;
+const FALLBACK_BUDGET = 115;
+let DRAFT_BUDGETS = {defaultBudget: FALLBACK_BUDGET, budgets: {}};
+
+function teamBudget(team){
+  const override = DRAFT_BUDGETS.budgets?.[team];
+  return Number.isFinite(Number(override)) ? Number(override) : (Number(DRAFT_BUDGETS.defaultBudget) || FALLBACK_BUDGET);
+}
 
 function rosterPoints(list){
   return (Array.isArray(list) ? list : []).reduce((sum, mon) => {
@@ -406,9 +430,9 @@ function rosterPoints(list){
   }, 0);
 }
 
-function budgetMarkup(list){
+function budgetMarkup(team, list){
   const spent = rosterPoints(list);
-  const remaining = ROSTER_BUDGET - spent;
+  const remaining = teamBudget(team) - spent;
   const cls = remaining < 0 ? 'negative' : 'good';
   return `<div class="budget-wrap"><div class="budget-label">Budget remaining</div><div class="budget-value ${cls}">${remaining} pts</div></div>`;
 }
@@ -451,9 +475,18 @@ async function loadRosters(){
       'Loading the roster data'
     );
     if(stateResult.error) throw stateResult.error;
-    rosters = normalizeRosters(stateResult.data?.replay_data?.settings?.rosters || {});
+    const shared=stateResult.data?.replay_data||{};
+    const snap=installSeasonPicker(shared);
+    rosters = normalizeRosters(snap.settings?.rosters || {});
+    const draftSettings = snap.settings?.draft;
+    if(draftSettings && typeof draftSettings === 'object'){
+      DRAFT_BUDGETS = {
+        defaultBudget: Number(draftSettings.defaultBudget) || FALLBACK_BUDGET,
+        budgets: (draftSettings.budgets && typeof draftSettings.budgets === 'object') ? draftSettings.budgets : {}
+      };
+    }
 
-    if(!Object.keys(rosters).length){
+    if(!snap.archived && !Object.keys(rosters).length){
       const publishedResult = await withTimeout(
         supabase.from('replays').select('replay_data').eq('replay_id','__rosters__').maybeSingle(),
         8000,
@@ -485,7 +518,7 @@ async function loadRosters(){
 
       content.innerHTML = `<div class="grid${team === '__all__' ? '' : ' single'}">${selectedTeams.map(name => `
         <section class="card">
-          <div class="head"><div><h2>${esc(name)}</h2><span class="count">${allRosters[name].length} Pokémon</span></div>${budgetMarkup(allRosters[name])}</div>
+          <div class="head"><div><h2>${esc(name)}</h2><span class="count">${allRosters[name].length} Pokémon</span></div>${budgetMarkup(name, allRosters[name])}</div>
           <div class="mons">${allRosters[name].map(mon => renderPokemon(name, mon)).join('')}</div>
         </section>`).join('')}</div>`;
     }
@@ -528,8 +561,7 @@ loadRosters().finally(() => clearTimeout(hardTimeout));
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
-        const opt=select.querySelector('option[data-admin-only]');
-        if(opt) opt.hidden=false;
+        select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
       }
       if(current===ADMIN) select.value=ADMIN;
     }catch(err){ console.warn('Commissioner navigation check failed:',err); }

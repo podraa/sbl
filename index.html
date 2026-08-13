@@ -161,6 +161,7 @@
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
+    <option value="draft.html" data-admin-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -179,6 +180,26 @@
   const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
   const SUPABASE_STATE_ID = '__dashboard_state__';
+  const DEFAULT_SEASON = 'Season 15';
+  function seasonKey(name){ return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'season'; }
+  function selectedSeasonSnapshot(shared){
+    const settings=shared?.settings||{}, archives=settings.seasonArchives||{}, requested=new URLSearchParams(location.search).get('season');
+    if(requested && archives[requested]){ const a=archives[requested]; return {name:a.name||requested,key:requested,teamMap:a.teamMap||{},settings:a.settings||{},replays:a.replays||{},archived:true,archives}; }
+    return {name:settings.activeSeason||DEFAULT_SEASON,key:'',teamMap:shared?.teamMap||{},settings,replays:null,archived:false,archives};
+  }
+  function installSeasonPicker(shared){
+    const snap=selectedSeasonSnapshot(shared), entries=Object.entries(snap.archives||{}).sort((a,b)=>String(b[1]?.archivedAt||'').localeCompare(String(a[1]?.archivedAt||'')));
+    let box=document.getElementById('seasonPicker');
+    if(!box){box=document.createElement('div');box.id='seasonPicker';box.style.cssText='position:fixed;top:14px;left:18px;z-index:1000;display:flex;align-items:center;gap:7px;';document.body.appendChild(box);}
+    box.innerHTML='<label style="font-size:11px;color:var(--text-dim);font-weight:700">Season</label><select id="seasonSelect" style="font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)"></select>';
+    const sel=box.querySelector('#seasonSelect'),opts=[{value:'',label:`${snap.name}${snap.archived?' (Archived)':''}`}];
+    entries.forEach(([key,a])=>opts.push({value:key,label:`${a.name} (Archived)`}));
+    sel.innerHTML=opts.map(o=>`<option value="${o.value}" ${o.value===(snap.archived?snap.key:'')?'selected':''}>${o.label}</option>`).join('');
+    sel.onchange=()=>{const u=new URL(location.href);if(sel.value)u.searchParams.set('season',sel.value);else u.searchParams.delete('season');location.href=u.toString();};
+    if(snap.archived){const note=document.createElement('div');note.style.cssText='position:fixed;top:50px;left:18px;z-index:999;font-size:10px;color:var(--amber);';note.textContent='Archived season — read only';document.body.appendChild(note);}
+    return snap;
+  }
+
   const ROSTER_BUDGET = 115; // keep in sync with the `budget` constant in accept_trade()
   function currentSeason(){ return new Date().getFullYear(); }
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -287,10 +308,11 @@
       if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
     }
     const shared = sharedState || {};
-    DASH.teamMap = shared.teamMap || {};
-    DASH.settings = Object.assign({ rosters:{}, freeAgency:{mons:[]} }, shared.settings || {});
+    const snap = installSeasonPicker(shared);
+    DASH.teamMap = snap.teamMap;
+    DASH.settings = Object.assign({ rosters:{}, freeAgency:{mons:[]} }, snap.settings || {});
     DASH.settings.rosters = normalizeStoredRosters(DASH.settings.rosters||{});
-    DASH.replays = replays;
+    DASH.replays = snap.archived ? snap.replays : replays;
   }
 
   async function loadProfile(){
@@ -1127,8 +1149,7 @@
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
-        const opt=select.querySelector('option[data-admin-only]');
-        if(opt) opt.hidden=false;
+        select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
       }
       if(current===ADMIN) select.value=ADMIN;
     }catch(err){ console.warn('Commissioner navigation check failed:',err); }

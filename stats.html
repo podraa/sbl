@@ -331,13 +331,35 @@
   /* audit modal */
   td.auditable{cursor:pointer; text-decoration:underline dotted var(--text-dim); text-underline-offset:3px;}
   td.auditable:hover{color:var(--amber);}
+  /* Franchise summary overlay */
   .audit-overlay{
-    position:fixed; inset:0; background:rgba(6,9,14,.7); display:flex; align-items:flex-start;
-    justify-content:center; padding:40px 16px; z-index:50; overflow-y:auto;
+    position:fixed; inset:0; z-index:50;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px 16px; overflow-y:auto;
+    background:rgba(6,9,14,.72);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    animation:teamOverlayIn .28s ease-out both;
   }
+  .audit-overlay.is-closing{animation:teamOverlayOut .2s ease-in both;}
   .audit-box{
-    background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:18px;
+    background:linear-gradient(145deg,var(--panel),var(--panel-alt));
+    border:1px solid var(--border); border-radius:14px; padding:20px;
     max-width:560px; width:100%;
+    box-shadow:0 28px 90px rgba(0,0,0,.58), 0 0 0 1px rgba(255,255,255,.015) inset;
+    transform-origin:center center;
+  }
+  .audit-overlay .audit-box{animation:teamModalIn .34s cubic-bezier(.16,1,.3,1) both;}
+  .audit-overlay.is-closing .audit-box{animation:teamModalOut .2s cubic-bezier(.4,0,1,1) both;}
+  @keyframes teamOverlayIn{from{opacity:0}to{opacity:1}}
+  @keyframes teamOverlayOut{from{opacity:1}to{opacity:0}}
+  @keyframes teamModalIn{
+    from{opacity:0; transform:translateY(24px) scale(.92); filter:blur(2px)}
+    55%{opacity:1}
+    to{opacity:1; transform:translateY(0) scale(1); filter:blur(0)}
+  }
+  @keyframes teamModalOut{
+    from{opacity:1; transform:translateY(0) scale(1)}
+    to{opacity:0; transform:translateY(10px) scale(.96)}
   }
   .audit-box h3{margin:0 0 2px; font-size:15px;}
   .audit-box .audit-sub{font-size:12px; color:var(--text-dim); margin-bottom:12px;}
@@ -427,7 +449,79 @@
 .pokemon-type-filter{min-width:150px; display:flex; flex-direction:column;}
 .pokemon-type-filter label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
 .pokemon-type-filter select{width:100%;height:38px;box-sizing:border-box;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px;font:inherit;}
-.roster-inactive{opacity:.42;filter:grayscale(.75)} .roster-badge{margin-left:6px;font-size:9px} </style>
+.roster-inactive{opacity:.42;filter:grayscale(.75)} .roster-badge{margin-left:6px;font-size:9px} 
+  /* ---------- Conference standings ---------- */
+  .conference-standings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px;}
+  .conference-block{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;min-width:0;}
+  .conference-block.unassigned{grid-column:1 / -1;}
+  .conference-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--panel-alt),var(--panel));}
+  .conference-title{font-size:17px;font-weight:800;letter-spacing:.02em;}
+  .conference-sub{font-size:11px;color:var(--text-dim);margin-top:3px;}
+  .conference-count{font:700 12px var(--mono);color:var(--text-dim);}
+  .standings-ladder{display:flex;flex-direction:column;}
+  .standings-row{display:grid;grid-template-columns:38px minmax(0,1fr) 62px 62px 76px 76px;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border);background:var(--panel);transition:background .12s,transform .12s;}
+  .standings-row:last-child{border-bottom:0;}
+  .standings-row:hover{background:var(--panel-alt);}
+  .standings-clickable{cursor:pointer;}
+  .standings-clickable:focus-visible{outline:2px solid var(--amber);outline-offset:-2px;}
+  .standings-row.top1{box-shadow:inset 3px 0 0 var(--amber);}
+  .standings-row.top2{box-shadow:inset 3px 0 0 var(--teal);}
+  .standings-rank{font:800 14px var(--mono);color:var(--text-dim);text-align:center;}
+  .standings-row.top1 .standings-rank{color:var(--amber);}
+  .standings-row.top2 .standings-rank{color:var(--teal);}
+  .standings-team{min-width:0;}
+  .standings-team-name{font-weight:750;font-size:14px;overflow-wrap:anywhere;}
+  .standings-record{font-size:11px;color:var(--text-dim);margin-top:3px;}
+  .standings-stat{text-align:right;font-family:var(--mono);font-size:13px;}
+  .standings-stat-label{display:block;font:700 9px var(--sans);text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:3px;}
+  .standings-pct{font-weight:700;}
+  .conference-empty{padding:22px 18px;color:var(--text-dim);font-size:13px;text-align:center;}
+  @media(max-width:900px){.conference-standings{grid-template-columns:1fr;}.conference-block.unassigned{grid-column:auto;}}
+  @media(max-width:620px){.standings-row{grid-template-columns:30px minmax(0,1fr) 54px 54px;gap:8px;padding:11px 12px;}.standings-row .standings-stat:nth-last-child(-n+2){display:none;}.standings-stat-label{font-size:8px;}.standings-team-name{font-size:13px;}}
+
+  /* ---------- Franchise Stats revamp ---------- */
+  .franchise-shell{display:flex;flex-direction:column;gap:14px;}
+  .franchise-header{display:flex;justify-content:space-between;align-items:flex-end;gap:22px;}
+  .franchise-header h2{margin-bottom:8px;}
+  .franchise-actions{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;flex:none;}
+  .franchise-actions>div{min-width:220px;}
+  .franchise-actions select{width:100%;}
+  .franchise-cards{display:flex;flex-direction:column;gap:14px;}
+  .franchise-card{padding:0;overflow:hidden;}
+  .franchise-card-head{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px 24px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--panel-alt),var(--panel));}
+  .franchise-title{font-size:24px;font-weight:800;line-height:1.15;}
+  .franchise-sub{font-size:12px;color:var(--text-dim);margin-top:6px;}
+  .franchise-coaches{font-size:12px;color:var(--teal);margin-top:8px;}
+  .franchise-coaches.muted{color:var(--text-dim);}
+  .franchise-total-grid{display:grid;grid-template-columns:repeat(4,minmax(85px,1fr));gap:8px;min-width:360px;}
+  .franchise-total-grid>div{padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--panel-alt);text-align:right;}
+  .franchise-total-grid span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);}
+  .franchise-total-grid strong{display:block;font-family:var(--mono);font-size:16px;margin-top:3px;}
+  .franchise-table-wrap{overflow-x:auto;}
+  .franchise-table{min-width:850px;}
+  .franchise-table tbody tr:hover{background:rgba(255,255,255,.025);}
+  @media(max-width:900px){
+    .franchise-header{align-items:stretch;flex-direction:column;}
+    .franchise-actions{width:100%;}
+    .franchise-actions>div{flex:1;}
+    .franchise-card-head{align-items:stretch;flex-direction:column;}
+    .franchise-total-grid{min-width:0;width:100%;}
+  }
+  @media(max-width:520px){
+    .franchise-card-head{padding:16px;}
+    .franchise-title{font-size:20px;}
+    .franchise-total-grid{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+
+<style id="all-popouts-animation">
+.audit-overlay { opacity:0; transition:opacity .28s cubic-bezier(.22,1,.36,1); }
+.audit-overlay .audit-box { opacity:0; transform:translateY(24px) scale(.965); filter:blur(5px); transition:opacity .32s cubic-bezier(.22,1,.36,1), transform .38s cubic-bezier(.22,1,.36,1), filter .38s cubic-bezier(.22,1,.36,1); will-change:opacity,transform,filter; }
+.audit-overlay.popout-visible { opacity:1; }
+.audit-overlay.popout-visible .audit-box { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+.audit-overlay.popout-closing { opacity:0; pointer-events:none; }
+.audit-overlay.popout-closing .audit-box { opacity:0; transform:translateY(14px) scale(.985); filter:blur(3px); }
+</style>
 </head>
 <body data-admin="false">
 <style>
@@ -445,6 +539,7 @@
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
+    <option value="draft.html" data-admin-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -452,7 +547,7 @@
 <div id="app">
   <header>
     <br>
-    <h1>SBL Season 15: National Dex Draft</h1>
+    <h1 id="seasonTitle">SBL Season</h1>
     <br>
     <div id="bannerMount"></div>
   </header>
@@ -476,7 +571,8 @@
 <script>
 (function(){
   const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
-  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'' } };
+  let STATE = { replays:{}, teamMap:{}, settings:{ caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}, conferences:{} } };
+  let PUBLISHED_ROSTERS = {};
   let loaded = false;
 
   // ---------- shared Supabase storage ----------
@@ -484,6 +580,26 @@
   const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
   const SUPABASE_STATE_ID = '__dashboard_state__';
+  const DEFAULT_SEASON = 'Season 15';
+  function seasonKey(name){ return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'season'; }
+  function selectedSeasonSnapshot(shared){
+    const settings=shared?.settings||{}, archives=settings.seasonArchives||{}, requested=new URLSearchParams(location.search).get('season');
+    if(requested && archives[requested]){ const a=archives[requested]; return {name:a.name||requested,key:requested,teamMap:a.teamMap||{},settings:a.settings||{},replays:a.replays||{},archived:true,archives}; }
+    return {name:settings.activeSeason||DEFAULT_SEASON,key:'',teamMap:shared?.teamMap||{},settings,replays:null,archived:false,archives};
+  }
+  function installSeasonPicker(shared){
+    const snap=selectedSeasonSnapshot(shared), entries=Object.entries(snap.archives||{}).sort((a,b)=>String(b[1]?.archivedAt||'').localeCompare(String(a[1]?.archivedAt||'')));
+    let box=document.getElementById('seasonPicker');
+    if(!box){box=document.createElement('div');box.id='seasonPicker';box.style.cssText='position:fixed;top:14px;left:18px;z-index:1000;display:flex;align-items:center;gap:7px;';document.body.appendChild(box);}
+    box.innerHTML='<label style="font-size:11px;color:var(--text-dim);font-weight:700">Season</label><select id="seasonSelect" style="font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)"></select>';
+    const sel=box.querySelector('#seasonSelect'),opts=[{value:'',label:`${snap.name}${snap.archived?' (Archived)':''}`}];
+    entries.forEach(([key,a])=>opts.push({value:key,label:`${a.name} (Archived)`}));
+    sel.innerHTML=opts.map(o=>`<option value="${o.value}" ${o.value===(snap.archived?snap.key:'')?'selected':''}>${o.label}</option>`).join('');
+    sel.onchange=()=>{const u=new URL(location.href);if(sel.value)u.searchParams.set('season',sel.value);else u.searchParams.delete('season');location.href=u.toString();};
+    if(snap.archived){const note=document.createElement('div');note.style.cssText='position:fixed;top:50px;left:18px;z-index:999;font-size:10px;color:var(--amber);';note.textContent='Archived season — read only';document.body.appendChild(note);}
+    return snap;
+  }
+
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const IS_ADMIN_PAGE = document.body.dataset.admin === 'true';
   const POLL_MS = 10000;
@@ -501,11 +617,14 @@
       if(error) throw error;
       const replays = {};
       let sharedState = null;
+      let publishedRosters = {};
       for(const row of (data || [])){
         if(row.replay_id === SUPABASE_STATE_ID) sharedState = row.replay_data || {};
-        else if(row.replay_id === '__rosters__') { /* metadata only; never a replay */ }
-        else if(row.replay_id === '__rosters__' || row.replay_id === '__free_agency__'){
-          // Published metadata records are not replays.
+        else if(row.replay_id === '__rosters__'){
+          // Keep the separately-published roster record as a fallback.
+          publishedRosters = row.replay_data?.rosters || {};
+        } else if(row.replay_id === '__free_agency__'){
+          // Published metadata record, not a replay.
           continue;
         } else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
       }
@@ -517,9 +636,22 @@
           if(id && replay && typeof replay === 'object') replays[id] = replay;
         }
       }
-      STATE.replays = replays;
-      STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}}, (sharedState && sharedState.settings) || {});
+      const snap=installSeasonPicker(sharedState || {});
+      const titleEl=document.getElementById('seasonTitle'); if(titleEl) titleEl.textContent=`SBL ${snap.name}: National Dex Draft`;
+      STATE.replays = snap.archived ? snap.replays : replays;
+      STATE.teamMap = snap.teamMap || {};
+      STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}}, snap.settings || {});
+
+      // The Rosters page treats __dashboard_state__.settings.rosters as the
+      // primary published roster, with __rosters__ as the compatibility fallback.
+      // Keep that exact roster in a dedicated variable so Franchise Stats does
+      // not accidentally depend on replay-derived team data.
+      const dashboardRosters = (STATE.settings.rosters && typeof STATE.settings.rosters === 'object')
+        ? STATE.settings.rosters : {};
+      PUBLISHED_ROSTERS = Object.keys(dashboardRosters).length
+        ? dashboardRosters
+        : (publishedRosters && typeof publishedRosters === 'object' ? publishedRosters : {});
+      STATE.settings.rosters = PUBLISHED_ROSTERS;
       STATE.settings.teamLogos = STATE.settings.teamLogos || {};
       const bp=JSON.parse(localStorage.getItem('sbl-banner-preferences')||'null'); if(bp){ STATE.settings.bannerMode=bp.bannerMode||STATE.settings.bannerMode; STATE.settings.bannerTeam=bp.bannerTeam||STATE.settings.bannerTeam; }
       loaded = true;
@@ -528,7 +660,7 @@
       if(!loaded){
         STATE.replays = {};
         STATE.teamMap = {};
-        STATE.settings = {caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}};
+        STATE.settings = {caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}, conferences:{}};
         loaded = true;
       }
       if(IS_ADMIN_PAGE) showAdminError('Could not load shared data: ' + e.message);
@@ -1145,10 +1277,25 @@
     return Object.values(out).sort((a,b)=>b.dealt-a.dealt);
   }
 
+  // Roster uploads have existed in both array form and wrapped/object form.
+  // Normalize them here so Franchise Stats never dies on a published roster
+  // object such as { pokemon:[...] } or { roster:[...] }.
+  function rosterEntries(roster){
+    if(Array.isArray(roster)) return roster;
+    if(roster && typeof roster==='object'){
+      for(const key of ['pokemon','roster','mons','members','entries']){
+        if(Array.isArray(roster[key])) return roster[key];
+      }
+      // Last-resort support for an object keyed by Pokemon name.
+      const vals=Object.values(roster);
+      if(vals.length && vals.every(v=>typeof v==='string' || (v && typeof v==='object'))) return vals;
+    }
+    return [];
+  }
   function rosterForTeam(team){
     const rosters=STATE.settings?.rosters||{};
     const key=Object.keys(rosters).find(k=>sameRosterTeam(k,team));
-    return key ? (Array.isArray(rosters[key]) ? rosters[key] : []) : [];
+    return key ? rosterEntries(rosters[key]) : [];
   }
   function rosterMonName(mon){
     if(typeof mon==='string') return mon.trim();
@@ -1160,52 +1307,105 @@
     return !r.length || r.some(x=>normName(canonicalRosterSpecies(x))===normName(species));
   }
 
-  function teamPokemonStats(weekFilter){
-    const groups = {}; // groupKey -> { label, species: {normSpecies -> stats} }
+  // ---------- Franchise Stats: completely roster-driven ----------
+  // The published roster is the ONLY source of truth for franchise membership.
+  // Replay records are used only to fill statistics for Pokemon that are already
+  // on that published roster. This prevents traded/released/old replay Pokemon
+  // from leaking into the current franchise display.
+  function franchiseRosterData(weekFilter='ALL'){
+    const raw = (PUBLISHED_ROSTERS && Object.keys(PUBLISHED_ROSTERS).length)
+      ? PUBLISHED_ROSTERS
+      : (STATE.settings?.rosters || {});
+    const result = {};
 
-    // Seed every current roster team, even if it has no processed replay yet.
-    for(const [rosterTeam, roster] of Object.entries(STATE.settings?.rosters || {})){
-      const team = rosterTeam;
-      const gk = groupKey(team);
-      if(!groups[gk]) groups[gk] = { label: team, species: {} };
-      for(const mon of (roster || [])){
-        const species = canonicalRosterSpecies(mon), nk = normName(species);
-        if(species && !groups[gk].species[nk]) groups[gk].species[nk] = {species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
+    // Build the complete current roster first, including zero-game Pokemon.
+    for(const [teamName, rawRoster] of Object.entries(raw || {})){
+      if(!String(teamName).trim()) continue;
+      const roster = rosterEntries(rawRoster);
+      const team = {
+        name:String(teamName),
+        roster:[],
+        byKey:{},
+        total:{dealt:0,taken:0,kills:0,deaths:0,appearances:0},
+        linkedPlayers:new Set(),
+        replayCount:0
+      };
+
+      for(const item of roster){
+        const species = canonicalRosterSpecies(item);
+        const key = normName(species);
+        if(!key || team.byKey[key]) continue;
+        const points = item && typeof item==='object'
+          ? (item.points ?? item.cost ?? item.price ?? null)
+          : null;
+        const stat = {
+          species,
+          points,
+          dealt:0,
+          taken:0,
+          kills:0,
+          deaths:0,
+          appearances:0,
+          killLog:[],
+          deathLog:[]
+        };
+        team.byKey[key]=stat;
+        team.roster.push(stat);
       }
+      result[team.name]=team;
     }
 
-    for(const r of allReplays(weekFilter)){
+    // Fill the roster entries from replay data. A replay can contribute only if
+    // the player is explicitly mapped to this franchise.
+    for(const replay of allReplays(weekFilter)){
+      if(!replay || !replay.mons) continue;
       for(const side of ['p1','p2']){
-        const team = teamFor(r.players?.[side]);
-        if(!team || team==='Unknown') continue;
-        const gk = groupKey(team);
-        if(!groups[gk]) groups[gk] = { label: team, species: {} };
-        const bucket = groups[gk].species;
-        const currentRoster = rosterForTeam(team);
-        for(const mon of currentRoster){
-          const species = canonicalRosterSpecies(mon), nk = normName(species);
-          if(species && !bucket[nk]) bucket[nk] = {species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
-        }
-        for(const k in (r.mons || {})){
-          const m = r.mons[k];
-          if(!m || m.side !== side || !m.species) continue;
-          const displaySpecies = normName(m.species)==='comfey' ? 'Comfey' : m.species;
-          const nk = normName(displaySpecies);
-          if(!bucket[nk]) bucket[nk] = {species:displaySpecies, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
-          bucket[nk].dealt += Number(m.damageDealt)||0;
-          bucket[nk].taken += Number(m.damageTaken)||0;
-          bucket[nk].kills += Number(m.kills)||0;
-          bucket[nk].deaths += Number(m.deaths)||0;
-          bucket[nk].games += Number(m.appearances)||0;
-          if(m.killLog) bucket[nk].killLog.push(...m.killLog);
-          if(m.deathLog) bucket[nk].deathLog.push(...m.deathLog);
+        const username=String(replay.players?.[side]||'').trim();
+        if(!username) continue;
+        const mappedTeam=teamFor(username);
+        if(!mappedTeam || mappedTeam==='Unknown') continue;
+        const teamName=Object.keys(result).find(t=>sameRosterTeam(t,mappedTeam));
+        if(!teamName) continue;
+        const team=result[teamName];
+        team.linkedPlayers.add(username);
+        team.replayCount++;
+
+        for(const stat of Object.values(replay.mons)){
+          if(!stat || stat.side!==side || !stat.species) continue;
+          const species=normName(stat.species)==='comfey' ? 'Comfey' : String(stat.species);
+          const target=team.byKey[normName(species)];
+          if(!target) continue;
+          target.dealt += Number(stat.damageDealt)||0;
+          target.taken += Number(stat.damageTaken)||0;
+          target.kills += Number(stat.kills)||0;
+          target.deaths += Number(stat.deaths)||0;
+          target.appearances += Number(stat.appearances)||0;
+          if(Array.isArray(stat.killLog)) target.killLog.push(...stat.killLog);
+          if(Array.isArray(stat.deathLog)) target.deathLog.push(...stat.deathLog);
         }
       }
     }
-    const out = {};
-    for(const gk in groups) out[groups[gk].label] = groups[gk].species;
+
+    for(const team of Object.values(result)){
+      for(const stat of team.roster){
+        team.total.dealt += stat.dealt;
+        team.total.taken += stat.taken;
+        team.total.kills += stat.kills;
+        team.total.deaths += stat.deaths;
+        team.total.appearances += stat.appearances;
+      }
+    }
+    return result;
+  }
+
+  // Kept as the common data API used by CSV export and the older Settings tools.
+  function teamPokemonStats(weekFilter){
+    const data=franchiseRosterData(weekFilter);
+    const out={};
+    for(const [team,info] of Object.entries(data)) out[team]=info.byKey;
     return out;
   }
+
   // ---------- duplicate detection (Settings) ----------
   // Normalizes a username so that things like "dossa37"/"dossa_37" (punctuation
   // difference) and "podraa"/"podrrraaa" (repeated-letter typo) collapse to the
@@ -1466,7 +1666,16 @@
   }
   function closeAudit(){
     const el = document.getElementById('auditModal');
-    if(el) el.innerHTML = '';
+    if(!el) return;
+    const overlay = el.querySelector('.audit-overlay');
+    if(!overlay || overlay.classList.contains('is-closing')){
+      el.innerHTML = '';
+      return;
+    }
+    overlay.classList.add('is-closing');
+    window.setTimeout(()=>{
+      if(el.contains(overlay)) el.innerHTML = '';
+    }, 210);
   }
   function openAudit(species, type, list, showLink){
     showLink = showLink !== false;
@@ -1850,13 +2059,84 @@
   }
 
   function renderTeamComparison(){
-    contentEl.innerHTML=`<div class="panel"><h2>Team / Coach Comparison</h2><div class="row" style="align-items:flex-end;"><div><label>Scope</label>${weekSelectorHtml('compareWeek')}</div></div><div class="note" id="compareNote"></div><div id="compareBody"></div></div>`;
-    const sel=document.getElementById('compareWeek');
-    function draw(){
-      const data=teamComparisonData(sel.value); const anyWins=data.some(x=>x.wins>0); document.getElementById('compareNote').textContent=anyWins?'Win/loss records are saved with each parsed replay. Reprocess older replays once to populate them.':'Win/loss data is not present in the stored replay parses yet; reprocess the season from the Admin page to populate it.';
-      document.getElementById('compareBody').innerHTML=!data.length?`<div class="empty-state">No team data.</div>`:`<table><thead><tr><th class="rank">#</th><th>Team / Coach</th><th class="num">Games</th><th class="num">Wins</th><th class="num">Losses</th><th class="num">Win %</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Differential</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th></tr></thead><tbody>${data.map((x,i)=>{return `<tr><td class="rank">${i+1}</td><td class="pname">${escapeHtml(x.team)}</td><td class="num">${x.games}</td><td class="num kills">${x.wins}</td><td class="num taken">${x.losses}</td><td class="num">${x.games?(100*x.wins/x.games).toFixed(1)+'%':'—'}</td><td class="num kills">${x.kills}</td><td class="num taken">${x.deaths}</td><td class="num ${x.kills-x.deaths>=0?'kills':'taken'}">${x.kills-x.deaths>0?'+':''}${x.kills-x.deaths}</td><td class="num dealt">${x.dealt.toFixed(1)}</td><td class="num taken">${x.taken.toFixed(1)}</td></tr>`}).join('')}</tbody></table>`;
+    const data = teamComparisonData('ALL');
+    const assignments = STATE.settings?.franchises || {};
+    const configuredNames = STATE.settings?.conferenceNames || {};
+    const conferenceNames = {
+      one: String(configuredNames.a || 'Conference A').trim() || 'Conference A',
+      two: String(configuredNames.b || 'Conference B').trim() || 'Conference B'
+    };
+
+    // The admin page stores conference assignments by franchise name. Match those
+    // assignments case-insensitively so a harmless capitalization difference does
+    // not cause a team to disappear from its conference.
+    const conferenceFor = team => {
+      const exact = assignments[team];
+      if(exact === 'a' || exact === 'b') return exact;
+      const key = String(team||'').trim().toLowerCase();
+      const found = Object.keys(assignments).find(k => String(k).trim().toLowerCase() === key);
+      if(found && (assignments[found] === 'a' || assignments[found] === 'b')) return assignments[found];
+      return 'Unassigned';
+    };
+
+    const groups = {one:[], two:[], Unassigned:[]};
+    data.forEach(team => {
+      const conf = conferenceFor(team.team);
+      (groups[conf === 'a' ? 'one' : conf === 'b' ? 'two' : 'Unassigned']).push(team);
+    });
+
+    // Keep the same ranking logic inside each conference.
+    Object.values(groups).forEach(list => list.sort((a,b)=>
+      b.wins-a.wins ||
+      (b.kills-b.deaths)-(a.kills-a.deaths) ||
+      b.dealt-a.dealt ||
+      a.team.localeCompare(b.team,undefined,{sensitivity:'base'})
+    ));
+
+    function ladder(title, list, subtitle, extraClass=''){
+      return `<section class="conference-block ${extraClass}">
+        <div class="conference-heading">
+          <div><div class="conference-title">${escapeHtml(title)}</div><div class="conference-sub">${escapeHtml(subtitle)}</div></div>
+          <div class="conference-count">${list.length} franchise${list.length===1?'':'s'}</div>
+        </div>
+        ${list.length ? `<div class="standings-ladder">${list.map((x,i)=>{
+          const pct=x.games ? (100*x.wins/x.games).toFixed(1)+'%' : '—';
+          const diff=x.kills-x.deaths;
+          return `<div class="standings-row standings-clickable ${i===0?'top1':i===1?'top2':''}" data-standings-team="${escapeHtml(x.team)}" role="button" tabindex="0" title="View ${escapeHtml(x.team)} summary">
+            <div class="standings-rank">${i+1}</div>
+            <div class="standings-team">
+              <div class="standings-team-name">${escapeHtml(x.team)}</div>
+              <div class="standings-record">${x.wins}-${x.losses} record · ${x.games} game${x.games===1?'':'s'}</div>
+            </div>
+            <div class="standings-stat"><span class="standings-stat-label">W-L</span>${x.wins}-${x.losses}</div>
+            <div class="standings-stat standings-pct"><span class="standings-stat-label">Win %</span>${pct}</div>
+            <div class="standings-stat"><span class="standings-stat-label">K-D</span><span class="${diff>=0?'kills':'taken'}">${diff>0?'+':''}${diff}</span></div>
+            <div class="standings-stat"><span class="standings-stat-label">Damage</span>${x.dealt.toFixed(1)}</div>
+          </div>`;
+        }).join('')}</div>` : `<div class="conference-empty">No franchises assigned to this conference.</div>`}
+      </section>`;
     }
-    sel.addEventListener('change',draw); draw();
+
+    const note = Object.keys(assignments).length
+      ? 'Standings are split using the conference assignments saved in Admin → Settings. Unassigned franchises remain visible below.'
+      : 'No conference assignments have been saved yet. Assign each franchise to a conference from Admin → Settings.';
+
+    contentEl.innerHTML = `<div class="panel">
+      <h2>Standings</h2>
+      <div class="note">${escapeHtml(note)}</div>
+      <div class="conference-standings">
+        ${ladder(conferenceNames.one,groups.one,'Conference standings')}
+        ${ladder(conferenceNames.two,groups.two,'Conference standings')}
+        ${groups.Unassigned.length ? ladder('Unassigned',''+groups.Unassigned.length ? groups.Unassigned : [],'Franchises without an East/West assignment','unassigned') : ''}
+      </div>
+    </div>`;
+
+    // Reuse the exact same franchise summary card used by League Overview.
+    contentEl.querySelectorAll('[data-standings-team]').forEach(row=>{
+      const open=()=>openTeamOverview(row.dataset.standingsTeam);
+      row.addEventListener('click',open);
+      row.addEventListener('keydown',e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } });
+    });
   }
 
   function renderGoldenFist(){
@@ -1902,48 +2182,89 @@
   }
 
   function renderTeams(){
-    const statTeams = Object.keys(teamPokemonStats('ALL'));
-    const rosterTeams = Object.keys(STATE.settings?.rosters||{});
-    const teams = [...new Set([...statTeams, ...rosterTeams])].sort();
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Franchise Stats</h2>
-        <div class="note" style="margin-bottom:18px;">Full-season franchise Pokémon statistics across all processed replays.</div>
-        <div class="row franchise-controls" style="align-items:flex-end;margin-top:4px;margin-bottom:18px;">
-          <div><label>Team</label><select id="teamSelect">${teams.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
-          <div style="flex:0;"><button class="ghost" id="exportTeams">Export all teams (CSV)</button></div>
+    const data=franchiseRosterData('ALL');
+    const teams=Object.keys(data).sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+    const defaultTeam=teams[0] || '';
+
+    contentEl.innerHTML=`
+      <div class="franchise-shell">
+        <div class="franchise-header panel">
+          <div>
+            <h2>Franchise Stats</h2>
+            <div class="note">Every Pokémon shown below comes directly from the currently published roster. A Pokémon remains visible even if it has 0 appearances. Replay data only fills its statistics.</div>
+          </div>
+          <div class="franchise-actions">
+            <div>
+              <label for="franchiseTeamFilter">Franchise</label>
+              <select id="franchiseTeamFilter">
+                ${teams.map(t=>`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
+              </select>
+            </div>
+            <button class="ghost" id="exportTeams">Export CSV</button>
+          </div>
         </div>
-        ${teams.length===0 ? `<div class="empty-state">No replays processed yet.</div>` : `<div class="note" id="coachLine" style="margin:-6px 0 14px;"></div><div id="teamTable"></div>`}
+        <div id="franchiseCards" class="franchise-cards"></div>
       </div>`;
-    if(teams.length===0) return;
-    const teamSel = document.getElementById('teamSelect');
+
+    if(!teams.length){
+      document.getElementById('franchiseCards').innerHTML=`<div class="panel empty-state">No published rosters were found.</div>`;
+      return;
+    }
+
+    const cards=document.getElementById('franchiseCards');
+    const filter=document.getElementById('franchiseTeamFilter');
+    filter.value=defaultTeam;
+
     function draw(){
-      const coaches = usernamesForTeamLabel(teamSel.value);
-      document.getElementById('coachLine').innerHTML = coaches.length===0 ? '' :
-        `Coached by <strong>${coaches.map(escapeHtml).join(', ')}</strong>`;
-      const data = teamPokemonStats('ALL');
-      const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>{
-        const ac=isCurrentRosterPokemon(teamSel.value,a.species), bc=isCurrentRosterPokemon(teamSel.value,b.species);
-        if(ac!==bc) return ac ? -1 : 1;
-        return b.dealt-a.dealt || b.games-a.games || a.species.localeCompare(b.species);
-      });
-      document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
-        ${list.map((s,i)=>{
-          const current=isCurrentRosterPokemon(teamSel.value,s.species);
-          return `<tr class="${current?'':'roster-inactive'}">
+      const selected=filter.value;
+      const info=data[selected];
+      if(!info){
+        cards.innerHTML=`<div class="panel empty-state">No roster data found for this franchise.</div>`;
+        return;
+      }
+      const linked=Array.from(info.linkedPlayers).sort((a,b)=>a.localeCompare(b));
+      const total=info.total;
+      const activeMons=info.roster.filter(s=>s.appearances>0).length;
+      const sortedRoster=[...info.roster].sort((a,b)=>{ const ap=Number(a.points); const bp=Number(b.points); const aValid=Number.isFinite(ap); const bValid=Number.isFinite(bp); if(aValid&&bValid&&bp!==ap) return bp-ap; if(aValid!==bValid) return aValid?-1:1; return String(a.species||'').localeCompare(String(b.species||''),undefined,{sensitivity:'base'}); });
+      const rows=sortedRoster.map((s,i)=>`
+        <tr>
           <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}${current?'':' <span class="badge roster-badge">Off roster</span>'}</div></td>
+          <td><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
+          <td class="num">${s.points==null||s.points===''?'—':escapeHtml(s.points)}</td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
-          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
-          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
-          <td class="num">${s.games}</td>
-        </tr>`;
-        }).join('')}</tbody></table>`;
+          <td class="num kills">${s.kills}</td>
+          <td class="num taken">${s.deaths}</td>
+          <td class="num">${s.appearances}</td>
+        </tr>`).join('');
+      cards.innerHTML=`
+        <section class="franchise-card panel">
+          <div class="franchise-card-head">
+            <div>
+              <div class="franchise-title">${escapeHtml(info.name)}</div>
+              <div class="franchise-sub">${info.roster.length} rostered Pokémon · ${activeMons} with appearances</div>
+              ${linked.length ? `<div class="franchise-coaches">${linked.map(escapeHtml).join(', ')}</div>` : `<div class="franchise-coaches muted">No player↔franchise mapping found for replay stats</div>`}
+            </div>
+            <div class="franchise-total-grid">
+              <div><span>Damage</span><strong>${total.dealt.toFixed(1)}</strong></div>
+              <div><span>Taken</span><strong>${total.taken.toFixed(1)}</strong></div>
+              <div><span>Kills</span><strong>${total.kills}</strong></div>
+              <div><span>Deaths</span><strong>${total.deaths}</strong></div>
+            </div>
+          </div>
+          <div class="franchise-table-wrap">
+            <table class="franchise-table">
+              <thead><tr><th>#</th><th>Pokémon</th><th class="num">Points</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Apps</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </section>`;
+      bindPokemonClicks(cards);
     }
-    teamSel.addEventListener('change', draw);
-    document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs('ALL', 'Season'));
+
+    filter.addEventListener('change',draw);
+    document.getElementById('exportTeams').addEventListener('click',()=>exportTeamCSVs(selectedExportTeam(),'Season'));
+    function selectedExportTeam(){ return filter.value || defaultTeam; }
     draw();
   }
 
@@ -2321,8 +2642,7 @@
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
-        const opt=select.querySelector('option[data-admin-only]');
-        if(opt) opt.hidden=false;
+        select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
       }
       if(current===ADMIN) select.value=ADMIN;
     }catch(err){ console.warn('Commissioner navigation check failed:',err); }
@@ -2332,6 +2652,16 @@
     if(e.target.value) location.href=e.target.value;
   });
   setupCommissionerNav();
+})();
+</script>
+
+<script id="global-popout-animation">
+(function(){
+  const container=document.getElementById('auditModal');
+  if(!container) return;
+  const animate=()=>container.querySelectorAll('.audit-overlay:not(.popout-visible):not(.popout-closing)').forEach(o=>requestAnimationFrame(()=>requestAnimationFrame(()=>o.classList.add('popout-visible'))));
+  new MutationObserver(animate).observe(container,{childList:true,subtree:true});
+  animate();
 })();
 </script>
 </body>

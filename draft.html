@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draft Room</title>
+<style>
+  :root{
+    --bg:#0e1218;
+    --panel:#161c26;
+    --panel-alt:#1c2432;
+    --border:#2a3444;
+    --text:#e8edf5;
+    --text-dim:#8996a8;
+    --amber:#ffb454;
+    --teal:#5eead4;
+    --red:#ff7a7a;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); -webkit-font-smoothing:antialiased;}
+  #app{max-width:1320px; margin:0 auto; padding:24px 20px 60px;}
+  header{margin-bottom:16px;}
+  h1{font-size:22px; margin:0 0 2px;}
+  .sub{color:var(--text-dim); font-size:13px; margin-bottom:16px;}
+
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px;}
+  .panel + .panel{margin-top:14px;}
+  .panel h2{font-size:14px; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim);}
+  label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px;}
+  input[type=text], input[type=email], input[type=password], select{
+    width:100%; background:var(--panel-alt); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); padding:10px 12px; font-family:var(--sans); font-size:13px;
+  }
+  .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+  .row > div{flex:1; min-width:160px;}
+  button.primary{background:var(--amber); color:#1a1206; border:none; border-radius:8px; padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; font-family:var(--sans);}
+  button.primary:disabled{opacity:.5; cursor:default;}
+  button.ghost{background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 14px; font-size:12px; cursor:pointer; font-family:var(--sans);}
+  button.ghost:hover{border-color:var(--amber);}
+  button.small{padding:5px 10px; font-size:11px;}
+  .danger-btn{border-color:var(--red); color:var(--red);}
+  .foot-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+  .note{font-size:12px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
+  .note.danger{color:var(--red);}
+  .empty-state{color:var(--text-dim); font-size:13px; padding:20px 0; text-align:center;}
+  .badge{display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px; background:var(--panel-alt); border:1px solid var(--border); color:var(--text-dim); margin-right:6px;}
+
+  .clock-banner{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+  .clock-banner .who{font-size:20px; font-weight:800;}
+  .clock-banner .who .amber{color:var(--amber);}
+  .clock-banner .pickno{font-family:var(--mono); color:var(--text-dim); font-size:13px;}
+
+  .budget-strip{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
+  .budget-chip{flex:0 0 auto; min-width:150px; background:var(--panel-alt); border:1px solid var(--border); border-radius:10px; padding:10px 12px;}
+  .budget-chip.oc{border-color:var(--amber); box-shadow:0 0 0 1px var(--amber) inset;}
+  .budget-chip .team{font-weight:700; font-size:13px; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .budget-chip .amt{font-family:var(--mono); font-size:15px;}
+  .budget-chip .amt.neg{color:var(--red);}
+  .budget-chip .amt.pos{color:var(--teal);}
+
+  .pool-toolbar{display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
+  .pool-toolbar input{flex:1; min-width:200px;}
+  .tier-block{margin-bottom:16px;}
+  .tier-title{font-size:12px; font-weight:700; color:var(--amber); margin:0 0 8px; text-transform:uppercase; letter-spacing:.06em;}
+  .mon-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;}
+  .mon-card{
+    display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px;
+    border:1px solid var(--border); border-radius:10px; background:var(--panel-alt);
+    cursor:pointer; text-align:center;
+  }
+  .mon-card:hover{border-color:var(--amber);}
+  .mon-card.taken{opacity:.4; cursor:default;}
+  .mon-card.taken:hover{border-color:var(--border);}
+  .mon-card img{width:56px; height:56px; object-fit:contain; image-rendering:pixelated;}
+  .mon-card .name{font-size:12px; font-weight:700;}
+  .mon-card .pts{font-size:11px; color:var(--amber); font-family:var(--mono);}
+  .mon-card .taken-to{font-size:10px; color:var(--text-dim);}
+
+  .overlay{position:fixed; inset:0; background:rgba(6,9,14,.7); display:flex; align-items:center; justify-content:center; padding:20px; z-index:100;}
+  .overlay-box{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; max-width:420px; width:100%;}
+  .overlay-box h3{margin:0 0 4px; font-size:16px;}
+  .overlay-box .pts{color:var(--amber); font-family:var(--mono); margin-bottom:14px;}
+
+  .page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
+  .page-nav label{font-size:11px;color:var(--text-dim);font-weight:700}
+  .page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  @media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+</style>
+</head>
+<body>
+
+<div class="page-nav">
+  <label for="pageNavSelect">Page</label>
+  <select id="pageNavSelect" aria-label="Choose page">
+    <option value="index.html">My Team</option>
+    <option value="stats.html">Stats Dashboard</option>
+    <option value="rosters.html">Rosters</option>
+    <option value="team-analysis.html">Team Analysis</option>
+    <option value="free-agency.html">Free Agency</option>
+    <option value="draft.html" data-admin-only hidden>Draft Room</option>
+    <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
+  </select>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Draft Room</h1>
+    <div class="sub">Make picks live. Every pick updates budgets and published rosters immediately. <span id="seasonLabel" class="badge">Current season</span></div>
+  </header>
+  <div id="content"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
+  const SUPABASE_STATE_ID = '__dashboard_state__';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let adminUser = null;
+  let STATE = { teamMap:{}, settings:{ rosters:{}, draft:null } };
+  let PROFILES = [];
+  let loaded = false;
+  let poolFilter = '';
+  const contentEl = document.getElementById('content');
+
+  const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+  function requireAdmin(){ if(!adminUser) throw new Error('Admin login required to make picks.'); }
+
+  function defaultDraftState(){
+    return { status:'setup', mode:'manual', defaultBudget:120, budgets:{}, pool:[], order:[], currentPick:0, picks:[], updatedAt:null };
+  }
+  function normalizeDraftState(draft){
+    const d = Object.assign(defaultDraftState(), draft || {});
+    d.budgets = d.budgets && typeof d.budgets === 'object' ? d.budgets : {};
+    d.pool = Array.isArray(d.pool) ? d.pool.map(m => ({
+      id: String(m?.id ?? ''), name: String(m?.name ?? '').trim(), points: Number(m?.points) || 0,
+      drafted: !!m?.drafted, draftedBy: m?.draftedBy || null, pickNumber: m?.pickNumber ?? null
+    })).filter(m => m.id && m.name) : [];
+    d.order = Array.isArray(d.order) ? d.order.map(String) : [];
+    d.picks = Array.isArray(d.picks) ? d.picks : [];
+    d.currentPick = Number.isFinite(Number(d.currentPick)) ? Number(d.currentPick) : 0;
+    if(d.status !== 'live' && d.status !== 'complete') d.status = 'setup';
+    if(d.mode !== 'ordered') d.mode = 'manual';
+    return d;
+  }
+  function normalizeStoredRosters(rosters){
+    const out = {};
+    for(const [team, list] of Object.entries(rosters || {})){
+      out[team] = (Array.isArray(list) ? list : []).map(mon => typeof mon === 'string'
+        ? {name:mon, points:null}
+        : {name:String(mon?.name ?? ''), points:mon?.points ?? null}
+      ).filter(mon => mon.name);
+    }
+    return out;
+  }
+
+  async function loadState(){
+    const [{data, error}, {data:profilesData, error:profErr}] = await Promise.all([
+      supabase.from('replays').select('replay_id,replay_data').eq('replay_id', SUPABASE_STATE_ID).maybeSingle(),
+      supabase.from('profiles').select('id,team_name,status').eq('status','approved')
+    ]);
+    if(error) throw error;
+    if(profErr) throw profErr;
+    const shared = data?.replay_data || {};
+    STATE.teamMap = shared.teamMap || {};
+    STATE.settings = Object.assign({rosters:{}}, shared.settings || {});
+    STATE.settings.rosters = normalizeStoredRosters(STATE.settings.rosters);
+    STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
+    const seasonLabel=document.getElementById('seasonLabel'); if(seasonLabel) seasonLabel.textContent=STATE.settings.activeSeason || 'Current season';
+    PROFILES = (profilesData || []).filter(p => p.team_name);
+    loaded = true;
+  }
+
+  async function saveSharedState(){
+    requireAdmin();
+    const {error} = await supabase.from('replays').upsert([{
+      replay_id: SUPABASE_STATE_ID,
+      replay_data: {teamMap: STATE.teamMap, settings: STATE.settings},
+      updated_at: new Date().toISOString()
+    }], {onConflict:'replay_id'});
+    if(error) throw error;
+  }
+  async function savePublishedRosters(){
+    requireAdmin();
+    const {error} = await supabase.from('replays').upsert([{
+      replay_id: '__rosters__',
+      replay_data: {rosters: STATE.settings.rosters},
+      updated_at: new Date().toISOString()
+    }], {onConflict:'replay_id'});
+    if(error) throw error;
+  }
+  async function persist(){
+    await saveSharedState();
+    await savePublishedRosters();
+  }
+
+  function franchises(){
+    const fromProfiles = PROFILES.map(p => p.team_name);
+    const fromOrder = STATE.settings.draft.order || [];
+    return [...new Set([...fromProfiles, ...fromOrder])].sort();
+  }
+  function draftBudget(team){
+    const d = STATE.settings.draft;
+    const b = d.budgets[team];
+    return Number.isFinite(Number(b)) ? Number(b) : Number(d.defaultBudget) || 0;
+  }
+  function draftSpent(team){
+    return STATE.settings.draft.picks.filter(p => p.team === team).reduce((s,p) => s + (Number(p.points) || 0), 0);
+  }
+  function currentTeam(){
+    const d = STATE.settings.draft;
+    if(d.mode !== 'ordered') return null;
+    return d.order[d.currentPick] || null;
+  }
+
+  // ---------- sprites ----------
+  function spriteCandidates(name){
+    const raw = String(name || '').trim().toLowerCase().replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m');
+    const hyphenated = raw.replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    const compact = hyphenated.replace(/-/g,'');
+    const candidates = [];
+    const add = id => { if(id && !candidates.includes(id)) candidates.push(id); };
+    add(hyphenated); add(compact);
+    return candidates;
+  }
+  function spriteUrl(name){
+    const c = spriteCandidates(name)[0] || '';
+    return `https://play.pokemonshowdown.com/sprites/gen5/${c}.png`;
+  }
+
+  // ---------- pick flow ----------
+  async function makePick(mon, team){
+    requireAdmin();
+    const d = STATE.settings.draft;
+    mon.drafted = true;
+    mon.draftedBy = team;
+    mon.pickNumber = d.picks.length + 1;
+    d.picks.push({poolId: mon.id, name: mon.name, points: mon.points, team, pickNumber: mon.pickNumber, ts: new Date().toISOString()});
+    STATE.settings.rosters[team] = STATE.settings.rosters[team] || [];
+    STATE.settings.rosters[team].push({name: mon.name, points: mon.points});
+    if(d.mode === 'ordered'){
+      d.currentPick += 1;
+      if(d.currentPick >= d.order.length) d.status = 'complete';
+    }
+    d.updatedAt = new Date().toISOString();
+    await persist();
+  }
+
+  async function undoLastPick(){
+    requireAdmin();
+    const d = STATE.settings.draft;
+    const last = d.picks.pop();
+    if(!last) return;
+    const mon = d.pool.find(m => m.id === last.poolId);
+    if(mon){ mon.drafted = false; mon.draftedBy = null; mon.pickNumber = null; }
+    const list = STATE.settings.rosters[last.team] || [];
+    const idx = [...list].reverse().findIndex(m => m.name === last.name && m.points === last.points);
+    if(idx >= 0) list.splice(list.length - 1 - idx, 1);
+    if(d.mode === 'ordered' && d.currentPick > 0) d.currentPick -= 1;
+    if(d.status === 'complete') d.status = 'live';
+    d.updatedAt = new Date().toISOString();
+    await persist();
+  }
+
+  // ---------- render ----------
+  function render(){
+    if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
+    const d = STATE.settings.draft;
+
+    if(d.status === 'setup'){
+      contentEl.innerHTML = `<div class="panel">
+        <h2>Draft not started</h2>
+        <div class="note">Set up the draft board, budgets, and order in the Admin Dashboard's Draft tab, then start the draft from there.</div>
+        <div class="foot-actions"><a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Go to Admin Dashboard ↗</a></div>
+      </div>`;
+      return;
+    }
+
+    const teams = franchises();
+    const oc = currentTeam();
+    const filtered = d.pool.filter(m => !poolFilter || m.name.toLowerCase().includes(poolFilter.toLowerCase()));
+    const groups = {};
+    filtered.forEach(m => { (groups[m.points] ??= []).push(m); });
+    const tiers = Object.keys(groups).map(Number).sort((a,b) => b - a);
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <div class="clock-banner">
+          <div>
+            ${d.status === 'complete'
+              ? `<div class="who">Draft complete</div>`
+              : d.mode === 'ordered'
+                ? `<div class="who">On the clock: <span class="amber">${oc ? esc(oc) : '—'}</span></div><div class="pickno">Pick #${d.currentPick + 1} of ${d.order.length}</div>`
+                : `<div class="who">Manual mode</div><div class="pickno">Pick a Pokémon, then choose the franchise</div>`}
+          </div>
+          <div class="foot-actions" style="margin-top:0">
+            ${d.picks.length ? `<button class="ghost danger-btn" id="undoBtn">Undo last pick</button>` : ''}
+            <a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Draft setup ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Budgets</h2>
+        <div class="budget-strip">
+          ${teams.length ? teams.map(t => {
+            const spent = draftSpent(t), budget = draftBudget(t), remain = budget - spent;
+            return `<div class="budget-chip ${t === oc ? 'oc' : ''}">
+              <div class="team">${esc(t)}</div>
+              <div class="amt ${remain < 0 ? 'neg' : 'pos'}">${remain} / ${budget} pts</div>
+            </div>`;
+          }).join('') : '<div class="empty-state">No approved franchises found.</div>'}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Draft board</h2>
+        <div class="pool-toolbar">
+          <input type="text" id="poolSearch" placeholder="Search Pokémon…" value="${esc(poolFilter)}">
+          <span class="badge">${d.pool.filter(m=>!m.drafted).length} available</span>
+          <span class="badge">${d.pool.filter(m=>m.drafted).length} drafted</span>
+        </div>
+        ${tiers.length ? tiers.map(pts => `
+          <div class="tier-block">
+            <div class="tier-title">${pts} points</div>
+            <div class="mon-grid">
+              ${groups[pts].sort((a,b)=>a.name.localeCompare(b.name)).map(m => `
+                <div class="mon-card ${m.drafted ? 'taken' : ''}" ${m.drafted ? '' : `data-pick="${esc(m.id)}"`}>
+                  <img src="${spriteUrl(m.name)}" alt="${esc(m.name)}" loading="lazy" onerror="this.style.opacity=.2">
+                  <div class="name">${esc(m.name)}</div>
+                  <div class="pts">${m.points} pts</div>
+                  ${m.drafted ? `<div class="taken-to">→ ${esc(m.draftedBy || '')}</div>` : ''}
+                </div>`).join('')}
+            </div>
+          </div>`).join('') : '<div class="empty-state">No Pokémon match your search.</div>'}
+      </div>
+    `;
+
+    document.getElementById('undoBtn')?.addEventListener('click', async () => {
+      if(!confirm('Undo the most recent pick? This removes it from the board, budgets, and the roster.')) return;
+      try{ await undoLastPick(); render(); }
+      catch(e){ alert(e.message); }
+    });
+    document.getElementById('poolSearch')?.addEventListener('input', (e) => {
+      poolFilter = e.target.value;
+      render();
+      document.getElementById('poolSearch')?.focus();
+    });
+    contentEl.querySelectorAll('[data-pick]').forEach(card => {
+      card.addEventListener('click', () => openPickModal(card.dataset.pick));
+    });
+  }
+
+  function openPickModal(monId){
+    const d = STATE.settings.draft;
+    const mon = d.pool.find(m => m.id === monId);
+    if(!mon || mon.drafted) return;
+    const teams = franchises();
+    const oc = currentTeam();
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.innerHTML = `<div class="overlay-box">
+      <h3>${esc(mon.name)}</h3>
+      <div class="pts">${mon.points} points</div>
+      <label>Assign to franchise</label>
+      <select id="pickTeamSelect">
+        ${teams.map(t => `<option value="${esc(t)}" ${t === oc ? 'selected' : ''}>${esc(t)}${t===oc?' (on the clock)':''}</option>`).join('')}
+      </select>
+      <div class="note" id="pickBudgetNote"></div>
+      <div class="foot-actions">
+        <button class="primary" id="confirmPickBtn">Confirm pick</button>
+        <button class="ghost" id="cancelPickBtn">Cancel</button>
+      </div>
+      <div class="note danger" id="pickErr"></div>
+    </div>`;
+    document.body.appendChild(overlay);
+
+    const sel = overlay.querySelector('#pickTeamSelect');
+    const note = overlay.querySelector('#pickBudgetNote');
+    function updateNote(){
+      const t = sel.value;
+      const remain = draftBudget(t) - draftSpent(t);
+      note.textContent = `${t} has ${remain} pts remaining before this pick.` + (remain - mon.points < 0 ? ' This pick would put them over budget.' : '');
+      note.className = 'note' + (remain - mon.points < 0 ? ' danger' : '');
+    }
+    sel?.addEventListener('change', updateNote);
+    updateNote();
+
+    overlay.querySelector('#cancelPickBtn').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.remove(); });
+    overlay.querySelector('#confirmPickBtn').addEventListener('click', async () => {
+      const err = overlay.querySelector('#pickErr');
+      const team = sel.value;
+      if(!team){ err.textContent = 'Choose a franchise.'; return; }
+      try{
+        await makePick(mon, team);
+        overlay.remove();
+        render();
+      }catch(e){ err.textContent = e.message; }
+    });
+  }
+
+  // ---------- auth ----------
+  function showAdminError(msg){
+    let el = document.getElementById('adminError');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'adminError';
+      el.style.cssText = 'position:fixed;top:12px;right:12px;z-index:1000;max-width:420px;padding:10px 14px;border:1px solid var(--red);border-radius:8px;background:var(--panel);color:var(--red);font-size:12px;';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function showAdminLogin(){
+    const app = document.getElementById('app');
+    app.style.display = 'none';
+    document.getElementById('adminAuth')?.remove();
+    const wrap = document.createElement('div');
+    wrap.id = 'adminAuth';
+    wrap.style.cssText = 'max-width:420px;margin:80px auto;padding:24px;background:var(--panel);border:1px solid var(--border);border-radius:10px;';
+    wrap.innerHTML = `
+      <h1 style="margin:0 0 6px;font-size:22px;">Draft Room</h1>
+      <div class="sub">Sign in to run the draft.</div>
+      <label>Email</label><input id="adminEmail" type="email" autocomplete="username" placeholder="you@example.com" style="width:100%;margin-bottom:12px;">
+      <label>Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password" style="width:100%;margin-bottom:14px;">
+      <button class="primary" id="adminLoginBtn" style="width:100%;">Log in</button>
+      <div id="adminError" class="note danger" style="margin-top:10px;"></div>`;
+    document.body.appendChild(wrap);
+    document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
+    document.getElementById('adminPassword').addEventListener('keydown', e => { if(e.key === 'Enter') adminLogin(); });
+  }
+  async function adminLogin(){
+    const email = document.getElementById('adminEmail').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    if(!email || !password){ showAdminError('Enter your email and password.'); return; }
+    const btn = document.getElementById('adminLoginBtn');
+    btn.disabled = true; btn.textContent = 'Logging in…';
+    const {data, error} = await supabase.auth.signInWithPassword({email, password});
+    btn.disabled = false; btn.textContent = 'Log in';
+    if(error){ showAdminError(error.message); return; }
+    adminUser = data.user;
+    document.getElementById('adminAuth')?.remove();
+    document.getElementById('app').style.display = '';
+    try{ await loadState(); render(); }
+    catch(e){ showAdminError('Could not load draft data: ' + e.message); }
+  }
+  async function initAuth(){
+    const {data, error} = await supabase.auth.getSession();
+    if(error) throw error;
+    if(data.session){
+      adminUser = data.session.user;
+      document.getElementById('app').style.display = '';
+      return true;
+    }
+    showAdminLogin();
+    return false;
+  }
+
+  (async function init(){
+    try{
+      const authed = await initAuth();
+      if(!authed) return;
+      await loadState();
+      render();
+    }catch(e){
+      console.error(e);
+      showAdminError('Could not start the Draft Room: ' + e.message);
+    }
+  })();
+})();
+</script>
+<script>
+(function(){
+  const select = document.getElementById('pageNavSelect');
+  if(!select) return;
+  const ADMIN = 'admin.html';
+  const current = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  if(current === 'draft.html') select.value = 'draft.html';
+  else if(Array.from(select.options).some(o => o.value === current)) select.value = current;
+
+  async function setupCommissionerNav(){
+    try{
+      const client = window.supabase?.createClient(
+        'https://dfxdkkemltukxaklhcpo.supabase.co',
+        'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
+      );
+      if(!client) return;
+      const {data:{session}} = await client.auth.getSession();
+      if(!session?.user) return;
+      const {data:profile, error} = await client.from('profiles').select('is_commissioner').eq('id', session.user.id).maybeSingle();
+      if(error) throw error;
+      if(profile?.is_commissioner){
+        select.querySelectorAll('option[data-admin-only]').forEach(opt => { opt.hidden = false; });
+      }
+      if(current === ADMIN) select.value = ADMIN;
+    }catch(err){ console.warn('Commissioner navigation check failed:', err); }
+  }
+
+  select.addEventListener('change', e => { if(e.target.value) location.href = e.target.value; });
+  setupCommissionerNav();
+})();
+</script>
+</body>
+</html>

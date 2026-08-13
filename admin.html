@@ -241,6 +241,7 @@
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
+    <option value="draft.html" data-admin-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -255,6 +256,7 @@
     <button data-tab="process" class="active">Process Replays</button>
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
+    <button data-tab="draft">Draft</button>
     <button data-tab="freeagency">Free Agency</button>
     <button data-tab="trades">Trades</button>
     <button data-tab="commissioner">Commissioner</button>
@@ -292,6 +294,42 @@
     if(!adminUser) throw new Error('Admin login required to change shared data.');
   }
 
+  // ---------- Draft ----------
+  // Draft state lives inside the same shared settings blob as rosters/free
+  // agency (see saveSharedState). Nothing here creates new Supabase tables.
+  function defaultDraftState(){
+    return {
+      status: 'setup',       // 'setup' | 'live' | 'complete'
+      mode: 'manual',        // 'manual' | 'ordered'
+      defaultBudget: 120,
+      budgets: {},            // per-franchise override: {teamName: number}
+      pool: [],                // [{id,name,points,drafted,draftedBy,pickNumber}]
+      order: [],               // [teamName, teamName, ...] one entry per pick slot
+      currentPick: 0,
+      picks: [],                // [{poolId,name,points,team,pickNumber,ts}]
+      updatedAt: null
+    };
+  }
+
+  function normalizeDraftState(draft){
+    const d = Object.assign(defaultDraftState(), draft || {});
+    d.budgets = d.budgets && typeof d.budgets === 'object' ? d.budgets : {};
+    d.pool = Array.isArray(d.pool) ? d.pool.map(m => ({
+      id: String(m?.id ?? ''),
+      name: String(m?.name ?? '').trim(),
+      points: Number(m?.points) || 0,
+      drafted: !!m?.drafted,
+      draftedBy: m?.draftedBy || null,
+      pickNumber: m?.pickNumber ?? null
+    })).filter(m => m.id && m.name) : [];
+    d.order = Array.isArray(d.order) ? d.order.map(String) : [];
+    d.picks = Array.isArray(d.picks) ? d.picks : [];
+    d.currentPick = Number.isFinite(Number(d.currentPick)) ? Number(d.currentPick) : 0;
+    if(d.status !== 'live' && d.status !== 'complete') d.status = 'setup';
+    if(d.mode !== 'ordered') d.mode = 'manual';
+    return d;
+  }
+
   async function loadState(){
     loadingFromRemote = true;
     try{
@@ -314,13 +352,14 @@
       }
       STATE.replays = replays;
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true, rosters:{}}, (sharedState && sharedState.settings) || {}); STATE.settings.rosters=STATE.settings.rosters||{};
+      STATE.settings = Object.assign({caseInsensitiveNames:true, rosters:{}, franchises:{}, conferenceNames:{a:'Conference A',b:'Conference B'}}, (sharedState && sharedState.settings) || {}); STATE.settings.rosters=STATE.settings.rosters||{}; STATE.settings.franchises=STATE.settings.franchises||{}; STATE.settings.conferenceNames=STATE.settings.conferenceNames||{a:'Conference A',b:'Conference B'};
+      STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
       loaded = true;
     }catch(e){
       console.error('Supabase load failed:', e);
       STATE.replays = {};
       STATE.teamMap = {};
-      STATE.settings = {caseInsensitiveNames:true, rosters:{}};
+      STATE.settings = {caseInsensitiveNames:true, rosters:{}, franchises:{}, conferenceNames:{a:'Conference A',b:'Conference B'}, draft:defaultDraftState()};
       loaded = true;
       throw e;
     }finally{
@@ -1253,6 +1292,7 @@
     if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'rosters') return renderRosters();
+    if(activeTab === 'draft') return renderDraft();
     if(activeTab === 'freeagency') return renderFreeAgency();
     if(activeTab === 'trades') return renderTrades();
     if(activeTab === 'commissioner') return renderCommissioner();
@@ -1756,6 +1796,285 @@
   }
 
 
+  // ---------- Draft ----------
+  // Setup lives here (board, budgets, order, mode, start/reset). Making picks
+  // happens on the separate draft.html "Draft Room" page, which reads/writes
+  // the same STATE.settings.draft blob plus STATE.settings.rosters.
+  let DRAFT_ROUND_BUILDER = [];
+
+  function genDraftId(){
+    return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function draftFranchises(){
+    return [...new Set((COMM_PROFILES || []).filter(p => p.status === 'approved' && p.team_name).map(p => p.team_name))].sort();
+  }
+
+  async function saveDraft(){
+    requireAdmin();
+    STATE.settings.draft.updatedAt = new Date().toISOString();
+    await saveSharedState();
+  }
+
+  function renderDraft(){
+    contentEl.innerHTML = `<div class="empty-state">Loading draft data…</div>`;
+    (COMM_PROFILES ? Promise.resolve() : loadCommissionerData()).then(() => {
+      if(activeTab === 'draft') drawDraft();
+    }).catch(e => {
+      if(activeTab === 'draft'){
+        contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load franchises: ${escapeHtml(e.message)}</div></div>`;
+      }
+    });
+  }
+
+  function drawDraft(){
+    const d = STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
+    const franchises = draftFranchises();
+    const editable = d.status === 'setup';
+    const draftedCount = d.pool.filter(m => m.drafted).length;
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Draft status</h2>
+        <div class="row" style="align-items:center">
+          <div>
+            <span class="badge">${escapeHtml(d.status.toUpperCase())}</span>
+            <span class="badge">${d.mode === 'ordered' ? 'Ordered' : 'Manual'} mode</span>
+            <span class="badge">${draftedCount}/${d.pool.length} drafted</span>
+          </div>
+        </div>
+        <div class="note">${
+          d.status === 'setup' ? 'Set up the board, budgets, and order below, then start the draft.' :
+          d.status === 'live' ? 'The draft is live. Make picks in the Draft Room — board, budgets, and order are locked here while live.' :
+          'This draft is complete. Reset to start a new one.'
+        }</div>
+        <div class="foot-actions">
+          <a class="ghost" href="draft.html" target="_blank" rel="noopener" style="text-decoration:none; display:inline-flex; align-items:center;">Open Draft Room ↗</a>
+          ${d.status === 'setup' ? `<button class="primary" id="startDraftBtn">Start draft</button>` : ''}
+          ${d.status !== 'setup' ? `<button class="ghost danger-btn" id="resetDraftBtn">Reset draft</button>` : ''}
+        </div>
+        <div class="note danger" id="draftStatusErr"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Draft board</h2>
+        <div class="note">Import the Tier List workbook (same "DRAFT BOARD" sheet format used by Free Agency), or add Pokémon one at a time below.${editable ? '' : ' Locked while the draft is live or complete — reset the draft to make changes.'}</div>
+        ${editable ? `
+        <div class="row" style="align-items:flex-end;margin-top:10px">
+          <div><label>Draft board workbook</label><input id="draftBoardFile" type="file" accept=".xlsx,.xls,.csv"></div>
+          <div style="flex:0"><button class="ghost" id="importDraftBoard">Import / Replace board</button></div>
+        </div>
+        <div class="row" style="align-items:flex-end">
+          <div><label>Pokémon name</label><input type="text" id="draftMonName" placeholder="e.g. Landorus-Therian"></div>
+          <div style="max-width:120px"><label>Points</label><input type="text" id="draftMonPoints" placeholder="20"></div>
+          <div style="flex:0"><button class="ghost" id="addDraftMonBtn">Add to board</button></div>
+        </div>
+        <div id="draftBoardStatus" style="margin-top:8px"></div>
+        ` : ''}
+        <div style="max-height:420px;overflow:auto;margin-top:12px">
+          ${d.pool.length ? `<table><thead><tr><th>Pokémon</th><th class="num">Points</th><th>Status</th>${editable ? '<th></th>' : ''}</tr></thead><tbody>
+            ${[...d.pool].sort((a,b)=>b.points-a.points||a.name.localeCompare(b.name)).map(m => `
+              <tr>
+                <td>${escapeHtml(m.name)}</td>
+                <td class="num">${m.points}</td>
+                <td>${m.drafted ? `<span class="badge">→ ${escapeHtml(m.draftedBy || '')}</span>` : '<span class="note" style="margin:0">Available</span>'}</td>
+                ${editable ? `<td><button class="ghost small danger-btn" data-remove-mon="${escapeHtml(m.id)}">Remove</button></td>` : ''}
+              </tr>`).join('')}
+          </tbody></table>` : '<div class="empty-state">No Pokémon on the board yet.</div>'}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Budgets</h2>
+        <div class="row" style="align-items:flex-end">
+          <div><label>League default budget</label><input type="text" id="draftDefaultBudget" value="${escapeHtml(d.defaultBudget)}"></div>
+          <div style="flex:0"><button class="ghost" id="saveDefaultBudgetBtn">Save default</button></div>
+        </div>
+        <div class="note">Optional per-franchise overrides — leave blank to use the default.</div>
+        <div style="margin-top:10px">
+          ${franchises.length ? franchises.map(t => `
+            <div class="map-row">
+              <input type="text" value="${escapeHtml(t)}" disabled style="flex:2">
+              <input type="text" data-budget-override="${escapeHtml(t)}" placeholder="${escapeHtml(d.defaultBudget)}" value="${d.budgets[t] != null ? escapeHtml(d.budgets[t]) : ''}" style="flex:1">
+            </div>`).join('') : '<div class="empty-state">No approved franchises yet — approve teams in the Commissioner tab first.</div>'}
+        </div>
+        ${franchises.length ? `<div class="foot-actions"><button class="ghost" id="saveBudgetOverridesBtn">Save overrides</button></div>` : ''}
+        <div class="note danger" id="draftBudgetErr"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Draft order</h2>
+        <div class="row" style="align-items:center">
+          <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">
+            <input type="checkbox" id="draftModeToggle" ${d.mode === 'ordered' ? 'checked' : ''} ${editable ? '' : 'disabled'}>
+            Ordered draft (auto-advance through a draft order). Leave unchecked to assign picks to any franchise manually.
+          </label>
+        </div>
+        ${d.mode === 'ordered' ? `
+        <div class="note">Build one round of pick order below, then generate the full order across all rounds.</div>
+        ${editable ? `
+        <div class="row" style="align-items:flex-end">
+          <div><label>Add franchise to round order</label>
+            <select id="orderRoundSelect">${franchises.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}</select>
+          </div>
+          <div style="flex:0"><button class="ghost" id="addToRoundBtn">Add</button></div>
+          <div style="flex:0"><button class="ghost" id="clearRoundBtn">Clear round</button></div>
+        </div>
+        <div id="roundOrderList" class="note">${DRAFT_ROUND_BUILDER.length ? DRAFT_ROUND_BUILDER.map((t,i)=>`${i+1}. ${escapeHtml(t)}`).join(' · ') : 'No franchises added to the round yet.'}</div>
+        <div class="row" style="align-items:flex-end;margin-top:10px">
+          <div><label>Rounds</label><input type="text" id="draftRounds" placeholder="e.g. 8"></div>
+          <div><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px;"><input type="checkbox" id="draftSnake" checked> Snake (reverse order each round)</label></div>
+          <div style="flex:0"><button class="primary" id="generateOrderBtn">Generate full order</button></div>
+        </div>
+        ` : ''}
+        <div class="note">${d.order.length} total picks scheduled.</div>
+        ${d.order.length ? `<div class="note" style="max-height:160px;overflow:auto">${d.order.map((t,i)=>`#${i+1} ${escapeHtml(t)}`).join(' · ')}</div>` : ''}
+        ${editable && d.order.length ? `<div class="foot-actions"><button class="ghost danger-btn" id="clearOrderBtn">Clear order</button></div>` : ''}
+        ` : ''}
+        <div class="note danger" id="draftOrderErr"></div>
+      </div>
+    `;
+
+    // -- status panel --
+    document.getElementById('startDraftBtn')?.addEventListener('click', async () => {
+      const err = document.getElementById('draftStatusErr');
+      err.textContent = '';
+      if(!d.pool.length){ err.textContent = 'Add at least one Pokémon to the draft board first.'; return; }
+      if(d.mode === 'ordered' && !d.order.length){ err.textContent = 'Generate a draft order first, or switch to manual mode.'; return; }
+      try{
+        d.status = 'live';
+        d.currentPick = 0;
+        await saveDraft();
+        drawDraft();
+      }catch(e){ err.textContent = e.message; }
+    });
+    document.getElementById('resetDraftBtn')?.addEventListener('click', async () => {
+      const err = document.getElementById('draftStatusErr');
+      if(!confirm('Reset the draft? This clears every pick made so far. Pokémon return to the board as available. The draft board, budgets, and order stay as configured.')) return;
+      try{
+        d.pool.forEach(m => { m.drafted = false; m.draftedBy = null; m.pickNumber = null; });
+        d.picks = [];
+        d.currentPick = 0;
+        d.status = 'setup';
+        await saveDraft();
+        drawDraft();
+      }catch(e){ err.textContent = e.message; }
+    });
+
+    // -- draft board panel --
+    document.getElementById('importDraftBoard')?.addEventListener('click', async () => {
+      const file = document.getElementById('draftBoardFile').files?.[0];
+      const status = document.getElementById('draftBoardStatus');
+      if(!file){ status.innerHTML = '<div class="note danger">Choose a file first.</div>'; return; }
+      status.innerHTML = '<div class="note">Reading workbook…</div>';
+      try{
+        const wb = XLSX.read(await file.arrayBuffer(), {type:'array'});
+        const parsed = parseFreeAgencyWorkbook(wb); // same "DRAFT BOARD" sheet format
+        if(d.pool.some(m => m.drafted) === false && d.pool.length && !confirm(`Replace the current board (${d.pool.length} Pokémon) with ${parsed.length} from this workbook?`)) return;
+        d.pool = parsed.map(m => ({id: genDraftId(), name: m.name, points: Number(m.points) || 0, drafted:false, draftedBy:null, pickNumber:null}));
+        await saveDraft();
+        drawDraft();
+      }catch(e){
+        status.innerHTML = `<div class="note danger">${escapeHtml(e.message)}</div>`;
+      }
+    });
+    document.getElementById('addDraftMonBtn')?.addEventListener('click', async () => {
+      const status = document.getElementById('draftBoardStatus');
+      const name = document.getElementById('draftMonName').value.trim();
+      const points = Number(document.getElementById('draftMonPoints').value);
+      if(!name || !Number.isFinite(points)){ status.innerHTML = '<div class="note danger">Enter a name and a numeric point value.</div>'; return; }
+      if(d.pool.some(m => m.name.toLowerCase() === name.toLowerCase())){ status.innerHTML = '<div class="note danger">That Pokémon is already on the board.</div>'; return; }
+      try{
+        d.pool.push({id: genDraftId(), name, points, drafted:false, draftedBy:null, pickNumber:null});
+        await saveDraft();
+        drawDraft();
+      }catch(e){ status.innerHTML = `<div class="note danger">${escapeHtml(e.message)}</div>`; }
+    });
+    contentEl.querySelectorAll('[data-remove-mon]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const status = document.getElementById('draftBoardStatus');
+        try{
+          d.pool = d.pool.filter(m => m.id !== btn.dataset.removeMon);
+          await saveDraft();
+          drawDraft();
+        }catch(e){ if(status) status.innerHTML = `<div class="note danger">${escapeHtml(e.message)}</div>`; }
+      });
+    });
+
+    // -- budgets panel --
+    document.getElementById('saveDefaultBudgetBtn')?.addEventListener('click', async () => {
+      const err = document.getElementById('draftBudgetErr');
+      const val = Number(document.getElementById('draftDefaultBudget').value);
+      if(!Number.isFinite(val) || val < 0){ err.textContent = 'Enter a valid non-negative number.'; return; }
+      try{
+        d.defaultBudget = val;
+        await saveDraft();
+        drawDraft();
+      }catch(e){ err.textContent = e.message; }
+    });
+    document.getElementById('saveBudgetOverridesBtn')?.addEventListener('click', async () => {
+      const err = document.getElementById('draftBudgetErr');
+      const inputs = contentEl.querySelectorAll('[data-budget-override]');
+      const next = {};
+      for(const inp of inputs){
+        const raw = inp.value.trim();
+        if(!raw) continue;
+        const val = Number(raw);
+        if(!Number.isFinite(val) || val < 0){ err.textContent = `Invalid budget for ${inp.dataset.budgetOverride}.`; return; }
+        next[inp.dataset.budgetOverride] = val;
+      }
+      try{
+        d.budgets = next;
+        await saveDraft();
+        drawDraft();
+      }catch(e){ err.textContent = e.message; }
+    });
+
+    // -- draft order panel --
+    document.getElementById('draftModeToggle')?.addEventListener('change', async (e) => {
+      const err = document.getElementById('draftOrderErr');
+      try{
+        d.mode = e.target.checked ? 'ordered' : 'manual';
+        await saveDraft();
+        drawDraft();
+      }catch(e2){ err.textContent = e2.message; }
+    });
+    document.getElementById('addToRoundBtn')?.addEventListener('click', () => {
+      const sel = document.getElementById('orderRoundSelect');
+      if(sel && sel.value) DRAFT_ROUND_BUILDER.push(sel.value);
+      drawDraft();
+    });
+    document.getElementById('clearRoundBtn')?.addEventListener('click', () => {
+      DRAFT_ROUND_BUILDER = [];
+      drawDraft();
+    });
+    document.getElementById('generateOrderBtn')?.addEventListener('click', async () => {
+      const err = document.getElementById('draftOrderErr');
+      const rounds = Number(document.getElementById('draftRounds').value);
+      const snake = document.getElementById('draftSnake').checked;
+      if(!DRAFT_ROUND_BUILDER.length){ err.textContent = 'Add at least one franchise to the round order first.'; return; }
+      if(!Number.isFinite(rounds) || rounds < 1){ err.textContent = 'Enter a valid number of rounds.'; return; }
+      try{
+        const order = [];
+        for(let r = 0; r < rounds; r++){
+          const seq = (snake && r % 2 === 1) ? [...DRAFT_ROUND_BUILDER].reverse() : DRAFT_ROUND_BUILDER;
+          order.push(...seq);
+        }
+        d.order = order;
+        await saveDraft();
+        drawDraft();
+      }catch(e){ err.textContent = e.message; }
+    });
+    document.getElementById('clearOrderBtn')?.addEventListener('click', async () => {
+      const err = document.getElementById('draftOrderErr');
+      try{
+        d.order = [];
+        await saveDraft();
+        drawDraft();
+      }catch(e){ err.textContent = e.message; }
+    });
+  }
+
   // ---------- Free Agency ----------
   // Free Agency deliberately uses the same shared dashboard-state mechanism as
   // the existing roster importer. It does not create a replay row or alter any
@@ -2227,10 +2546,47 @@
     });
   }
 
+  function configuredFranchises(){
+    const rosters = STATE.settings.rosters || {};
+    const rosterNames = Object.keys(rosters || {}).map(String).filter(Boolean);
+    const configured = STATE.settings.franchises && typeof STATE.settings.franchises === 'object' ? STATE.settings.franchises : {};
+    const names = [...new Set([...rosterNames, ...Object.keys(configured)])].sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+    return names.map(name => ({ name, conference: configured[name] || '' }));
+  }
+
+  function saveFranchiseConferences(map){
+    STATE.settings.franchises = map;
+    return saveSettings();
+  }
+
   function renderSettings(){
     const entries = Object.entries(STATE.teamMap);
+    const franchises = configuredFranchises();
+    const conferenceMap = STATE.settings.conferenceNames || {};
+    const conferenceA = conferenceMap.a || 'Conference A';
+    const conferenceB = conferenceMap.b || 'Conference B';
     contentEl.invisible;
     contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Franchise Conferences</h2>
+        <div class="note">Every franchise from the published roster is listed below. Click its conference dropdown to assign it. This setting is stored in Admin only and does not change the roster data.</div>
+        <div class="row" style="margin-top:12px; gap:12px; align-items:end;">
+          <div style="flex:1;"><label>Conference 1 name</label><input type="text" id="conferenceNameA" value="${escapeHtml(conferenceA)}"></div>
+          <div style="flex:1;"><label>Conference 2 name</label><input type="text" id="conferenceNameB" value="${escapeHtml(conferenceB)}"></div>
+          <button class="primary" id="saveConferenceNames">Save conference names</button>
+        </div>
+        <div id="franchiseConferenceRows" style="margin-top:16px;">
+          ${franchises.length ? franchises.map(f=>`
+            <div class="map-row" style="align-items:center;">
+              <div style="flex:1; font-weight:600;">${escapeHtml(f.name)}</div>
+              <select class="franchise-conference-select" data-franchise="${escapeHtml(f.name)}" style="min-width:220px;">
+                <option value="">Unassigned</option>
+                <option value="a" ${f.conference==='a'?'selected':''}>${escapeHtml(conferenceA)}</option>
+                <option value="b" ${f.conference==='b'?'selected':''}>${escapeHtml(conferenceB)}</option>
+              </select>
+            </div>`).join('') : '<div class="empty-state">No published rosters found yet. Publish the rosters first, then every franchise will appear here.</div>'}
+        </div>
+      </div>
       <div class="panel">
         <h2>Player → Team name mapping</h2>
         <div class="note">Map each Showdown username to your league's team/trainer name, so stats group correctly. Unmapped usernames just show as-is.</div>
@@ -2290,6 +2646,31 @@
       });
     }
     drawMap();
+
+    document.getElementById('saveConferenceNames').addEventListener('click', async ()=>{
+      const a = document.getElementById('conferenceNameA').value.trim() || 'Conference A';
+      const b = document.getElementById('conferenceNameB').value.trim() || 'Conference B';
+      STATE.settings.conferenceNames = {a,b};
+      const current = STATE.settings.franchises && typeof STATE.settings.franchises === 'object' ? STATE.settings.franchises : {};
+      STATE.settings.franchises = current;
+      await saveSettings();
+      renderSettings();
+    });
+
+    document.querySelectorAll('.franchise-conference-select').forEach(select=>{
+      select.addEventListener('change', async ()=>{
+        const map = STATE.settings.franchises && typeof STATE.settings.franchises === 'object' ? {...STATE.settings.franchises} : {};
+        const franchise = select.dataset.franchise;
+        if(select.value) map[franchise] = select.value;
+        else delete map[franchise];
+        try{
+          await saveFranchiseConferences(map);
+        }catch(err){
+          alert('Could not save conference assignment: ' + err.message);
+          renderSettings();
+        }
+      });
+    });
 
     const dupPlayersEl = document.getElementById('dupPlayers');
     function drawDupPlayers(){
@@ -2392,6 +2773,7 @@
         STATE.teamMap = data.teamMap || {};
         STATE.settings = Object.assign({caseInsensitiveNames:true, rosters:{}}, data.settings || {});
         STATE.settings.rosters = STATE.settings.rosters || {};
+        STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
         await deleteRemoteRowsNotInState();
         await saveReplays();
         await saveTeamMap();
@@ -2451,8 +2833,7 @@
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
-        const opt=select.querySelector('option[data-admin-only]');
-        if(opt) opt.hidden=false;
+        select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
       }
       if(current===ADMIN) select.value=ADMIN;
     }catch(err){ console.warn('Commissioner navigation check failed:',err); }
