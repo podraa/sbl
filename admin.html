@@ -219,6 +219,7 @@
     <option value="index.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
+    <option value="free-agency.html">Free Agency</option>
   </select>
 </div>
 
@@ -236,6 +237,7 @@
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
+    <button data-tab="freeagency">Free Agency</button>
     <button data-tab="settings">Settings</button>
 
 
@@ -1230,6 +1232,7 @@
     if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'rosters') return renderRosters();
+    if(activeTab === 'freeagency') return renderFreeAgency();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
@@ -1727,6 +1730,208 @@
         btn.disabled=false;
       }
     };
+  }
+
+  function normalizeFreeAgencyName(name){
+    return String(name || '')
+      .replace(/[’']/g, '')
+      .replace(/[_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function freeAgencyKey(name){
+    return normalizeFreeAgencyName(name)
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '');
+  }
+
+  function parseFreeAgencyDraftBoard(wb){
+    const sheetName = wb.SheetNames.find(
+      s => String(s).trim().toLowerCase() === 'draft board'
+    );
+    if(!sheetName){
+      throw new Error('Could not find a "DRAFT BOARD" sheet in this workbook.');
+    }
+
+    const rows = XLSX.utils.sheet_to_json(
+      wb.Sheets[sheetName],
+      {header:1, defval:''}
+    );
+
+    const pool = [];
+
+    for(let col=0; col<(rows[0]?.length || 0); col++){
+      const header = String(rows[0]?.[col] || '').trim();
+      const match = header.match(/(\d+)\s*POINTS?/i);
+      if(!match) continue;
+
+      const points = Number(match[1]);
+      if(!Number.isFinite(points)) continue;
+
+      for(let row=1; row<rows.length; row++){
+        const raw = rows[row]?.[col];
+        if(raw === undefined || raw === null) continue;
+
+        const name = normalizeFreeAgencyName(raw);
+        if(!name) continue;
+        if(/^(pokemon|pokémon|species|name|pick|roster)$/i.test(name)) continue;
+
+        const key = freeAgencyKey(name);
+        if(!key || pool.some(x => x.key === key)) continue;
+
+        pool.push({key, name, points});
+      }
+    }
+
+    if(!pool.length){
+      throw new Error('The DRAFT BOARD was found, but no Pokémon/point values were detected.');
+    }
+
+    return pool.sort(
+      (a,b) => b.points - a.points || a.name.localeCompare(b.name)
+    );
+  }
+
+  function renderFreeAgency(){
+    const existing = STATE.settings?.freeAgency?.pool || [];
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Free Agency</h2>
+        <div class="note">
+          Import the <strong>DRAFT BOARD</strong> sheet from the Tier List workbook.
+          Each Pokémon receives the point value of the column it appears under.
+        </div>
+
+        <div class="row" style="align-items:flex-end;margin-top:14px;">
+          <div>
+            <label>Tier List workbook</label>
+            <input id="freeAgencyFile" type="file" accept=".xlsx,.xls">
+          </div>
+          <div style="flex:0;">
+            <button class="primary" id="previewFreeAgency">
+              Preview DRAFT BOARD
+            </button>
+          </div>
+        </div>
+
+        <div id="freeAgencyStatus" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Published Free Agency Pool</h2>
+        ${
+          existing.length
+          ? `<div class="note">
+               ${existing.length} Pokémon currently published.
+               ${STATE.settings.freeAgency?.source
+                 ? `Source: ${escapeHtml(STATE.settings.freeAgency.source)}`
+                 : ''}
+             </div>
+             <div class="roster-admin-grid" style="margin-top:14px;">
+               ${[...existing]
+                 .sort((a,b)=>b.points-a.points || a.name.localeCompare(b.name))
+                 .map(mon => `
+                   <div class="roster-admin-card">
+                     <h3>${escapeHtml(mon.name)}</h3>
+                     <div class="badge">${Number(mon.points)} points</div>
+                   </div>
+                 `).join('')}
+             </div>`
+          : `<div class="empty-state">No Free Agency pool has been published yet.</div>`
+        }
+      </div>
+    `;
+
+    const fileInput = document.getElementById('freeAgencyFile');
+    const previewBtn = document.getElementById('previewFreeAgency');
+    const status = document.getElementById('freeAgencyStatus');
+
+    previewBtn.addEventListener('click', async ()=>{
+      const file = fileInput.files?.[0];
+
+      if(!file){
+        status.innerHTML =
+          '<div class="note danger">Choose the Tier List workbook first.</div>';
+        return;
+      }
+
+      previewBtn.disabled = true;
+      status.innerHTML = '<div class="note">Reading DRAFT BOARD…</div>';
+
+      try{
+        const wb = XLSX.read(await file.arrayBuffer(), {type:'array'});
+        const pool = parseFreeAgencyDraftBoard(wb);
+
+        status.innerHTML = `
+          <div class="panel" style="padding:14px;">
+            <strong>DRAFT BOARD detected successfully</strong>
+            <div class="note" style="margin-top:6px;">
+              ${pool.length} Pokémon detected.
+            </div>
+
+            <div style="max-height:360px;overflow:auto;margin-top:12px;">
+              <table>
+                <thead>
+                  <tr><th>Pokémon</th><th>Points</th></tr>
+                </thead>
+                <tbody>
+                  ${pool.map(mon => `
+                    <tr>
+                      <td>${escapeHtml(mon.name)}</td>
+                      <td class="num">${mon.points}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="foot-actions" style="margin-top:14px;">
+              <button class="primary" id="publishFreeAgency">
+                Publish Free Agency
+              </button>
+              <button class="ghost" id="cancelFreeAgency">
+                Cancel
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('cancelFreeAgency').onclick = renderFreeAgency;
+
+        document.getElementById('publishFreeAgency').onclick = async ()=>{
+          const btn = document.getElementById('publishFreeAgency');
+          btn.disabled = true;
+
+          try{
+            STATE.settings = STATE.settings || {};
+            STATE.settings.freeAgency = {
+              pool,
+              source: file.name,
+              importedAt: new Date().toISOString()
+            };
+
+            await saveSettings();
+            renderFreeAgency();
+          }catch(err){
+            console.error(err);
+            status.innerHTML =
+              `<div class="note danger">
+                 Could not publish Free Agency: ${escapeHtml(err.message)}
+               </div>`;
+            btn.disabled = false;
+          }
+        };
+
+      }catch(err){
+        console.error(err);
+        status.innerHTML =
+          `<div class="note danger">${escapeHtml(err.message)}</div>`;
+      }finally{
+        previewBtn.disabled = false;
+      }
+    });
   }
 
   function renderSettings(){
