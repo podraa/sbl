@@ -71,6 +71,36 @@ body{
   text-align:right;
 }
 
+.budget-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:4px;
+  margin-top:8px;
+}
+
+.budget-label{
+  color:var(--text-dim);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.budget-value{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:var(--panel-alt);
+  color:var(--text);
+  font-size:12px;
+  font-weight:800;
+}
+
+.budget-value.negative{color:#ff8e9f}
+.budget-value.good{color:#8fe0b2}
+
 @media(max-width:700px){
   #app{width:calc(100% - 20px);padding-top:20px}
   .roster-toolbar{align-items:stretch;flex-direction:column}
@@ -210,6 +240,21 @@ h1{
 
 <body>
 
+<style>
+.page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
+.page-nav label{font-size:11px;color:var(--text-dim);font-weight:700}
+.page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+@media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+</style>
+<div class="page-nav">
+  <label for="pageNavSelect">Page</label>
+  <select id="pageNavSelect" aria-label="Choose page">
+    <option value="index.html">Stats Dashboard</option>
+    <option value="rosters.html">Rosters</option>
+    <option value="team-analysis.html">Team Analysis</option>
+  </select>
+</div>
+
 <div id="app">
   <h1>Current Rosters</h1>
   <p class="sub">Select a franchise to view its currently published Pokémon roster.</p>
@@ -244,17 +289,51 @@ const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({
 // Pokémon Showdown sprite filenames preserve hyphens for forme/name separators.
 // Keep the hyphen so names such as Ho-Oh, Porygon-Z, Landorus-Therian and
 // Necrozma-Dusk-Mane resolve to their actual sprite files.
-const sid = s => String(s || '')
-  .trim()
-  .toLowerCase()
-  .replace(/[^a-z0-9-]/g,'')
-  .replace(/-+/g,'-')
-  .replace(/^-|-$/g,'');
+function spriteCandidates(name){
+  const raw = String(name || '').trim().toLowerCase()
+    .replace(/[’\']/g,'')
+    .replace(/[♀]/g,'-f')
+    .replace(/[♂]/g,'-m');
 
-const sprite = s => `
-  <img src="https://play.pokemonshowdown.com/sprites/gen5/${sid(s)}.png"
-       alt="${esc(s)}" loading="lazy"
-       onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25'">`;
+  // Showdown has both hyphenated forme IDs and compact IDs for
+  // multi-word species such as Gouging Fire and Scream Tail.
+  const hyphenated = raw
+    .replace(/\s+/g,'-')
+    .replace(/[^a-z0-9-]/g,'')
+    .replace(/-+/g,'-')
+    .replace(/^-|-$/g,'');
+
+  const compact = hyphenated.replace(/-/g,'');
+  return [...new Set([hyphenated, compact].filter(Boolean))];
+}
+
+function sprite(s){
+  const candidates = spriteCandidates(s);
+  const urls = candidates.map(id =>
+    `https://play.pokemonshowdown.com/sprites/gen5/${id}.png`
+  );
+  return `<img class="sprite"
+    src="${urls[0] || ''}"
+    alt="${esc(s)}"
+    loading="lazy"
+    data-sprite-candidates="${esc(JSON.stringify(urls))}"
+    data-sprite-index="0"
+    onerror="spriteFallback(this)">`;
+}
+
+function spriteFallback(img){
+  let urls = [];
+  try { urls = JSON.parse(img.dataset.spriteCandidates || '[]'); } catch(e) {}
+  const next = Number(img.dataset.spriteIndex || 0) + 1;
+  if(next < urls.length){
+    img.dataset.spriteIndex = String(next);
+    img.src = urls[next];
+    return;
+  }
+  img.onerror = null;
+  img.src = 'https://play.pokemonshowdown.com/sprites/gen5/0.png';
+  img.style.opacity = '.25';
+}
 
 function normalizeRosters(raw){
   const out = {};
@@ -267,6 +346,22 @@ function normalizeRosters(raw){
     if(mons.length) out[String(team)] = mons;
   }
   return out;
+}
+
+const ROSTER_BUDGET = 120;
+
+function rosterPoints(list){
+  return (Array.isArray(list) ? list : []).reduce((sum, mon) => {
+    const points = Number(mon?.points);
+    return sum + (Number.isFinite(points) ? points : 0);
+  }, 0);
+}
+
+function budgetMarkup(list){
+  const spent = rosterPoints(list);
+  const remaining = ROSTER_BUDGET - spent;
+  const cls = remaining < 0 ? 'negative' : 'good';
+  return `<div class="budget-wrap"><div class="budget-label">Budget remaining</div><div class="budget-value ${cls}">${remaining} pts</div></div>`;
 }
 
 function renderPokemon(team, mon){
@@ -337,11 +432,11 @@ async function loadRosters(){
       const totalMons = selectedTeams.reduce((sum, name) => sum + (allRosters[name]?.length || 0), 0);
       rosterSummary.textContent = team === '__all__'
         ? `${teams.length} franchises · ${totalMons} Pokémon`
-        : `${allRosters[team]?.length || 0} Pokémon`;
+        : `${allRosters[team]?.length || 0} Pokémon · ${rosterPoints(allRosters[team])} pts spent`;
 
       content.innerHTML = `<div class="grid${team === '__all__' ? '' : ' single'}">${selectedTeams.map(name => `
         <section class="card">
-          <div class="head"><h2>${esc(name)}</h2><span class="count">${allRosters[name].length} Pokémon</span></div>
+          <div class="head"><div><h2>${esc(name)}</h2><span class="count">${allRosters[name].length} Pokémon</span></div>${budgetMarkup(allRosters[name])}</div>
           <div class="mons">${allRosters[name].map(mon => renderPokemon(name, mon)).join('')}</div>
         </section>`).join('')}</div>`;
     }
@@ -363,6 +458,14 @@ const hardTimeout = setTimeout(() => {
 
 loadRosters().finally(() => clearTimeout(hardTimeout));
 </script>
-
+<script>
+(function(){
+  const select=document.getElementById('pageNavSelect');
+  if(!select)return;
+  const current=location.pathname.split('/').pop()||'index.html';
+  select.value=['index.html','rosters.html','team-analysis.html'].includes(current)?current:'rosters.html';
+  select.addEventListener('change',()=>{ if(select.value) location.href=select.value; });
+})();
+</script>
 </body>
 </html>
