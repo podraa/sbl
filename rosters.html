@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -262,10 +263,30 @@ const sprite = s => `
     onerror="this.style.opacity='.2'"
   >`;
 
-function renderPokemon(franchise, mon){
-  const p = typeof mon === 'string'
-    ? { name: mon, points: null }
-    : mon;
+function normalizeMon(mon){
+  if(mon && typeof mon === 'object' && !Array.isArray(mon)){
+    return {
+      name: String(mon.name || 'Unknown'),
+      points: mon.points ?? null
+    };
+  }
+
+  if(typeof mon === 'string'){
+    return { name: mon, points: null };
+  }
+
+  if(Array.isArray(mon)){
+    return {
+      name: String(mon[2] || mon[0] || 'Unknown'),
+      points: Number(mon[0]) || null
+    };
+  }
+
+  return { name: 'Unknown', points: null };
+}
+
+function renderPokemon(franchise, rawMon){
+  const p = normalizeMon(rawMon);
 
   return `
     <div class="mon">
@@ -277,11 +298,12 @@ function renderPokemon(franchise, mon){
           ? `<div class="mon-points">${p.points} pts</div>`
           : ''}
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
 (async () => {
+  const content = document.getElementById('content');
+
   try{
     const {data, error} = await supabase
       .from('replays')
@@ -289,43 +311,46 @@ function renderPokemon(franchise, mon){
 
     if(error) throw error;
 
-    let settings = { rosters:{} };
+    const stateRow = (data || []).find(r => r.replay_id === '__dashboard_state__');
 
-    for(const row of (data || [])){
-      if(row.replay_id === '__dashboard_state__'){
-        settings = Object.assign(
-          settings,
-          row.replay_data?.settings || {}
-        );
-      }
-    }
-
+    const settings = stateRow?.replay_data?.settings || {};
     const rosters = settings.rosters || {};
+
     const teams = Object.keys(rosters).sort();
 
-    document.getElementById('content').innerHTML = teams.length
-      ? `
-        <div class="grid">
-          ${teams.map(team => `
+    if(!teams.length){
+      content.innerHTML = `
+        <div class="empty">
+          No rosters have been published yet.
+        </div>`;
+      return;
+    }
+
+    content.innerHTML = `
+      <div class="grid">
+        ${teams.map(team => {
+          const mons = Array.isArray(rosters[team]) ? rosters[team] : [];
+
+          return `
             <section class="card">
               <div class="head">
                 <h2>${esc(team)}</h2>
-                <span class="count">${rosters[team].length} Pokémon</span>
+                <span class="count">${mons.length} Pokémon</span>
               </div>
 
               <div class="mons">
-                ${rosters[team].map(mon => renderPokemon(team, mon)).join('')}
+                ${mons.map(mon => renderPokemon(team, mon)).join('')}
               </div>
-            </section>
-          `).join('')}
-        </div>
-      `
-      : `<div class="empty">No current rosters have been published yet.</div>`;
+            </section>`;
+        }).join('')}
+      </div>`;
 
   }catch(err){
-    document.getElementById('content').innerHTML = `
+    console.error(err);
+    content.innerHTML = `
       <div class="empty">
-        Could not load rosters: ${esc(err.message)}
+        Could not load rosters:<br>
+        ${esc(err.message)}
       </div>`;
   }
 })();
@@ -352,3 +377,4 @@ function renderPokemon(franchise, mon){
 
 </body>
 </html>
+```
