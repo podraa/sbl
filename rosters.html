@@ -7,13 +7,13 @@
 
 <style>
 :root{
-  --bg:#160308;
-  --panel:#24060d;
-  --panel-alt:#310a14;
-  --border:#4a1421;
-  --text:#f7eef0;
-  --text-dim:#b99da5;
-  --amber:#c56880;
+  --bg:#071426;
+  --panel:#0d2038;
+  --panel-alt:#142b47;
+  --border:#2b4c70;
+  --text:#eef6ff;
+  --text-dim:#9db4cc;
+  --amber:#69a9e8;
 }
 
 *{box-sizing:border-box}
@@ -290,13 +290,16 @@ const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({
 // Keep the hyphen so names such as Ho-Oh, Porygon-Z, Landorus-Therian and
 // Necrozma-Dusk-Mane resolve to their actual sprite files.
 function spriteCandidates(name){
-  const raw = String(name || '').trim().toLowerCase()
-    .replace(/[’\']/g,'')
+  const original = String(name || '').trim();
+  const raw = original.toLowerCase()
+    .replace(/[’']/g,'')
     .replace(/[♀]/g,'-f')
     .replace(/[♂]/g,'-m');
 
-  // Showdown has both hyphenated forme IDs and compact IDs for
-  // multi-word species such as Gouging Fire and Scream Tail.
+  // IMPORTANT: preserve hyphens that are actually part of the Showdown ID
+  // (Ho-Oh, Porygon-Z, Mr. Mime, Landorus-Therian, etc.).
+  // Spaces are a different case: Showdown commonly compacts those IDs
+  // (Gouging Fire -> gougingfire, Scream Tail -> screamtail).
   const hyphenated = raw
     .replace(/\s+/g,'-')
     .replace(/[^a-z0-9-]/g,'')
@@ -304,7 +307,50 @@ function spriteCandidates(name){
     .replace(/^-|-$/g,'');
 
   const compact = hyphenated.replace(/-/g,'');
-  return [...new Set([hyphenated, compact].filter(Boolean))];
+
+  // A few common Showdown aliases use an abbreviated form in roster data.
+  const aliases = {
+    // Showdown uses compact species IDs for some names, while regional/forms
+    // use a mixture of compact base names and hyphenated suffixes.
+    'mr-mime':'mrmime',
+    'mr-mime-galar':'mrmime-galar',
+    'mrmime-galar':'mrmime-galar',
+    'landorus-incarnate':'landorus',
+    'landorus-therian':'landorus-therian',
+    'landorus-t':'landorus-therian',
+    'tornadus-incarnate':'tornadus',
+    'tornadus-therian':'tornadus-therian',
+    'tornadus-t':'tornadus-therian',
+    'thundurus-incarnate':'thundurus',
+    'thundurus-therian':'thundurus-therian',
+    'thundurus-t':'thundurus-therian',
+    'enamorus-incarnate':'enamorus',
+    'enamorus-therian':'enamorus-therian',
+    'enamorus-t':'enamorus-therian',
+    'hoopa-u':'hoopa-unbound',
+    'urshifu-r':'urshifu-rapid-strike',
+    'urshifu-s':'urshifu-single-strike',
+    'necrozma-dm':'necrozma-dusk-mane',
+    'necrozma-dw':'necrozma-dawn-wings',
+    'calyrex-ice':'calyrex-ice-rider',
+    'calyrex-shadow':'calyrex-shadow-rider'
+  };
+
+  const candidates = [];
+  const add = id => { if(id && !candidates.includes(id)) candidates.push(id); };
+  add(aliases[hyphenated] || hyphenated);
+  add(hyphenated);
+  add(compact);
+  if(aliases[hyphenated]) add(aliases[hyphenated].replace(/-/g,''));
+
+  // Handle names written with spaces/punctuation that correspond to compact
+  // Showdown IDs (e.g. Mr. Mime Galar -> mrmime-galar).
+  const compactWords = raw.replace(/[^a-z0-9]+/g,'');
+  if(raw.includes('mr') && raw.includes('mime') && raw.includes('galar')) add('mrmime-galar');
+  if(raw.includes('landorus') && raw.includes('incarnate')) add('landorus');
+  add(compactWords);
+
+  return candidates;
 }
 
 function sprite(s){

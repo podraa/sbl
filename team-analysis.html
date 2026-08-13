@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Team Analysis</title>
 <style>
-:root{--bg:#160308;--panel:#24060d;--panel-alt:#310a14;--border:#4a1421;--text:#f7eef0;--text-dim:#b99da5;--amber:#c56880;--teal:#a9566d;--red:#e87891;--mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;--sans:'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+:root{--bg:#171224;--panel:#241b38;--panel-alt:#302448;--border:#51406f;--text:#f7f2ff;--text-dim:#b9aecf;--amber:#b99aff;--teal:#9d86d8;--red:#e39ab6;--mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;--sans:'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
 #app{width:min(1500px,calc(100% - 32px));margin:0 auto;padding:26px 0 64px} header{margin-bottom:24px} h1{font-size:clamp(24px,2vw,30px);margin:0 0 4px}.sub{color:var(--text-dim);font-size:14px;line-height:1.5;margin:0 0 22px}
 .toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:20px}.toolbar>div{min-width:220px;flex:1}.toolbar .fixed{flex:0 0 auto;min-width:auto} label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px} select,input{width:100%;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-family:var(--sans);font-size:13px}button{border:1px solid var(--border);background:none;color:var(--text);border-radius:8px;padding:10px 14px;font-weight:650;cursor:pointer}button:hover{border-color:var(--amber)}
@@ -259,7 +259,7 @@ const BASE_SPEED={
   porygonz:79,primeape:95,probopass:40,pyroar:106,quagsire:35,quaquaval:85,raichu:110,
   rapidash:105,rayquaza:95,regieleki:200,regidrago:80,regirock:50,registeel:50,relicanth:55,
   roaringmoon:119,roserade:90,rotom:86,sableye:50,salazzle:117,samurott:70,sandslash:65,
-  sceptile:120,scizor:65,scovillain:75,sharpedo:95,shaymin:100,shedinja:40,shiftry:80,
+  sceptile:120,scizor:65,scovillain:75,sharpedo:95,squawkabilly:92,shaymin:100,shedinja:40,shiftry:80,
   shinx:45,skarmory:70,slaking:100,slowbro:30,slowking:30,smeargle:75,sneasler:120,snorlax:30,
   solgaleo:97,spectrier:130,starmie:115,staraptor:100,steelix:30,sudowoodo:30,suicune:85,sylveon:60,
   talonflame:126,tauros:100,tentacruel:100,terapagos:71,toxapex:35,toxtricity:75,toedscruel:100,torkoal:20,
@@ -381,125 +381,70 @@ function baseSpeedForSpecies(species){
   return null;
 }
 const SPEED_CACHE = new Map();
+let SHOWDOWN_DEX_PROMISE = null;
 
-function speciesCandidates(species){
-  const original=String(species||'').trim();
-  const cleaned=original
+function showdownDexCandidates(species){
+  const original=String(species||'').trim().toLowerCase()
     .replace(/[’']/g,'')
-    .replace(/[♀]/g,'-f')
-    .replace(/[♂]/g,'-m')
-    .replace(/\./g,'')
-    .replace(/\s+/g,'-')
-    .replace(/-+/g,'-')
-    .replace(/^-|-$/g,'');
-
-  const lower=cleaned.toLowerCase();
-  const compact=lower.replace(/[^a-z0-9]/g,'');
-
+    .replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
+    .replace(/[.:]/g,'')
+    .replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
   const aliases={
-    'landorus-t':'landorus-therian',
-    'landorus-therian':'landorus-therian',
-    'tornadus-t':'tornadus-therian',
-    'tornadus-therian':'tornadus-therian',
-    'thundurus-t':'thundurus-therian',
-    'thundurus-therian':'thundurus-therian',
-    'enamorus-t':'enamorus-therian',
-    'enamorus-therian':'enamorus-therian',
-    'hoopa-u':'hoopa-unbound',
-    'hoopa-unbound':'hoopa-unbound',
-    'necrozma-dm':'necrozma-dusk-mane',
-    'necrozma-dusk-mane':'necrozma-dusk-mane',
-    'necrozma-dw':'necrozma-dawn-wings',
-    'necrozma-dawn-wings':'necrozma-dawn-wings',
-    'necrozma-ultra':'necrozma-ultra',
-    'urshifu-r':'urshifu-rapid-strike',
-    'urshifu-rapid-strike':'urshifu-rapid-strike',
-    'urshifu-s':'urshifu-single-strike',
-    'urshifu-single-strike':'urshifu-single-strike',
-    'calyrex-s':'calyrex-shadow-rider',
-    'calyrex-shadow-rider':'calyrex-shadow-rider',
-    'calyrex-i':'calyrex-ice-rider',
-    'calyrex-ice-rider':'calyrex-ice-rider',
-    'nidoran-f':'nidoran-f',
-    'nidoran-m':'nidoran-m',
-    'indeedee-f':'indeedee-female',
-    'indeedee-female':'indeedee-female',
-    'indeedee-m':'indeedee-male',
-    'indeedee-male':'indeedee-male',
-    'meowstic-f':'meowstic-female',
-    'meowstic-female':'meowstic-female',
-    'meowstic-m':'meowstic-male',
-    'meowstic-male':'meowstic-male',
-    'darmanitan-galar-zen':'darmanitan-galar-zen',
-    'darmanitan-zen':'darmanitan-zen',
-    'darmanitan-galar':'darmanitan-galar',
-    'lycanroc-midday':'lycanroc-midday',
-    'lycanroc-midnight':'lycanroc-midnight',
-    'lycanroc-dusk':'lycanroc-dusk',
-    'basculin-red-striped':'basculin-red-striped',
-    'basculin-blue-striped':'basculin-blue-striped',
-    'basculin-white-striped':'basculin-white-striped'
+    'mr-mime':'mr-mime','mr-mime-galar':'mr-mime-galar','mr-rime':'mr-rime',
+    'landorus-incarnate':'landorus','landorus-therian':'landorus-therian','landorus-t':'landorus-therian',
+    'tornadus-incarnate':'tornadus','tornadus-therian':'tornadus-therian','tornadus-t':'tornadus-therian',
+    'thundurus-incarnate':'thundurus','thundurus-therian':'thundurus-therian','thundurus-t':'thundurus-therian',
+    'enamorus-incarnate':'enamorus','enamorus-therian':'enamorus-therian','enamorus-t':'enamorus-therian',
+    'squawkabilly-blue-plumage':'squawkabilly-blue-plumage','squawkabilly-yellow-plumage':'squawkabilly-yellow-plumage',
+    'squawkabilly-white-plumage':'squawkabilly-white-plumage','squawkabilly-green-plumage':'squawkabilly-green-plumage',
+    'nidoran-f':'nidoran-f','nidoran-m':'nidoran-m','indeedee-f':'indeedee-f','indeedee-m':'indeedee-m',
+    'meowstic-f':'meowstic-f','meowstic-m':'meowstic-m'
   };
-
-  const out=[];
-  const add=x=>{
-    if(!x)return;
-    x=x.toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-');
-    if(x&&!out.includes(x))out.push(x);
-  };
-
-  add(aliases[lower]||lower);
-  add(lower);
-  add(compact);
-
-  // Showdown can use shortened form names. Try the corresponding
-  // canonical form before falling back to the base species.
-  const canonical=aliases[lower];
-  if(canonical)add(canonical);
-
-  // Remove common form suffixes one at a time.
-  const parts=lower.split('-');
-  for(let i=parts.length-1;i>=1;i--) add(parts.slice(0,i).join('-'));
-
-  // Also try the normalized base species from our embedded table.
-  const base=speedKey(species);
-  if(base) add(base);
-
+  const out=[]; const add=x=>{if(!x)return;x=String(x).replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-');if(x&&!out.includes(x))out.push(x)};
+  add(aliases[original]||original); add(original); add(original.replace(/-/g,''));
+  const parts=original.split('-'); for(let i=parts.length-1;i>=1;i--) add(parts.slice(0,i).join('-'));
   return out;
+}
+
+async function loadShowdownDex(){
+  if(SHOWDOWN_DEX_PROMISE)return SHOWDOWN_DEX_PROMISE;
+  SHOWDOWN_DEX_PROMISE=fetch('https://play.pokemonshowdown.com/data/pokedex.json',{cache:'force-cache'})
+    .then(r=>r.ok?r.json():null).catch(()=>null);
+  return SHOWDOWN_DEX_PROMISE;
 }
 
 async function fetchBaseSpeed(species){
   const cacheKey=String(species||'').trim().toLowerCase();
   if(SPEED_CACHE.has(cacheKey))return SPEED_CACHE.get(cacheKey);
 
-  // First use the embedded data when it has an exact/base match.
   const embedded=baseSpeedForSpecies(species);
-  if(embedded!==null){
-    SPEED_CACHE.set(cacheKey,embedded);
-    return embedded;
+  if(embedded!==null){SPEED_CACHE.set(cacheKey,embedded);return embedded;}
+
+  // Use the same canonical Pokédex data that Showdown itself uses. This is
+  // much more complete than maintaining a hand-written speed table.
+  const dex=await loadShowdownDex();
+  if(dex){
+    for(const slug of showdownDexCandidates(species)){
+      const d=dex[slug];
+      const value=Number(d?.baseStats?.spe);
+      if(Number.isFinite(value)){
+        SPEED_CACHE.set(cacheKey,value); return value;
+      }
+    }
   }
 
-  // Robust fallback: query PokéAPI using several canonicalized candidates.
-  // This handles Showdown hyphenated forme names instead of guessing by
-  // string prefix alone.
+  // Final fallback for anything not present in the Showdown data.
   for(const slug of speciesCandidates(species)){
     try{
       const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+encodeURIComponent(slug));
       if(!r.ok)continue;
       const d=await r.json();
       const st=(d.stats||[]).find(x=>x.stat?.name==='speed');
-      if(st){
-        const value=Number(st.base_stat);
-        if(Number.isFinite(value)){
-          SPEED_CACHE.set(cacheKey,value);
-          return value;
-        }
-      }
+      const value=Number(st?.base_stat);
+      if(Number.isFinite(value)){SPEED_CACHE.set(cacheKey,value);return value;}
     }catch(e){}
   }
-
-  SPEED_CACHE.set(cacheKey,null);
-  return null;
+  SPEED_CACHE.set(cacheKey,null); return null;
 }
 
 function maxSpeedFromBase(base,level=100){
@@ -629,19 +574,32 @@ const TYPE_CHART={
 };
 function typeChartMultiplier(attacking,defending){return TYPE_CHART[attacking]?.[defending]??1}
 const TYPE_CACHE=new Map();
-function typeSlugCandidates(species){
-  const original=String(species||'').trim().toLowerCase().replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m').replace(/[.:]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
-  const aliases={'mr-mime':'mr-mime','mr-rime':'mr-rime','mime-jr':'mime-jr','type-null':'type-null','farfetchd':'farfetchd','sirfetchd':'sirfetchd','nidoran-f':'nidoran-f','nidoran-m':'nidoran-m','landorus-t':'landorus-therian','landorus-therian':'landorus-therian','tornadus-t':'tornadus-therian','tornadus-therian':'tornadus-therian','thundurus-t':'thundurus-therian','thundurus-therian':'thundurus-therian','enamorus-t':'enamorus-therian','enamorus-therian':'enamorus-therian','hoopa-u':'hoopa-unbound','necrozma-dm':'necrozma-dusk-mane','necrozma-dw':'necrozma-dawn-wings','urshifu-r':'urshifu-rapid-strike','urshifu-s':'urshifu-single-strike','calyrex-s':'calyrex-shadow-rider','calyrex-i':'calyrex-ice-rider','indeedee-f':'indeedee-female','indeedee-m':'indeedee-male','meowstic-f':'meowstic-female','meowstic-m':'meowstic-male'};
-  const out=[]; const add=x=>{x=String(x||'').toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-');if(x&&!out.includes(x))out.push(x)};
-  add(aliases[original]||original);add(original);add(original.replace(/-/g,''));
-  const parts=original.split('-');for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
-  return out;
-}
 async function fetchTypes(species){
-  const key=String(species||'').trim().toLowerCase(); if(TYPE_CACHE.has(key))return TYPE_CACHE.get(key);
-  for(const slug of typeSlugCandidates(species)){try{const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+encodeURIComponent(slug));if(!r.ok)continue;const d=await r.json();const types=(d.types||[]).sort((a,b)=>a.slot-b.slot).map(x=>x.type?.name).filter(Boolean).map(x=>x[0].toUpperCase()+x.slice(1));if(types.length){TYPE_CACHE.set(key,types);return types}}catch(e){}}
+  const key=String(species||'').trim().toLowerCase();
+  if(TYPE_CACHE.has(key))return TYPE_CACHE.get(key);
+
+  // Prefer Showdown's own canonical Pokédex so unusual names/forms and
+  // aliases don't depend on guessing a third-party URL slug.
+  const dex=await loadShowdownDex();
+  if(dex){
+    for(const slug of showdownDexCandidates(species)){
+      const types=(dex[slug]?.types||[]).map(String).filter(Boolean);
+      if(types.length){TYPE_CACHE.set(key,types);return types;}
+    }
+  }
+
+  for(const slug of typeSlugCandidates(species)){
+    try{
+      const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+encodeURIComponent(slug));
+      if(!r.ok)continue;
+      const d=await r.json();
+      const types=(d.types||[]).sort((a,b)=>a.slot-b.slot).map(x=>x.type?.name).filter(Boolean).map(x=>x[0].toUpperCase()+x.slice(1));
+      if(types.length){TYPE_CACHE.set(key,types);return types}
+    }catch(e){}
+  }
   TYPE_CACHE.set(key,[]);return [];
 }
+
 function typePills(types){return types.length?`<div class="type-row">${types.map(t=>`<span class="type-pill type-${esc(t)}">${esc(t)}</span>`).join('')}</div>`:'<div class="type-row"><span class="type-pill type-unknown">Type unknown</span></div>'}
 function combinedMultiplier(attackingTypes,defendingTypes){if(!attackingTypes.length||!defendingTypes.length)return null;return Math.max(...attackingTypes.map(a=>defendingTypes.reduce((m,d)=>m*typeChartMultiplier(a,d),1)))}
 function defensiveMultiplier(attackingType,defendingTypes){if(!defendingTypes.length)return null;return defendingTypes.reduce((m,d)=>m*typeChartMultiplier(attackingType,d),1)}
@@ -750,7 +708,17 @@ async function renderComparison(team){
   const speedRows=[];
   for(const y of your){const yb=await fetchBaseSpeed(y.species);const ymax=yb===null?null:maxSpeedFromBase(yb,100);for(const o of opp){const ob=await fetchBaseSpeed(o.species);const omax=ob===null?null:maxSpeedFromBase(ob,100);speedRows.push({y,o,ymax,omax,scarf:ymax===null?null:scarfSpeedFromMax(ymax),oscarf:omax===null?null:scarfSpeedFromMax(omax)});}}
   const getSpeed=(y,o)=>speedRows.find(x=>x.y.species===y.species&&x.o.species===o.species)||{};
-  const speedText=(a,b)=>a==null||b==null?['Unknown','matchup-neutral']:a>b?['Faster','matchup-good']:a<b?['Slower','matchup-bad']:['Tie','matchup-neutral'];
+  // Compare max-Speed tiers rather than exposing raw Speed values.
+  // If your Pokemon is slower normally but a Choice Scarf reaches the
+  // opponent's unboosted tier, call that out explicitly.
+  const speedText=(a,b)=>{
+    if(a==null||b==null) return ['Speed unknown','matchup-neutral'];
+    const scarfA=scarfSpeedFromMax(a);
+    if(a>b) return ['Faster','matchup-good'];
+    if(a<b && scarfA>=b) return ['Slower without Scarf','matchup-neutral'];
+    if(a<b) return ['Slower','matchup-bad'];
+    return ['Same tier','matchup-neutral'];
+  };
 
 
 
@@ -767,12 +735,12 @@ async function renderComparison(team){
       const [matchup,matchupClass]=offenseMatchup(mult);
       const row=getSpeed(y,o);
       const [sl,sc]=speedText(row.ymax,row.omax);
-      return `<article class="opponent-card"><div class="top"><div class="mon-inline">${sprite(o.species,'sprite-small')}<div><div class="name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</div></div><span class="speed-badge ${sc}">${sl}</span></div><div class="matchup-result"><span class="matchup-pill ${matchupClass}">${matchup}</span><div class="label">${row.ymax!=null&&row.omax!=null?`${row.ymax} vs ${row.omax} max Speed`:'Speed unavailable'}</div></div></article>`;
+      return `<article class="opponent-card"><div class="top"><div class="mon-inline">${sprite(o.species,'sprite-small')}<div><div class="name">${esc(o.species)}</div>${typePills(oppTypes[o.species]||[])}</div></div><span class="speed-badge ${sc}">${sl}</span></div><div class="matchup-result"><span class="matchup-pill ${matchupClass}">${matchup}</span><div class="label">${row.ymax!=null&&row.omax!=null?'Speed tier comparison':'Speed tier unavailable'}</div></div></article>`;
     }).join('');
   };
   const defaultSelected=STATE.comparePokemon&&your.some(m=>m.species===STATE.comparePokemon)?STATE.comparePokemon:(your[0]?.species||'');
   const selectedMon=your.find(m=>m.species===defaultSelected)||your[0];
-  const offense=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Pick one of your Pokémon to see its matchup across the entire opposing roster. The result is type-only; it does not model move power, abilities, stats or STAB.</p><div class="matchup-select-wrap"><div><label>Your Pokémon</label><select id="offensePokemon">${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>`<option value="${esc(displaySpecies(m))}" ${m.species===selectedMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select></div><div class="matchup-selected">${selectedMon?`<div class="selected-offense-mon">${sprite(selectedMon.species)}<div><strong>${esc(selectedMon.species)}</strong>${typePills(yourTypes[selectedMon.species]||[])}<div class="small">Compare this Pokémon against the full opposing roster.</div></div></div>`:''}</div></div><div id="offenseResults" class="opponent-matchups">${renderOffenseResults(defaultSelected)}</div></section>`;
+  const offense=`<section class="panel"><h2>Offensive Matchups</h2><p class="panel-desc">Pick one of your Pokémon to see its matchup across the entire opposing roster. The result is type-only; it does not model move power, abilities, stats or STAB.</p><div class="matchup-select-wrap"><div><label>Your Pokémon</label><select id="offensePokemon">${your.slice().sort((a,b)=>(Number(b.maxSpeed??b.max??b.speed??-1)-Number(a.maxSpeed??a.max??a.speed??-1))).map(m=>`<option value="${esc(displaySpecies(m))}" ${m.species===selectedMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select></div><div class="matchup-selected">${selectedMon?`<div class="selected-offense-mon">${sprite(selectedMon.species,'sprite offense-selected-sprite').replace('<img ','<img id="offenseSelectedSprite" ')}<div><strong id="offenseSelectedName">${esc(selectedMon.species)}</strong><div id="offenseSelectedTypes">${typePills(yourTypes[selectedMon.species]||[])}</div><div class="small">Compare this Pokémon against the full opposing roster.</div></div></div>`:''}</div></div><div id="offenseResults" class="opponent-matchups">${renderOffenseResults(defaultSelected)}</div></section>`;
 
   const yourWeak=weaknessSummary(yourTypes),oppWeak=weaknessSummary(oppTypes);
   
@@ -818,44 +786,43 @@ async function render(){
       STATE.setPokemon='';
       await render();
     });
-    $('offensePokemon')?.addEventListener('change',(e)=>{
+    $('offensePokemon')?.addEventListener('change',async(e)=>{
       const species=e.target.value;
       STATE.comparePokemon=species;
       const selected=e.target.options[e.target.selectedIndex];
       const label=$('offenseSelectedName');
-      if(label) label.textContent=selected?.textContent?.trim()||species;
-      Promise.all([franchiseMons($('teamSelect').value), franchiseMons(STATE.compareOpponent||teamNames().find(x=>x!==$('teamSelect').value)||'')]).then(([y,oppMons])=>{
+      const selectedSprite=$('offenseSelectedSprite');
+      const targetTeam=$('teamSelect').value;
+      const opponentTeam=STATE.compareOpponent||teamNames().find(x=>!sameTeam(x,targetTeam))||'';
+      const [y,oppMons]=await Promise.all([franchiseMons(targetTeam),franchiseMons(opponentTeam)]);
       const target=y.find(m=>m.species===species)||y[0];
       const results=$('offenseResults');
       if(!target||!results)return;
-      Promise.all([...y,...oppMons].map(async m=>[m.species,await fetchTypes(m.species)])).then(typePairs=>{
-        const typeMap=Object.fromEntries(typePairs);
-        results.innerHTML=oppMons.map(o=>{
-          const mult=combinedMultiplier(typeMap[target.species]||[],typeMap[o.species]||[]);
-          const [tl,tc]=matchupLabel(mult);
-          const baseY=baseSpeedForSpecies(target.species);
-          const baseO=baseSpeedForSpecies(o.species);
-          const ymax=baseY==null?null:maxSpeedFromBase(baseY,100);
-          const omax=baseO==null?null:maxSpeedFromBase(baseO,100);
-          const [sl,sc]=ymax==null||omax==null?['Unknown','matchup-neutral']:ymax>omax?['Faster','matchup-good']:ymax<omax?['Slower','matchup-bad']:['Tie','matchup-neutral'];
-          return `<article class="opponent-card">
-            <div class="top">
-              <div class="mon-inline">${sprite(o.species,'sprite-small')}<div><div class="name">${esc(o.species)}</div>${typePills(typeMap[o.species]||[])}</div></div>
-              <span class="speed-badge ${sc}">${sl}</span>
-            </div>
-            <div class="matchup-result">
-              <div><div class="mult">${scoutingEffectiveness(mult)}</div><div class="small">type matchup</div></div>
-              <div class="label">${tl}<br><span class="small">${ymax!=null&&omax!=null?`${ymax} vs ${omax} max Speed`:'Speed unavailable'}</span></div>
-            </div>
-          </article>`;
-        }).join('');
-      }).catch(err=>{
-        console.error('Offensive matchup update failed:',err);
-        results.innerHTML='<div class="empty">Could not load matchup data.</div>';
-      });
-    }).catch(err=>{console.error('Roster load failed:',err);});
+      if(selectedSprite){
+        selectedSprite.src=`https://play.pokemonshowdown.com/sprites/gen5/${spriteId(target.species)}.png`;
+        selectedSprite.alt=target.species;
+        selectedSprite.style.opacity='1';
+        selectedSprite.onerror=function(){this.onerror=null;this.style.opacity='.2'};
+      }
+      if(label) label.textContent=displaySpecies(target);
+      const selectedTypes=await fetchTypes(target.species);
+      const selectedTypeMount=$('offenseSelectedTypes');
+      if(selectedTypeMount) selectedTypeMount.innerHTML=typePills(selectedTypes);
+      results.innerHTML='<div class="empty">Loading matchup data…</div>';
+      const typePairs=await Promise.all([...y,...oppMons].map(async m=>[m.species,await fetchTypes(m.species)]));
+      const typeMap=Object.fromEntries(typePairs);
+      results.innerHTML=oppMons.map(o=>{
+        const mult=combinedMultiplier(typeMap[target.species]||[],typeMap[o.species]||[]);
+        const [tl,tc]=matchupLabel(mult);
+        const baseY=baseSpeedForSpecies(target.species);
+        const baseO=baseSpeedForSpecies(o.species);
+        const ymax=baseY==null?null:maxSpeedFromBase(baseY,100);
+        const omax=baseO==null?null:maxSpeedFromBase(baseO,100);
+        const [sl,sc]=speedText(ymax,omax);
+        return `<article class="opponent-card"><div class="top"><div class="mon-inline">${sprite(o.species,'sprite-small')}<div><div class="name">${esc(o.species)}</div>${typePills(typeMap[o.species]||[])}</div></div><span class="speed-badge ${sc}">${sl}</span></div><div class="matchup-result"><div><div class="mult">${scoutingEffectiveness(mult)}</div><div class="small">type matchup</div></div><div class="label">${tl}<br><span class="small">${ymax!=null&&omax!=null?'Speed tier comparison':'Speed tier unavailable'}</span></div></div></article>`;
+      }).join('');
     });
-    $('setPokemonSelect')?.addEventListener('change',async(e)=>{
+$('setPokemonSelect')?.addEventListener('change',async(e)=>{
       STATE.setPokemon=e.target.value;
       await render();
     });
@@ -940,7 +907,7 @@ $('viewSelect').addEventListener('change',async()=>{
 });
 
 document.addEventListener('change',async(e)=>{
-  if(e.target?.id==='speedSort'){
+  if(e.target?.id==='speedOrderSelect'){
     STATE.speedSort=e.target.value;
     const team=$('teamSelect')?.value;
     if(team && $('viewSelect')?.value==='speed')$('main').innerHTML=await speedTableForTeam(team);
