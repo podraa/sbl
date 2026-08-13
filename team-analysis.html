@@ -126,17 +126,33 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 </style>
 </head>
 <body>
+<style>
+.page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
+.page-nav label{font-size:11px;color:var(--text-dim,#777);font-weight:700}
+.page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--panel,#fff);color:var(--text,#222);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+@media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+</style>
+
+<div class="page-nav">
+  <label for="pageNavSelect">Page</label>
+  <select id="pageNavSelect" aria-label="Choose page">
+    <option value="index.html">Stats Dashboard</option>
+    <option value="rosters.html">Rosters</option>
+    <option value="team-analysis.html">Team Analysis</option>
+  </select>
+</div>
+
 <div id="app">
 <header>
   <h1>Team Analysis</h1>
-  <p class="sub">Scout a franchise in depth. Review Pokémon usage, moves, observed battle patterns and available stat evidence without adding scouting logic to the main Stats Dashboard.</p>
+  <p class="sub">Scout a franchise in depth using its current roster. Historical replay data is retained, but Pokémon no longer on the roster are excluded from Team Analysis.</p>
   <div class="toolbar">
     <div><label>Franchise</label><select id="teamSelect"><option value="">Loading teams…</option></select></div>
     <div><label>View</label><select id="viewSelect">
       <option value="overview">Team Overview</option>
       <option value="speed">Speed Tiers</option><option value="comparison">Team Comparison</option>
     </select></div>
-    <div class="fixed"><button id="backDashboard">← Stats Dashboard</button></div>
+    <div class="fixed"><a class="nav-link" href="rosters.html" style="margin-right:8px;">Rosters</a><button id="backDashboard">← Stats Dashboard</button></div>
   </div>
 </header>
 <div id="main"></div>
@@ -148,7 +164,7 @@ const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
 const SUPABASE_KEY='sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
 const STATE_ID='__dashboard_state__';
 const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let STATE={replays:{},teamMap:{},settings:{caseInsensitiveNames:true},speedSort:'name'};
+let STATE={replays:{},teamMap:{},settings:{caseInsensitiveNames:true,rosters:{}},speedSort:'name'};
 const $=id=>document.getElementById(id);
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function norm(s){return String(s||'').trim().toLowerCase().replace(/[-_]/g,' ')}
@@ -159,6 +175,12 @@ function allRows(){return Object.values(STATE.replays)}
 function rowsForTeam(team){return allRows().filter(r=>teamFor(r.players?.p1)===team||teamFor(r.players?.p2)===team)}
 function sideForTeam(r,team){if(teamFor(r.players?.p1)===team)return 'p1';if(teamFor(r.players?.p2)===team)return 'p2';return null}
 function monsForSide(r,side){const out={};for(const m of Object.values(r.mons||{})){if(m.side===side)out[norm(m.species)]=m}for(const sp of (r.teamRoster?.[side]||[])){const k=norm(sp);if(!out[k])out[k]={species:sp,appearances:0,kills:0,deaths:0,damageDealt:0,damageTaken:0,moves:{}}}return Object.values(out)}
+function rosterForTeam(team){
+  const rosters=STATE.settings?.rosters||{};
+  const key=Object.keys(rosters).find(k=>norm(k)===norm(team));
+  return key ? (rosters[key]||[]) : [];
+}
+function hasCurrentRoster(team){return rosterForTeam(team).length>0}
 function aggregate(team){
   const games=rowsForTeam(team);const mons={};let wins=0;const pairCounts={};
   for(const r of games){
@@ -179,6 +201,11 @@ function aggregate(team){
       seen.push(k)
     }
     seen.sort();for(let i=0;i<seen.length;i++)for(let j=i+1;j<seen.length;j++){const key=seen[i]+'|'+seen[j];pairCounts[key]=(pairCounts[key]||0)+1}
+  }
+  if(hasCurrentRoster(team)){
+    const allowed=new Set(rosterForTeam(team).map(x=>norm(x)));
+    Object.keys(mons).forEach(k=>{if(!allowed.has(norm(mons[k].species)))delete mons[k]});
+    Object.keys(pairCounts).forEach(k=>{const [x,y]=k.split('|');if(!allowed.has(x)||!allowed.has(y))delete pairCounts[k]});
   }
   return {games,wins,losses:Math.max(0,games.length-wins),mons,pairCounts}
 }
@@ -495,31 +522,43 @@ function teamNames(){
   ]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
 
-function variantGroupName(species){
-  const raw=String(species||'').trim().toLowerCase();
-  const compact=raw.replace(/[\s_-]+/g,'');
-  const aliases={gastrodoneast:'gastrodon',gastrodonwest:'gastrodon'};
-  return aliases[compact]||raw;
+function statSignatureForMon(m){
+  const base=m.baseSpeed??m.speed??null;
+  const max=m.maxSpeed??m.max??null;
+  const scarf=m.scarfSpeed??(max!=null?scarfSpeedFromMax(Number(max)):null);
+  return `${base}|${max}|${scarf}`;
 }
 function groupEquivalentVariants(list){
   const groups=new Map(),out=[];
   for(const m of list){
-    const key=variantGroupName(m.species);
+    const key=statSignatureForMon(m);
     if(!groups.has(key)){
-      const g={...m,names:[m.species],variantGroup:key}; groups.set(key,g); out.push(g);
+      const g={...m,names:[m.species],variantCount:1};
+      groups.set(key,g);out.push(g);
     }else{
       const g=groups.get(key);
-      if(!g.names.includes(m.species))g.names.push(m.species);
+      g.names.push(m.species);
+      g.variantCount++;
       g.appearances=(Number(g.appearances)||0)+(Number(m.appearances)||0);
-      if(m.replays?.size && g.replays?.size)m.replays.forEach(x=>g.replays.add(x));
+      if(m.replays?.size && g.replays?.size) m.replays.forEach(x=>g.replays.add(x));
     }
   }
   return out;
 }
-function displaySpecies(m){return m.names?.length?m.names.join(', '):m.species;}
-function franchiseMons(team){
-  const list=Object.values(aggregate(team).mons).sort((a,b)=>b.appearances-a.appearances||a.species.localeCompare(b.species));
-  return groupEquivalentVariants(list);
+function displaySpecies(m){
+  return m.names?.length?m.names.join(', '):m.species;
+}
+
+
+async function franchiseMons(team){
+  const list=Object.values(aggregate(team).mons);
+  const enriched=await Promise.all(list.map(async m=>{
+    const base=await fetchBaseSpeed(m.species);
+    const max=base===null?null:maxSpeedFromBase(base,100);
+    return {...m,baseSpeed:base,maxSpeed:max,scarfSpeed:max===null?null:scarfSpeedFromMax(max)};
+  }));
+  enriched.sort((a,b)=>b.appearances-a.appearances||a.species.localeCompare(b.species));
+  return groupEquivalentVariants(enriched);
 }
 
 function typeChartMultiplier(attacking, defending){
@@ -770,26 +809,16 @@ async function render(){
     return;
   }
   const a=aggregate(team);
-  const list=groupEquivalentVariants(Object.values(a.mons).sort((x,y)=>y.appearances-x.appearances||y.kills-x.kills));
+  const list=Object.values(a.mons).sort((x,y)=>y.appearances-x.appearances||y.kills-x.kills);
   const pairs=Object.entries(a.pairCounts).sort((x,y)=>y[1]-x[1]).slice(0,8);
   $('main').innerHTML=`<section class="panel"><h2>${esc(team)}</h2><p class="panel-desc">This is the scouting workspace for <strong>${esc(team)}</strong>. It uses the same shared replay data as the dashboard, but keeps opponent-prep analysis separate from league statistics.</p><div class="grid overview"><div class="statbox"><div class="k">Games analyzed</div><div class="v">${a.games.length}</div></div><div class="statbox"><div class="k">Record</div><div class="v">${a.wins}-${a.losses}</div></div><div class="statbox"><div class="k">Unique Pokémon</div><div class="v">${list.length}</div></div><div class="statbox"><div class="k">Pokémon appearances</div><div class="v">${list.reduce((n,m)=>n+m.appearances,0)}</div></div></div></section>
-  <section class="panel"><h2>Pokémon scouting</h2><p class="panel-desc">Select a Pokémon to inspect the exact moves it brought in each individual replay, along with performance.</p><div class="grid pokemon-grid">${list.map(m=>`<div class="mon-card" data-mon="${esc(m.variantGroup||norm(m.species))}"><div class="mon-head">${sprite(m.species)}<div><div class="mon-name">${esc(displaySpecies(m))}</div><div class="muted">${m.replays.size} replay${m.replays.size===1?'':'s'} · ${m.appearances} appearances</div></div></div><div class="chips"><span class="chip"><b>${m.kills}</b> K</span><span class="chip"><b>${m.deaths}</b> D</span><span class="chip"><b>${m.dealt.toFixed(0)}</b> dmg</span><span class="chip"><b>${m.gameSets.filter(g=>g.moves.length).length}</b> sets recorded</span></div></div>`).join('')}</div></section>
+  <section class="panel"><h2>Pokémon scouting</h2><p class="panel-desc">Select a Pokémon to inspect the exact moves it brought in each individual replay, along with performance.</p><div class="grid pokemon-grid">${list.map(m=>`<div class="mon-card" data-mon="${esc(norm(m.species))}"><div class="mon-head">${sprite(m.species)}<div><div class="mon-name">${esc(displaySpecies(m))}</div><div class="muted">${m.replays.size} replay${m.replays.size===1?'':'s'} · ${m.appearances} appearances</div></div></div><div class="chips"><span class="chip"><b>${m.kills}</b> K</span><span class="chip"><b>${m.deaths}</b> D</span><span class="chip"><b>${m.dealt.toFixed(0)}</b> dmg</span><span class="chip"><b>${m.gameSets.filter(g=>g.moves.length).length}</b> sets recorded</span></div></div>`).join('')}</div></section>
   <section class="panel"><h2>Common Pokémon pairs</h2><p class="panel-desc">Pairs are counted when both Pokémon appeared for the selected franchise in the same replay.</p>${pairs.length?`<table><thead><tr><th>Pair</th><th class="num">Games</th></tr></thead><tbody>${pairs.map(([key,n])=>{const [x,y]=key.split('|');const names=list.filter(m=>norm(m.species)===x||norm(m.species)===y).map(m=>m.species);return `<tr><td>${names.join(' + ')||key.replace('|',' + ')}</td><td class="num">${n}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Not enough roster data.</div>'}</section>
   <div id="detail"></div>`;
   document.querySelectorAll('.mon-card').forEach(c=>c.addEventListener('click',()=>openMon(team,c.dataset.mon)));
 }
 function openMon(team,key){
-  const a=aggregate(team);
-  const matching=Object.values(a.mons).filter(m=>variantGroupName(m.species)===key||norm(m.species)===key);
-  if(!matching.length)return;
-  const m={...matching[0],names:matching.map(x=>x.species),replays:new Set(),gameSets:[],appearances:0,kills:0,deaths:0,dealt:0,taken:0};
-  for(const x of matching){
-    x.replays?.forEach(r=>m.replays.add(r));
-    m.gameSets.push(...(x.gameSets||[]));
-    m.appearances+=Number(x.appearances||0);m.kills+=Number(x.kills||0);m.deaths+=Number(x.deaths||0);
-    m.dealt+=Number(x.dealt||0);m.taken+=Number(x.taken||0);
-  }
-  const detail=$('detail');
+  const a=aggregate(team);const m=a.mons[key];if(!m)return;const detail=$('detail');
   const sets=m.gameSets.slice();
   detail.innerHTML=`<section class="panel detail open"><div class="detail-head"><div class="detail-title">${sprite(m.species)}<div><h2>${esc(displaySpecies(m))}</h2><div class="muted">${m.replays.size} replays · ${m.appearances} appearances · ${m.kills} K · ${m.deaths} D</div></div></div><button id="closeDetail">Close</button></div><div style="height:18px"></div>
   <section class="panel" style="padding:16px;margin:0 0 14px"><h2 style="font-size:17px">Sets</h2><p class="panel-desc">The individual move sets captured for <strong>${esc(displaySpecies(m))}</strong>. Each set represents one recorded instance of the Pokémon.</p>${sets.length?`<div class="set-list">${sets.map((g,i)=>`<div class="set-card"><div class="muted">Set ${i+1}</div><div class="chips">${g.moves.length?g.moves.map(x=>`<span class="chip">${esc(x)}</span>`).join(''):'<span class="small">No move lines captured</span>'}</div></div>`).join('')}</div>`:'<div class="empty">No sets are available.</div>'}</section>
@@ -797,7 +826,6 @@ function openMon(team,key){
   detail.scrollIntoView({behavior:'smooth',block:'start'});
   $('closeDetail').addEventListener('click',()=>{detail.innerHTML='';window.scrollTo({top:0,behavior:'smooth'})});
 }
-
 async function load(){
   try{
     const {data,error}=await supabase.from('replays').select('replay_id,replay_data');
@@ -805,7 +833,7 @@ async function load(){
     for(const row of data||[]){
       if(row.replay_id===STATE_ID){
         STATE.teamMap=row.replay_data?.teamMap||{};
-        STATE.settings=Object.assign(STATE.settings,row.replay_data?.settings||{});
+        STATE.settings=Object.assign(STATE.settings,row.replay_data?.settings||{}); STATE.settings.rosters=STATE.settings.rosters||{};
       }else if(row.replay_id){
         STATE.replays[row.replay_id]=row.replay_data||{};
       }
@@ -855,6 +883,18 @@ $('backDashboard').addEventListener('click',()=>{
 });
 
 load();
+})();
+</script>
+
+<script>
+(function(){
+  const select=document.getElementById('pageNavSelect');
+  if(!select)return;
+  const current=location.pathname.split('/').pop()||'index.html';
+  select.value=['index.html','rosters.html','team-analysis.html'].includes(current)?current:'index.html';
+  select.addEventListener('change',function(){
+    if(this.value) location.href=this.value;
+  });
 })();
 </script>
 </body>

@@ -427,9 +427,25 @@
 .pokemon-type-filter{min-width:150px; display:flex; flex-direction:column;}
 .pokemon-type-filter label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
 .pokemon-type-filter select{width:100%;height:38px;box-sizing:border-box;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px;font:inherit;}
-</style>
+.roster-inactive{opacity:.42;filter:grayscale(.75)} .roster-badge{margin-left:6px;font-size:9px} </style>
 </head>
 <body data-admin="false">
+<style>
+.page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
+.page-nav label{font-size:11px;color:var(--text-dim,#777);font-weight:700}
+.page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--panel,#fff);color:var(--text,#222);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+@media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+</style>
+
+<div class="page-nav">
+  <label for="pageNavSelect">Page</label>
+  <select id="pageNavSelect" aria-label="Choose page">
+    <option value="index.html">Stats Dashboard</option>
+    <option value="rosters.html">Rosters</option>
+    <option value="team-analysis.html">Team Analysis</option>
+  </select>
+</div>
+
 <div id="app">
   <header>
     <br>
@@ -446,6 +462,7 @@
     <button data-tab="causes">Death Stats</button>
     <button data-tab="teamcompare">Standings</button>
     <button data-tab="teams">Franchise Stats</button>
+    <a class="nav-link" href="rosters.html" style="align-self:center;margin-left:4px;">Rosters ↗</a>
     <a class="nav-link" href="team-analysis.html" style="align-self:center;margin-left:4px;">Team Analysis ↗</a>
     <button data-tab="replays">Replay Browser</button>
   </nav>
@@ -489,7 +506,7 @@
       }
       STATE.replays = replays;
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:''}, (sharedState && sharedState.settings) || {});
+      STATE.settings = Object.assign({caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}}, (sharedState && sharedState.settings) || {});
       STATE.settings.teamLogos = STATE.settings.teamLogos || {};
       const bp=JSON.parse(localStorage.getItem('sbl-banner-preferences')||'null'); if(bp){ STATE.settings.bannerMode=bp.bannerMode||STATE.settings.bannerMode; STATE.settings.bannerTeam=bp.bannerTeam||STATE.settings.bannerTeam; }
       loaded = true;
@@ -498,7 +515,7 @@
       if(!loaded){
         STATE.replays = {};
         STATE.teamMap = {};
-        STATE.settings = {caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:''};
+        STATE.settings = {caseInsensitiveNames:true, teamLogos:{}, bannerMode:'top', bannerTeam:'', rosters:{}};
         loaded = true;
       }
       if(IS_ADMIN_PAGE) showAdminError('Could not load shared data: ' + e.message);
@@ -1097,6 +1114,17 @@
     }
     return Object.values(out).sort((a,b)=>b.dealt-a.dealt);
   }
+
+  function rosterForTeam(team){
+    const rosters=STATE.settings?.rosters||{};
+    const key=Object.keys(rosters).find(k=>groupKey(k)===groupKey(team));
+    return key ? (rosters[key]||[]) : [];
+  }
+  function isCurrentRosterPokemon(team,species){
+    const r=rosterForTeam(team);
+    return !r.length || r.some(x=>normName(x)===normName(species));
+  }
+
   function teamPokemonStats(weekFilter){
     const groups = {}; // groupKey -> { label, species: {normSpecies -> stats} }
     for(const r of allReplays(weekFilter)){
@@ -1835,15 +1863,18 @@
       const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>b.dealt-a.dealt);
       document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team.</div>` :
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
-        ${list.map((s,i)=>`<tr>
+        ${list.map((s,i)=>{
+          const current=isCurrentRosterPokemon(teamSel.value,s.species);
+          return `<tr class="${current?'':'roster-inactive'}">
           <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
+          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}${current?'':' <span class="badge roster-badge">Off roster</span>'}</div></td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
           <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
           <td class="num">${s.games}</td>
-        </tr>`).join('')}</tbody></table>`;
+        </tr>`;
+        }).join('')}</tbody></table>`;
     }
     teamSel.addEventListener('change', draw);
     document.getElementById('exportTeams').addEventListener('click', ()=> exportTeamCSVs('ALL', 'Season'));
@@ -2200,6 +2231,18 @@
       setInterval(async ()=>{ try{ await refreshSharedState(); }catch(e){ console.warn('Shared refresh failed', e); } }, POLL_MS);
     }
   })();
+})();
+</script>
+
+<script>
+(function(){
+  const select=document.getElementById('pageNavSelect');
+  if(!select)return;
+  const current=location.pathname.split('/').pop()||'index.html';
+  select.value=['index.html','rosters.html','team-analysis.html'].includes(current)?current:'index.html';
+  select.addEventListener('change',function(){
+    if(this.value) location.href=this.value;
+  });
 })();
 </script>
 </body>

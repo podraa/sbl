@@ -203,9 +203,25 @@
   .player-group .player-table-wrap{padding:4px 14px 12px;}
   .player-group table{margin-top:6px;}
   .player-filter{max-width:320px; margin-bottom:14px;}
-</style>
+.roster-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.roster-admin-card{border:1px solid var(--border);background:var(--panel-alt);border-radius:10px;padding:12px}.roster-admin-card h3{margin:0 0 7px;font-size:14px}.roster-admin-mons{margin-top:10px;font-size:12px;line-height:1.6;color:var(--text-dim)} </style>
 </head>
 <body data-admin="true">
+<style>
+.page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
+.page-nav label{font-size:11px;color:var(--text-dim,#777);font-weight:700}
+.page-nav select{font:inherit;font-size:12px;padding:7px 30px 7px 10px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--panel,#fff);color:var(--text,#222);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+@media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}}
+</style>
+
+<div class="page-nav">
+  <label for="pageNavSelect">Page</label>
+  <select id="pageNavSelect" aria-label="Choose page">
+    <option value="index.html">Stats Dashboard</option>
+    <option value="rosters.html">Rosters</option>
+    <option value="team-analysis.html">Team Analysis</option>
+  </select>
+</div>
+
 <div id="app">
   <header>
     <h1>League Damage Dashboard</h1>
@@ -218,8 +234,10 @@
     <button data-tab="global">Leaderboards</button>
     <button data-tab="goldenfist">Golden Fist</button>
     <button data-tab="teams">Franchise Stats</button>
+    <a class="nav-link" href="rosters.html" style="align-self:center;margin-left:4px;">Rosters ↗</a>
     <a class="nav-link" href="team-analysis.html" style="align-self:center;margin-left:4px;">Team Analysis ↗</a>
     <button data-tab="players">Replays by Player</button>
+    <button data-tab="rosters">Rosters</button>
     <button data-tab="settings">Settings</button>
   </nav>
 
@@ -228,6 +246,7 @@
 <div id="auditModal"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 (function(){
   const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
@@ -261,13 +280,13 @@
       }
       STATE.replays = replays;
       STATE.teamMap = (sharedState && sharedState.teamMap) || {};
-      STATE.settings = Object.assign({caseInsensitiveNames:true}, (sharedState && sharedState.settings) || {});
+      STATE.settings = Object.assign({caseInsensitiveNames:true, rosters:{}}, (sharedState && sharedState.settings) || {}); STATE.settings.rosters=STATE.settings.rosters||{};
       loaded = true;
     }catch(e){
       console.error('Supabase load failed:', e);
       STATE.replays = {};
       STATE.teamMap = {};
-      STATE.settings = {caseInsensitiveNames:true};
+      STATE.settings = {caseInsensitiveNames:true, rosters:{}};
       loaded = true;
       throw e;
     }finally{
@@ -1126,6 +1145,7 @@
     if(activeTab === 'goldenfist') return renderGoldenFist();
     if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'players') return renderPlayers();
+    if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
@@ -1435,6 +1455,61 @@
     draw('');
   }
 
+
+  function rosterKey(s){return String(s||'').trim().toLowerCase().replace(/[\s_-]+/g,'');}
+  function parseRosterWorkbook(wb){
+    const out={};
+    const teamHeaders=['team','franchise','team name','franchise name'];
+    const monHeaders=['pokemon','pokémon','species','pokemon species','pick','roster'];
+    for(const sheet of wb.SheetNames){
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheet],{header:1,defval:''});
+      if(!rows.length)continue;
+      const headers=rows[0].map(v=>String(v).trim().toLowerCase());
+      const teamCol=headers.findIndex(h=>teamHeaders.includes(h));
+      const monCol=headers.findIndex(h=>monHeaders.includes(h));
+      const defaultTeam=String(sheet).trim();
+      for(let r=1;r<rows.length;r++){
+        const row=rows[r];
+        const team=String(teamCol>=0?row[teamCol]:defaultTeam).trim().replace(/\s+/g,' ');
+        if(!team)continue;
+        const mons=[];
+        if(monCol>=0){
+          const v=String(row[monCol]??'').trim(); if(v)mons.push(v);
+        }else{
+          for(let c=0;c<row.length;c++){if(c!==teamCol){const v=String(row[c]??'').trim();if(v)mons.push(v)}}
+        }
+        if(!out[team])out[team]=[];
+        mons.forEach(mon=>{
+          if(!mon || /^(pokemon|pokémon|species|name|pick|roster)$/i.test(mon))return;
+          if(!out[team].some(x=>rosterKey(x)===rosterKey(mon)))out[team].push(mon);
+        });
+      }
+    }
+    Object.keys(out).forEach(t=>{out[t].sort((a,b)=>a.localeCompare(b));if(!out[t].length)delete out[t]});
+    return out;
+  }
+  function renderRosters(){
+    const rosters=STATE.settings.rosters||{};
+    const teams=Object.keys(rosters).sort();
+    contentEl.innerHTML=`<div class="panel"><h2>Current Rosters</h2>
+      <div class="note">Upload an Excel/CSV roster file. You can use a <strong>Team/Franchise</strong> column plus a <strong>Pokémon/Species</strong> column, or put each team on its own sheet.</div>
+      <div class="row" style="align-items:flex-end;margin-top:14px"><div><label>Roster file</label><input id="rosterFile" type="file" accept=".xlsx,.xls,.csv"></div><div style="flex:0"><button class="primary" id="importRosters">Preview import</button></div></div>
+      <div id="rosterStatus" style="margin-top:12px"></div></div>
+      <div class="panel"><h2>Published rosters</h2>${teams.length?`<div class="roster-admin-grid">${teams.map(t=>`<div class="roster-admin-card"><h3>${escapeHtml(t)}</h3><div class="badge">${rosters[t].length} Pokémon</div><div class="roster-admin-mons">${rosters[t].map(escapeHtml).join(', ')}</div></div>`).join('')}</div>`:'<div class="empty-state">No rosters published yet.</div>'}</div>`;
+    document.getElementById('importRosters').onclick=async()=>{
+      const file=document.getElementById('rosterFile').files?.[0],status=document.getElementById('rosterStatus');
+      if(!file){status.innerHTML='<div class="note danger">Choose a file first.</div>';return}
+      try{
+        const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),parsed=parseRosterWorkbook(wb);
+        if(!Object.keys(parsed).length)throw new Error('No rosters detected. Use Team/Franchise + Pokémon/Species columns, or one sheet per team.');
+        const preview=Object.entries(parsed).map(([t,a])=>`<li><strong>${escapeHtml(t)}</strong>: ${a.length} — ${a.map(escapeHtml).join(', ')}</li>`).join('');
+        status.innerHTML=`<div class="panel" style="padding:12px"><strong>Preview</strong><ul>${preview}</ul><button class="primary" id="confirmRoster">Publish rosters</button> <button class="ghost" id="cancelRoster">Cancel</button></div>`;
+        document.getElementById('cancelRoster').onclick=renderRosters;
+        document.getElementById('confirmRoster').onclick=async()=>{STATE.settings.rosters=parsed;await saveSettings();renderRosters()};
+      }catch(e){status.innerHTML=`<div class="note danger">${escapeHtml(e.message)}</div>`}
+    };
+  }
+
   function renderSettings(){
     const entries = Object.entries(STATE.teamMap);
     contentEl.invisible;
@@ -1632,6 +1707,18 @@
       showAdminError('Admin initialization failed: ' + e.message);
     }
   })();
+})();
+</script>
+
+<script>
+(function(){
+  const select=document.getElementById('pageNavSelect');
+  if(!select)return;
+  const current=location.pathname.split('/').pop()||'index.html';
+  select.value=['index.html','rosters.html','team-analysis.html'].includes(current)?current:'index.html';
+  select.addEventListener('change',function(){
+    if(this.value) location.href=this.value;
+  });
 })();
 </script>
 </body>
