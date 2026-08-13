@@ -105,6 +105,13 @@
   .trade-cols{display:flex; gap:16px; flex-wrap:wrap; margin-top:6px;}
   .trade-col{flex:1; min-width:180px;}
   .trade-col h4{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin:0 0 4px;}
+  .trade-column-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px;align-items:start;margin-top:14px;}
+  .trade-column-main,.trade-column-side{min-width:0;}
+  .trade-history-mini{position:sticky;top:16px;}
+  .trade-tab-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--amber);color:#1a1206;font-size:10px;font-family:var(--mono);vertical-align:middle;margin-left:4px;}
+  @media(max-width:800px){.trade-column-grid{grid-template-columns:1fr;}.trade-history-mini{position:static;}}
+
 
   .roster-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px;}
   .roster-card{border:1px solid var(--border); background:var(--panel-alt); border-radius:10px; padding:12px;}
@@ -490,7 +497,7 @@
 
     el.innerHTML = `
       <h2>Propose a Trade</h2>
-      <div class="note">You can offer multiple Pokémon for multiple Pokémon as long as both sides' total points match, and neither roster drops below 10 Pokémon.</div>
+      <div class="note">You can offer multiple Pokémon for multiple Pokémon. Point totals do not have to match, but after the trade neither roster may exceed 115 points or fall below 10 Pokémon. Each team gets 8 completed trades per season.</div>
       <div class="row">
         <div>
           <label>Trade with</label>
@@ -535,15 +542,34 @@
       return Array.from(set).reduce((s,name)=>{ const m = pool.find(x=>x.name===name); return s + (m ? (Number(m.points)||0) : 0); }, 0);
     }
 
+    function currentSeason(){ return new Date().getFullYear(); }
+    function completedTradeCount(team){
+      const season = currentSeason();
+      return trades.filter(t=>
+        (t.proposer_team===team || t.target_team===team) &&
+        (t.status==='accepted' || t.status==='reverted') &&
+        new Date(t.created_at).getFullYear()===season
+      ).length;
+    }
+    function tradeLimitMessage(team){
+      const used = completedTradeCount(team);
+      return `${escapeHtml(team)} has used ${used}/8 trades this season (${8-used} remaining)`;
+    }
+
     function updateTradeSummary(){
       const summaryEl = document.getElementById('tradeSummary');
       if(!summaryEl) return;
       const offPts = totalPts('offered'), reqPts = totalPts('requested');
       const proposerAfter = roster.length - draft.offered.size + draft.requested.size;
       const targetAfter = targetIsFA ? null : ((targetRoster||[]).length - draft.requested.size + draft.offered.size);
-      const bits = [`Offered ${offPts} pts / Requested ${reqPts} pts${(draft.offered.size||draft.requested.size) ? (offPts===reqPts ? ' — balanced' : ' — must match to trade') : ''}`];
+      const pointDelta = reqPts - offPts;
+      const bits = [`Give ${offPts} pts / Get ${reqPts} pts${pointDelta===0 ? ' — balanced' : pointDelta>0 ? ` — you gain ${pointDelta} pts` : ` — you lose ${Math.abs(pointDelta)} pts`}`];
       bits.push(`Your roster after: ${proposerAfter}${proposerAfter<10?' (below 10 minimum)':''}`);
-      if(!targetIsFA) bits.push(`${escapeHtml(draft.target)}'s roster after: ${targetAfter}${targetAfter<10?' (below 10 minimum)':''}`);
+      bits.push(`${tradeLimitMessage(profile.team_name)}`);
+      if(!targetIsFA){
+        bits.push(`${escapeHtml(draft.target)} roster after: ${targetAfter}${targetAfter<10?' (below 10 minimum)':''}`);
+        bits.push(`${tradeLimitMessage(draft.target)}`);
+      }
       summaryEl.textContent = bits.join(' · ');
     }
     updateTradeSummary();
@@ -608,12 +634,53 @@
       const msgEl = document.getElementById('tradeMsg');
       if(draft.offered.size < 1 || draft.requested.size < 1){ msgEl.className='note danger'; msgEl.textContent='Select at least one Pokémon on each side.'; return; }
       const offPts = totalPts('offered'), reqPts = totalPts('requested');
-      if(offPts !== reqPts){ msgEl.className='note danger'; msgEl.textContent=`Trade must be point-balanced — offered totals ${offPts} pts but requested totals ${reqPts} pts.`; return; }
       const proposerAfter = roster.length - draft.offered.size + draft.requested.size;
-      if(proposerAfter < 10){ msgEl.className='note danger'; msgEl.textContent=`This trade would leave your roster with only ${proposerAfter} Pokémon — teams must keep at least 10.`; return; }
+      const proposerPointsAfter = rosterPoints(roster) - offPts + reqPts;
+
+      // Each team gets 8 completed trades per season. Team trades consume a
+      // slot for both teams; Free Agency trades consume a slot for the team
+      // making the pickup. Pending trades do not consume a slot.
+      const proposerUsed = completedTradeCount(profile.team_name);
+      if(proposerUsed >= 8){
+        msgEl.className='note danger';
+        msgEl.textContent=`Trade limit reached: ${profile.team_name} has used all 8 trades for ${currentSeason()}.`;
+        return;
+      }
+
+      if(proposerAfter < 10){
+        msgEl.className='note danger';
+        msgEl.textContent=`Invalid trade: your roster would have ${proposerAfter} Pokémon. Both sides must have at least 10.`;
+        return;
+      }
+
+      if(proposerPointsAfter > ROSTER_BUDGET){
+        msgEl.className='note danger';
+        msgEl.textContent=`Invalid trade: your roster would be ${proposerPointsAfter}/${ROSTER_BUDGET} points, which is ${proposerPointsAfter-ROSTER_BUDGET} over the limit. You give ${offPts} points and receive ${reqPts} points.`;
+        return;
+      }
+
       if(!targetIsFA){
         const targetAfter = (targetRoster||[]).length - draft.requested.size + draft.offered.size;
-        if(targetAfter < 10){ msgEl.className='note danger'; msgEl.textContent=`This trade would leave ${draft.target}'s roster with only ${targetAfter} Pokémon — teams must keep at least 10.`; return; }
+        const targetPointsAfter = rosterPoints(targetRoster||[]) - reqPts + offPts;
+        const targetUsed = completedTradeCount(draft.target);
+
+        if(targetUsed >= 8){
+          msgEl.className='note danger';
+          msgEl.textContent=`Invalid trade: ${draft.target} has used all 8 trades for ${currentSeason()}.`;
+          return;
+        }
+
+        if(targetAfter < 10){
+          msgEl.className='note danger';
+          msgEl.textContent=`Invalid trade: ${draft.target}'s roster would have ${targetAfter} Pokémon. Both sides must have at least 10.`;
+          return;
+        }
+
+        if(targetPointsAfter > ROSTER_BUDGET){
+          msgEl.className='note danger';
+          msgEl.textContent=`Invalid trade: ${draft.target}'s roster would be ${targetPointsAfter}/${ROSTER_BUDGET} points, which is ${targetPointsAfter-ROSTER_BUDGET} over the limit. They give ${reqPts} points and receive ${offPts} points.`;
+          return;
+        }
       }
       const btn = document.getElementById('submitTradeBtn'); btn.disabled = true;
       msgEl.className='note'; msgEl.textContent='Sending…';
@@ -664,46 +731,13 @@
     </div>`;
   }
 
-  function renderTrades(){
-    if(profile.status !== 'approved'){
-      contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can send or receive trades.</div></div>`;
-      return;
-    }
-    const myTeam = profile.team_name;
-    const incoming = trades.filter(t=>t.target_team===myTeam && t.status==='pending');
-    const outgoing = trades.filter(t=>t.proposer_team===myTeam && t.status==='pending');
-    const history = trades.filter(t=> t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam));
-
-    contentEl.innerHTML = `
-      <div class="panel">
-        <h2>Incoming <span class="badge">${incoming.length}</span></h2>
-        ${incoming.length ? incoming.map(t=>tradeCard(t,'incoming')).join('') : '<div class="empty-state">No incoming trade offers.</div>'}
-      </div>
-      <div class="panel">
-        <h2>Sent by you <span class="badge">${outgoing.length}</span></h2>
-        ${outgoing.length ? outgoing.map(t=>tradeCard(t,'outgoing')).join('') : '<div class="empty-state">You have no pending sent trades.</div>'}
-      </div>
-      <div class="panel">
-        <h2>History <span class="badge">${history.length}</span></h2>
-        ${history.length ? history.map(t=>tradeCard(t,'history')).join('') : '<div class="empty-state">No resolved trades yet.</div>'}
-      </div>
-      <div class="panel" id="proposePanel"></div>`;
-    // History/Incoming/Outgoing are always rendered above — this always runs
-    // regardless of what (or whether) a trade target has been picked, so a
-    // problem building the picker never hides trade history.
-    try{ renderProposeTrade(); }
-    catch(e){
-      const p = document.getElementById('proposePanel');
-      if(p) p.innerHTML = `<h2>Propose a Trade</h2><div class="note danger">Couldn't load the trade builder: ${escapeHtml(e.message||String(e))}</div>`;
-    }
-
+  function bindTradeActions(){
     contentEl.querySelectorAll('button[data-action]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const id = Number(btn.dataset.id);
         const action = btn.dataset.action;
         const errEl = document.getElementById(`tradeErr-${id}`);
-        errEl.className = 'note';
-        errEl.textContent = '';
+        if(errEl){ errEl.className='note'; errEl.textContent=''; }
         btn.disabled = true;
         try{
           if(action === 'accept'){
@@ -723,12 +757,106 @@
           await refreshAll();
           render();
         }catch(e){
-          errEl.className = 'note danger';
-          errEl.textContent = e.message;
+          if(errEl){
+            errEl.className = 'note danger';
+            errEl.textContent = e.message;
+          }
           btn.disabled = false;
         }
       });
     });
+  }
+
+  function renderTradeHistory(){
+    if(profile.status !== 'approved'){
+      contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can view trade history.</div></div>`;
+      return;
+    }
+    const myTeam = profile.team_name;
+    const history = trades.filter(t =>
+      t.status !== 'pending' &&
+      (t.proposer_team === myTeam || t.target_team === myTeam)
+    );
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <div class="trade-tab-head">
+          <div>
+            <h2 style="margin-bottom:4px;">Trade History <span class="badge">${history.length}</span></h2>
+            <div class="note">Completed, rejected, withdrawn, and reverted trades involving your team.</div>
+          </div>
+          <button class="ghost small" id="backToTrades">Back to Trades</button>
+        </div>
+        ${history.length
+          ? history.map(t=>tradeCard(t,'history')).join('')
+          : '<div class="empty-state">No resolved trades yet.</div>'}
+      </div>`;
+
+    document.getElementById('backToTrades').onclick = ()=>{
+      activeTab = 'trades';
+      renderTabs();
+      render();
+    };
+  }
+
+  function renderTrades(){
+    if(profile.status !== 'approved'){
+      contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can send or receive trades.</div></div>`;
+      return;
+    }
+
+    const myTeam = profile.team_name;
+    const incoming = trades.filter(t=>t.target_team===myTeam && t.status==='pending');
+    const outgoing = trades.filter(t=>t.proposer_team===myTeam && t.status==='pending');
+    const history = trades.filter(t=> t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam));
+
+    /*
+      Trade builder intentionally comes FIRST.
+      The active/pending trade queues remain underneath it.
+      History is moved to its own tab, but a compact history panel remains
+      in the Trades column so the user can still see the count and jump to it.
+    */
+    contentEl.innerHTML = `
+      <div class="panel" id="proposePanel"></div>
+
+      <div class="trade-column-grid">
+        <div class="trade-column-main">
+          <div class="panel">
+            <h2>Incoming <span class="badge">${incoming.length}</span></h2>
+            ${incoming.length ? incoming.map(t=>tradeCard(t,'incoming')).join('') : '<div class="empty-state">No incoming trade offers.</div>'}
+          </div>
+
+          <div class="panel">
+            <h2>Sent by you <span class="badge">${outgoing.length}</span></h2>
+            ${outgoing.length ? outgoing.map(t=>tradeCard(t,'outgoing')).join('') : '<div class="empty-state">You have no pending sent trades.</div>'}
+          </div>
+        </div>
+
+        <div class="trade-column-side">
+          <div class="panel trade-history-mini">
+            <h2>Trade History <span class="badge">${history.length}</span></h2>
+            <div class="note">Resolved trades are kept here as a quick reference.</div>
+            <div class="foot-actions">
+              <button class="ghost" id="viewTradeHistory">View full trade history</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    try{
+      renderProposeTrade();
+    }catch(e){
+      const p = document.getElementById('proposePanel');
+      if(p) p.innerHTML = `<h2>Propose a Trade</h2><div class="note danger">Couldn't load the trade builder: ${escapeHtml(e.message||String(e))}</div>`;
+    }
+
+    document.getElementById('viewTradeHistory')?.addEventListener('click', ()=>{
+      activeTab = 'tradehistory';
+      renderTabs();
+      render();
+    });
+
+    bindTradeActions();
   }
 
   // ---------- All Rosters tab ----------
@@ -784,9 +912,13 @@
       nav.id = 'tabs';
       contentEl.before(nav);
     }
+    const myTeam = profile && profile.team_name;
+    const incomingCount = myTeam ? trades.filter(t=>t.target_team===myTeam && t.status==='pending').length : 0;
+    const historyCount = myTeam ? trades.filter(t=>t.status!=='pending' && (t.proposer_team===myTeam || t.target_team===myTeam)).length : 0;
     const tabs = [
       ['myteam','My Team'],
-      ['trades','Trades'],
+      ['trades',`Trades${incomingCount ? ` <span class="tab-badge">${incomingCount}</span>` : ''}`],
+      ['tradehistory',`Trade History${historyCount ? ` <span class="tab-badge">${historyCount}</span>` : ''}`],
       ['rosters','All Rosters'],
       ['account','Account']
     ];
@@ -812,6 +944,7 @@
     renderTabs();
     if(activeTab === 'myteam') return renderMyTeam();
     if(activeTab === 'trades') return renderTrades();
+    if(activeTab === 'tradehistory') return renderTradeHistory();
     if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'account') return renderAccount();
   }
