@@ -443,6 +443,7 @@
     <option value="index.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
+    <option value="free-agency.html">Free Agency</option>
   </select>
 </div>
 
@@ -2302,7 +2303,7 @@
   const select=document.getElementById('pageNavSelect');
   if(!select)return;
   const current=location.pathname.split('/').pop()||'index.html';
-  select.value=['index.html','rosters.html','team-analysis.html'].includes(current)?current:'index.html';
+  select.value=['index.html','rosters.html','team-analysis.html','free-agency.html'].includes(current)?current:'index.html';
   select.addEventListener('change',function(){
     if(this.value) location.href=this.value;
   });

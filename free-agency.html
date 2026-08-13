@@ -172,7 +172,9 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??''). replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 const key=s=>String(s||''). trim().toLowerCase()
-  .replace(/[\u2018\u2019]/g,'')
+  .replace(/[\u2018\u2019']/g,'')
+  .replace(/[♀]/g,'-f')
+  .replace(/[♂]/g,'-m')
   .replace(/[\s_]+/g,'-')
   .replace(/[^a-z0-9-]/g,'')
   .replace(/-+/g,'-')
@@ -225,26 +227,47 @@ function sprite(name){
     `onerror="(function(i){var us=JSON.parse(i.dataset.spriteUrls||'[]');var nx=Number(i.dataset.spriteIdx||0)+1;if(nx<us.length){i.dataset.spriteIdx=nx;i.src=us[nx];}else{i.onerror=null;i.style.opacity='.25';}})(this)">`;
 }
 
-// Fetch types from PokeAPI. Uses the base-form name (strips formes for the lookup).
-// Results are cached in typeCache so each mon is only fetched once per session.
+// Fetch types from PokeAPI. Results are cached in typeCache so each mon is
+// only fetched once per session.
+//
+// Previously this stripped forme suffixes (Therian, Dusk-Mane, Wellspring, …)
+// using a fixed, hand-maintained list of known suffix words before calling
+// the API. Any name whose forme wasn't in that list (or names with gender
+// symbols, punctuation, etc.) would 404, and the failure was cached as a
+// permanent empty type list — silently and permanently dropping that mon out
+// of every type-filter result, even though it does have that type.
+//
+// Instead, try the full name first, then progressively fall back to shorter
+// prefixes (dropping one trailing hyphen-segment at a time) until PokeAPI
+// resolves something. This mirrors the sprite-fallback approach used
+// elsewhere in the app and doesn't depend on an exhaustive suffix list.
 async function fetchTypes(name){
   const k=key(name);
   if(typeCache[k]) return typeCache[k];
-  // Strip forme suffix for the API call — PokeAPI uses base species IDs
-  const apiName=k.split('-')[0]=== 'mr'||k.startsWith('mr-')?
-    k : // keep mr-mime etc whole
-    k.replace(/-(?:therian|incarnate|black|white|sky|land|origin|primal|mega|alola|galar|hisui|paldea|original|hero|teal|aqua|blaze|rapid|single|dusk|dawn|ultra|bond|ash|blade|shield|crowned|eternamax|gmax|stellar|bloodmoon|wellspring|hearthflame|cornerstone|family|four|combat|resolute|confined|unbound|pirouette|aria|cosplay|rock-star|belle|pop-star|phd|libre|wormadam-sandy|wormadam-trash|east|west|striped|blue|orange|red|sunshine|midnight|midday|dusk|dawn|ice|noice|original|zen|standard|low-key|amped|ice-face|noice-face|hangry|full-belly|gulping|gorging|three-segment|two-segment|one-segment|roaming|curly|droopy|stretchy|phony|antique|mightiest|paldean|combat-breed|blaze-breed|aqua-breed).*/,'');
-  try{
-    const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+apiName);
-    if(!r.ok) throw new Error('not found');
-    const d=await r.json();
-    const types=d.types.map(t=>t.type.name);
-    typeCache[k]=types;
-    return types;
-  }catch{
-    typeCache[k]=[];
-    return [];
+
+  const candidates=[];
+  const add=id=>{ if(id && !candidates.includes(id)) candidates.push(id); };
+  add(k);
+  let parts=k.split('-');
+  while(parts.length>1){
+    parts=parts.slice(0,-1);
+    add(parts.join('-'));
   }
+
+  for(const apiName of candidates){
+    try{
+      const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+apiName);
+      if(!r.ok) continue;
+      const d=await r.json();
+      const types=d.types.map(t=>t.type.name);
+      typeCache[k]=types;
+      return types;
+    }catch{
+      // network hiccup — try the next, shorter candidate
+    }
+  }
+  typeCache[k]=[];
+  return [];
 }
 
 // Kick off type fetches for all mons in the pool, non-blocking.
