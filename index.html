@@ -161,7 +161,7 @@
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
     <option value="index.html" selected>My Team</option>
-  </select>
+  <option value="__admin_dashboard__" data-admin-only="true" hidden>Admin Dashboard</option></select>
 </div>
 
 <div id="app">
@@ -183,10 +183,6 @@
 
   const appEl = document.getElementById('app');
   const contentEl = document.getElementById('content');
-
-  document.getElementById('pageNavSelect').addEventListener('change', e=>{
-    if(e.target.value) location.href = e.target.value;
-  });
 
   let session = null;
   let profile = null;
@@ -445,11 +441,6 @@
             <div class="budget-bar"><div class="budget-fill${pts>ROSTER_BUDGET?' over':''}" style="width:${pct}%"></div></div>
             <div class="budget-row"><span>Remaining</span><span class="budget-value">${Math.max(0, ROSTER_BUDGET-pts)} pts</span></div>
           </div>
-          <div class="budget-card">
-            <div class="budget-row"><span>Trades remaining</span><span class="budget-value">${tradeAllowance(profile.team_name).remaining}</span></div>
-            <div class="budget-row"><span>Season allowance</span><span>${8 + tradeAllowance(profile.team_name).credits}</span></div>
-            ${tradeAllowance(profile.team_name).credits ? `<div class="note">Includes ${tradeAllowance(profile.team_name).credits} commissioner credit${tradeAllowance(profile.team_name).credits===1?'':'s'}.</div>` : ''}
-          </div>
         </div>
       </div>
 
@@ -574,17 +565,9 @@
         new Date(t.created_at).getFullYear()===season
       ).length;
     }
-    function tradeAllowance(team){
-      const isMine = team === profile?.team_name;
-      const credits = isMine ? Math.max(0, Number(profile?.trade_credits) || 0) : 0;
-      const used = completedTradeCount(team);
-      const remaining = Math.max(0, 8 + credits - used);
-      return {used, credits, remaining};
-    }
-
     function tradeLimitMessage(team){
-      const a = tradeAllowance(team);
-      return `${escapeHtml(team)} has used ${a.used}/${8 + a.credits} trades this season (${a.remaining} remaining${a.credits ? ` · ${a.credits} extra credited` : ''})`;
+      const used = completedTradeCount(team);
+      return `${escapeHtml(team)} has used ${used}/8 trades this season (${8-used} remaining)`;
     }
 
     function updateTradeSummary(){
@@ -671,10 +654,10 @@
       // Each team gets 8 completed trades per season. Team trades consume a
       // slot for both teams; Free Agency trades consume a slot for the team
       // making the pickup. Pending trades do not consume a slot.
-      const proposerAllowance = tradeAllowance(profile.team_name);
-      if(proposerAllowance.remaining <= 0){
+      const proposerUsed = completedTradeCount(profile.team_name);
+      if(proposerUsed >= 8){
         msgEl.className='note danger';
-        msgEl.textContent=`Trade limit reached: ${profile.team_name} has no trades remaining for ${currentSeason()}.`;
+        msgEl.textContent=`Trade limit reached: ${profile.team_name} has used all 8 trades for ${currentSeason()}.`;
         return;
       }
 
@@ -693,11 +676,11 @@
       if(!targetIsFA){
         const targetAfter = (targetRoster||[]).length - draft.requested.size + draft.offered.size;
         const targetPointsAfter = rosterPoints(targetRoster||[]) - reqPts + offPts;
-        const targetAllowance = tradeAllowance(draft.target);
+        const targetUsed = completedTradeCount(draft.target);
 
-        if(targetAllowance.remaining <= 0){
+        if(targetUsed >= 8){
           msgEl.className='note danger';
-          msgEl.textContent=`Invalid trade: ${draft.target} has no trades remaining for ${currentSeason()}.`;
+          msgEl.textContent=`Invalid trade: ${draft.target} has used all 8 trades for ${currentSeason()}.`;
           return;
         }
 
@@ -1058,6 +1041,17 @@
       if(event === 'SIGNED_OUT'){ session=null; profile=null; trades=[]; render(); }
     });
   })();
+})();
+</script>
+<script>
+(function(){
+ const s=document.getElementById('pageNavSelect'); if(!s)return;
+ let o=s.querySelector('option[data-admin-only]');
+ if(!o){o=document.createElement('option');o.value='__admin_dashboard__';o.textContent='Admin Dashboard';o.dataset.adminOnly='true';o.hidden=true;s.appendChild(o);}
+ const client=window.supabase?window.supabase.createClient('https://dfxdkkemltukxaklhcpo.supabase.co','sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'):null;
+ async function init(){try{if(!client)return;const {data:{session}}=await client.auth.getSession();if(session?.user){const {data:p}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();if(p?.is_commissioner)o.hidden=false;}}catch(e){console.warn('Admin nav check failed',e)} setCurrent();}
+ function setCurrent(){const cur=location.pathname.split('/').pop()||'index.html';s.value=cur==='admin.html'?'__admin_dashboard__':(Array.from(s.options).some(x=>x.value===cur)?cur:s.value);}
+ s.addEventListener('change',()=>location.href=s.value==='__admin_dashboard__'?'admin.html':s.value); init();
 })();
 </script>
 </body>

@@ -136,12 +136,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 <div class="page-nav">
   <label for="pageNavSelect">Page</label>
   <select id="pageNavSelect" aria-label="Choose page">
-    <option value="index.html">My Team</option>
-    <option value="stats.html">Stats Dashboard</option>
+    <option value="index.html">Stats Dashboard</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-  </select>
+  <option value="__admin_dashboard__" data-admin-only="true" hidden>Admin Dashboard</option></select>
 </div>
 
 <div id="app">
@@ -933,6 +932,17 @@ load();
   select.addEventListener('change',function(){
     if(this.value) location.href=this.value;
   });
+})();
+</script>
+<script>
+(function(){
+ const s=document.getElementById('pageNavSelect'); if(!s)return;
+ let o=s.querySelector('option[data-admin-only]');
+ if(!o){o=document.createElement('option');o.value='__admin_dashboard__';o.textContent='Admin Dashboard';o.dataset.adminOnly='true';o.hidden=true;s.appendChild(o);}
+ const client=window.supabase?window.supabase.createClient('https://dfxdkkemltukxaklhcpo.supabase.co','sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'):null;
+ async function init(){try{if(!client)return;const {data:{session}}=await client.auth.getSession();if(session?.user){const {data:p}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();if(p?.is_commissioner)o.hidden=false;}}catch(e){console.warn('Admin nav check failed',e)} setCurrent();}
+ function setCurrent(){const cur=location.pathname.split('/').pop()||'index.html';s.value=cur==='admin.html'?'__admin_dashboard__':(Array.from(s.options).some(x=>x.value===cur)?cur:s.value);}
+ s.addEventListener('change',()=>location.href=s.value==='__admin_dashboard__'?'admin.html':s.value); init();
 })();
 </script>
 </body>

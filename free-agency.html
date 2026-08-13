@@ -146,7 +146,7 @@ input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-  </select>
+  <option value="__admin_dashboard__" data-admin-only="true" hidden>Admin Dashboard</option></select>
 </div>
 
 <div id="app">
@@ -486,6 +486,17 @@ $("pageNavSelect").value='free-agency.html';
 $("pageNavSelect").onchange=e=>location.href=e.target.value;
 load().catch(e=>$("main").innerHTML=`<div class="empty">Could not load Free Agency: ${esc(String(e?.message||e))}</div>`);
 setInterval(()=>{if(!document.hidden)load().catch(()=>{});},5000);
+})();
+</script>
+<script>
+(function(){
+ const s=document.getElementById('pageNavSelect'); if(!s)return;
+ let o=s.querySelector('option[data-admin-only]');
+ if(!o){o=document.createElement('option');o.value='__admin_dashboard__';o.textContent='Admin Dashboard';o.dataset.adminOnly='true';o.hidden=true;s.appendChild(o);}
+ const client=window.supabase?window.supabase.createClient('https://dfxdkkemltukxaklhcpo.supabase.co','sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'):null;
+ async function init(){try{if(!client)return;const {data:{session}}=await client.auth.getSession();if(session?.user){const {data:p}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();if(p?.is_commissioner)o.hidden=false;}}catch(e){console.warn('Admin nav check failed',e)} setCurrent();}
+ function setCurrent(){const cur=location.pathname.split('/').pop()||'index.html';s.value=cur==='admin.html'?'__admin_dashboard__':(Array.from(s.options).some(x=>x.value===cur)?cur:s.value);}
+ s.addEventListener('change',()=>location.href=s.value==='__admin_dashboard__'?'admin.html':s.value); init();
 })();
 </script>
 </body></html>
