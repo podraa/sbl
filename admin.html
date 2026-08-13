@@ -247,17 +247,14 @@
   <header>
     <h1>League Damage Dashboard</h1>
     <div class="sub">Paste replay links → auto-parsed stats → running season totals + weekly CSVs</div>
-    <div class="ticker" id="ticker"></div>
   </header>
 
   <nav class="tabs" id="tabs">
     <button data-tab="process" class="active">Process Replays</button>
-    <button data-tab="global">Leaderboards</button>
-    <button data-tab="goldenfist">Golden Fist</button>
-    <button data-tab="teams">Franchise Stats</button>
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
     <button data-tab="freeagency">Free Agency</button>
+    <button data-tab="trades">Trades</button>
     <button data-tab="commissioner">Commissioner</button>
     <button data-tab="settings">Settings</button>
 
@@ -1187,6 +1184,7 @@
 
   function renderTicker(){
     const ticker = document.getElementById('ticker');
+    if(!ticker) return;
     const top = globalPokemonStats('ALL').slice(0,6);
     if(top.length === 0){
       ticker.innerHTML = `<div class="tick empty"><div class="lbl">Season</div><div class="val">No games processed yet</div></div>`;
@@ -1245,7 +1243,7 @@
   }
 
   function render(){
-    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'players');
+    document.getElementById('app').classList.toggle('wide', activeTab === 'players');
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     if(activeTab === 'process') return renderProcess();
     if(activeTab === 'global') return renderLeaderboards();
@@ -1254,6 +1252,7 @@
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'freeagency') return renderFreeAgency();
+    if(activeTab === 'trades') return renderTrades();
     if(activeTab === 'commissioner') return renderCommissioner();
     if(activeTab === 'settings') return renderSettings();
   }
@@ -1880,6 +1879,17 @@
     });
   }
 
+  function renderTrades(){
+    contentEl.innerHTML = `<div class="empty-state">Loading trades…</div>`;
+    loadCommissionerData().then(()=>{
+      if(activeTab === 'trades') drawTrades();
+    }).catch(e=>{
+      if(activeTab === 'trades'){
+        contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load trades: ${escapeHtml(e.message)}</div></div>`;
+      }
+    });
+  }
+
   function commClaimRow(p, showApproveReject){
     return `<div class="trade-card">
       <div class="trade-head">
@@ -1909,7 +1919,7 @@
     const canRevoke = t.status !== 'pending';
     const canRevert = t.status === 'accepted';
     const isFA = t.target_team === null;
-    const canAcceptFA = isFA && t.status === 'pending';
+    const canCredit = t.status === 'pending';
     const canRejectFA = isFA && t.status === 'pending';
 
     return `<div class="trade-card">
@@ -1924,8 +1934,15 @@
         <div class="trade-col"><h4>Offered</h4><div class="note">${(t.mons_offered||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
         <div class="trade-col"><h4>Requested</h4><div class="note">${(t.mons_requested||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
       </div>
-      ${(canAcceptFA || canRejectFA || canRevoke || canRevert) ? `<div class="foot-actions">
-        ${canAcceptFA ? `<button class="teal small" data-trade-action="accept-fa" data-trade-id="${t.id}">Accept Free Agency Trade</button>` : ''}
+      <div class="note" style="margin-top:10px;">
+        ${t.status === 'accepted'
+          ? 'Trade is already credited to the teams.'
+          : t.status === 'pending'
+            ? 'Use “Credit trade” to manually apply this trade on behalf of the players.'
+            : 'This trade is not currently actionable.'}
+      </div>
+      ${(canCredit || canRejectFA || canRevoke || canRevert) ? `<div class="foot-actions">
+        ${canCredit ? `<button class="teal small" data-trade-action="credit" data-trade-id="${t.id}">Credit trade to players</button>` : ''}
         ${canRejectFA ? `<button class="danger small" data-trade-action="reject-fa" data-trade-id="${t.id}">Reject</button>` : ''}
         ${canRevert ? `<button class="ghost small danger-btn" data-trade-action="revert" data-trade-id="${t.id}">Revert &amp; end trade</button>` : ''}
         ${canRevoke ? `<button class="ghost small" data-trade-action="revoke" data-trade-id="${t.id}">Reset to pending</button>` : ''}
@@ -1934,43 +1951,21 @@
     </div>`;
   }
 
-  function drawCommissioner(){
-    const pending = COMM_PROFILES.filter(p=>p.status==='pending');
-    const approved = COMM_PROFILES.filter(p=>p.status==='approved');
-    const rejected = COMM_PROFILES.filter(p=>p.status==='rejected');
-
+  function drawTrades(){
     const filteredTrades = COMM_TRADES.filter(t=>{
       if(COMM_TRADE_FILTER === 'pending') return t.status === 'pending';
       if(COMM_TRADE_FILTER === 'completed') return t.status !== 'pending';
       if(COMM_TRADE_FILTER === 'freeagency') return t.target_team === null;
       return true;
     });
-
     const pendingFA = COMM_TRADES.filter(t=>t.target_team === null && t.status === 'pending').length;
 
     contentEl.innerHTML = `
       <div class="panel">
-        <h2>Sign-up page</h2>
-        <div class="note">This is where users sign up, claim a team, and manage trades once approved.</div>
-        <div class="foot-actions"><a class="nav-link" href="/sbl/index.html" target="_blank" rel="noopener">Open My Team (user dashboard) ↗</a></div>
-      </div>
-      <div class="panel">
-        <h2>Pending Team Claims <span class="badge">${pending.length}</span></h2>
-        ${pending.length ? pending.map(p=>commClaimRow(p,true)).join('') : '<div class="empty-state">No pending claims.</div>'}
-      </div>
-      <div class="panel">
-        <h2>Approved Teams <span class="badge">${approved.length}</span></h2>
-        ${approved.length ? approved.map(p=>commClaimRow(p,false)).join('') : '<div class="empty-state">No approved teams yet.</div>'}
-      </div>
-      ${rejected.length ? `<div class="panel">
-        <h2>Rejected Claims <span class="badge">${rejected.length}</span></h2>
-        ${rejected.map(p=>commClaimRow(p,false)).join('')}
-      </div>` : ''}
-      <div class="panel">
         <div class="trade-tab-head">
           <div>
             <h2>Trade Management <span class="badge">${COMM_TRADES.length}</span></h2>
-            <div class="note">Free Agency trades require commissioner approval. Team-to-team trades are accepted by the receiving team.</div>
+            <div class="note">All trade actions live here. “Credit trade to players” manually applies a pending trade on behalf of the teams.</div>
           </div>
           <div>
             <label for="commTradeFilter">View</label>
@@ -1988,7 +1983,7 @@
 
     document.getElementById('commTradeFilter')?.addEventListener('change', e=>{
       COMM_TRADE_FILTER = e.target.value;
-      drawCommissioner();
+      drawTrades();
     });
 
     contentEl.querySelectorAll('button[data-trade-action]').forEach(btn=>{
@@ -1998,12 +1993,22 @@
         const errEl = document.getElementById(`tradeCommErr-${id}`);
         if(errEl){ errEl.className='note'; errEl.textContent=''; }
         if(action === 'revert' && !confirm('This undoes the roster swap from this accepted trade and ends it — it will NOT go back to pending. Continue?')) return;
-        if(action === 'accept-fa' && !confirm('Accept this Free Agency trade? This will move the requested Pokémon from Free Agency onto the team and remove the offered Pokémon from the team.')) return;
+        if(action === 'credit' && !confirm('Credit this trade to the players now? This will apply the roster swap on their behalf.')) return;
         btn.disabled = true;
         try{
-          if(action === 'accept-fa'){
-            const {error} = await supabase.rpc('commissioner_accept_free_agency_trade', { trade_id:id });
-            if(error) throw error;
+          if(action === 'credit'){
+            const trade = COMM_TRADES.find(t => Number(t.id) === id);
+            if(!trade) throw new Error('Trade not found.');
+            if(trade.target_team === null){
+              const {error} = await supabase.rpc('commissioner_accept_free_agency_trade', { trade_id:id });
+              if(error) throw error;
+            }else{
+              // Team-to-team trades normally use accept_trade() from the receiving
+              // player's dashboard. The admin can trigger the same server-side
+              // operation here when a player needs the trade credited manually.
+              const {error} = await supabase.rpc('accept_trade', { trade_id:id });
+              if(error) throw error;
+            }
           } else if(action === 'reject-fa'){
             const {error} = await supabase.from('trade_requests')
               .update({ status:'rejected', responded_at:new Date().toISOString(), responded_by:adminUser.id })
@@ -2019,7 +2024,7 @@
             if(error) throw error;
           }
           await loadCommissionerData();
-          if(activeTab === 'commissioner') drawCommissioner();
+          if(activeTab === 'trades') drawTrades();
         }catch(e){
           if(errEl){ errEl.className='note danger'; errEl.textContent=e.message; }
           else showAdminError(e.message);
@@ -2027,6 +2032,30 @@
         }
       });
     });
+  }
+
+  function drawCommissioner(){
+    const pending = COMM_PROFILES.filter(p=>p.status==='pending');
+    const approved = COMM_PROFILES.filter(p=>p.status==='approved');
+    const rejected = COMM_PROFILES.filter(p=>p.status==='rejected');
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Commissioner / Admin</h2>
+        <div class="note">User approvals and commissioner permissions only. Trade management has its own tab.</div>
+      </div>
+      <div class="panel">
+        <h2>Pending Team Claims <span class="badge">${pending.length}</span></h2>
+        ${pending.length ? pending.map(p=>commClaimRow(p,true)).join('') : '<div class="empty-state">No pending claims.</div>'}
+      </div>
+      <div class="panel">
+        <h2>Approved Teams <span class="badge">${approved.length}</span></h2>
+        ${approved.length ? approved.map(p=>commClaimRow(p,false)).join('') : '<div class="empty-state">No approved teams yet.</div>'}
+      </div>
+      ${rejected.length ? `<div class="panel">
+        <h2>Rejected Claims <span class="badge">${rejected.length}</span></h2>
+        ${rejected.map(p=>commClaimRow(p,false)).join('')}
+      </div>` : ''}`;
 
     contentEl.querySelectorAll('button[data-comm-action]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
