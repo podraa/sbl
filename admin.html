@@ -203,7 +203,25 @@
   .player-group .player-table-wrap{padding:4px 14px 12px;}
   .player-group table{margin-top:6px;}
   .player-filter{max-width:320px; margin-bottom:14px;}
-.roster-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.roster-admin-card{border:1px solid var(--border);background:var(--panel-alt);border-radius:10px;padding:12px}.roster-admin-card h3{margin:0 0 7px;font-size:14px}.roster-admin-mons{margin-top:10px;font-size:12px;line-height:1.6;color:var(--text-dim)} </style>
+.roster-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.roster-admin-card{border:1px solid var(--border);background:var(--panel-alt);border-radius:10px;padding:12px}.roster-admin-card h3{margin:0 0 7px;font-size:14px}.roster-admin-mons{margin-top:10px;font-size:12px;line-height:1.6;color:var(--text-dim)}
+
+  /* commissioner tab */
+  .status-pill{display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:.04em;}
+  .status-pill.pending{color:var(--amber); background:#3a2c12; border:1px solid #5a4620;}
+  .status-pill.approved{color:var(--teal); background:#0f2b27; border:1px solid #1c4a43;}
+  .status-pill.rejected{color:var(--red); background:#3a1414; border:1px solid #5a2020;}
+  .status-pill.accepted{color:var(--teal); background:#0f2b27; border:1px solid #1c4a43;}
+  .status-pill.withdrawn{color:var(--text-dim); background:var(--panel-alt); border:1px solid var(--border);}
+  .trade-card{border:1px solid var(--border); border-radius:10px; background:var(--panel-alt); padding:14px; margin-bottom:10px;}
+  .trade-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
+  .trade-teams{font-weight:700; font-size:13px;}
+  .trade-sub{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .trade-cols{display:flex; gap:16px; flex-wrap:wrap; margin-top:6px;}
+  .trade-col{flex:1; min-width:180px;}
+  .trade-col h4{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin:0 0 4px;}
+  button.danger{border:1px solid var(--red); color:var(--red); background:none; border-radius:8px; padding:5px 10px; font-size:11px; cursor:pointer;}
+  button.teal{background:var(--teal); color:#062521; border:none; border-radius:8px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer;}
+  </style>
 </head>
 <body data-admin="true">
 <style>
@@ -220,6 +238,7 @@
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
+    <option value="team.html">My Team</option>
   </select>
 </div>
 
@@ -238,6 +257,7 @@
     <button data-tab="players">Replays by Player</button>
     <button data-tab="rosters">Rosters</button>
     <button data-tab="freeagency">Free Agency</button>
+    <button data-tab="commissioner">Commissioner</button>
     <button data-tab="settings">Settings</button>
 
 
@@ -1233,6 +1253,7 @@
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'rosters') return renderRosters();
     if(activeTab === 'freeagency') return renderFreeAgency();
+    if(activeTab === 'commissioner') return renderCommissioner();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
@@ -1826,6 +1847,131 @@
       }catch(e){status.innerHTML='<div class="note danger">'+escapeHtml(e.message)+'</div>'}
       finally{btn.disabled=false}
     };
+  }
+
+  // ---------- Commissioner: team-claim approvals + trade oversight ----------
+  // These read/write the `profiles` and `trade_requests` tables from
+  // trade_schema.sql. Trades are read-only here: RLS only lets the two
+  // teams involved in a trade (via accept_trade / status updates) change it,
+  // so a commissioner viewing here cannot force-accept/reject someone else's
+  // trade — only the profile-approval actions are commissioner-only writes.
+  let COMM_PROFILES = null;
+  let COMM_TRADES = null;
+
+  async function loadCommissionerData(){
+    const [{data:profilesData, error:profErr}, {data:tradesData, error:tradeErr}] = await Promise.all([
+      supabase.from('profiles').select('*').order('created_at', {ascending:false}),
+      supabase.from('trade_requests').select('*').order('created_at', {ascending:false})
+    ]);
+    if(profErr) throw profErr;
+    if(tradeErr) throw tradeErr;
+    COMM_PROFILES = profilesData || [];
+    COMM_TRADES = tradesData || [];
+  }
+
+  function renderCommissioner(){
+    contentEl.innerHTML = `<div class="empty-state">Loading commissioner data…</div>`;
+    loadCommissionerData().then(()=>{
+      if(activeTab === 'commissioner') drawCommissioner();
+    }).catch(e=>{
+      if(activeTab === 'commissioner'){
+        contentEl.innerHTML = `<div class="panel"><div class="note danger">Could not load commissioner data: ${escapeHtml(e.message)}</div></div>`;
+      }
+    });
+  }
+
+  function commClaimRow(p, showApproveReject){
+    return `<div class="trade-card">
+      <div class="trade-head">
+        <div>
+          <div class="trade-teams">${escapeHtml(p.team_name || '(no team picked yet)')}</div>
+          <div class="trade-sub">${escapeHtml(p.email)} · joined ${new Date(p.created_at).toLocaleDateString()}</div>
+        </div>
+        <span class="status-pill ${p.status}">${p.status}</span>
+      </div>
+      ${p.is_commissioner ? '<span class="badge">Commissioner</span>' : ''}
+      <div class="foot-actions">
+        ${showApproveReject ? `
+          <button class="teal" data-comm-action="approve" data-id="${p.id}">Approve</button>
+          <button class="danger" data-comm-action="reject" data-id="${p.id}">Reject</button>
+        ` : `
+          <button class="ghost small" data-comm-action="revoke" data-id="${p.id}">Set to pending</button>
+        `}
+        ${p.is_commissioner
+          ? `<button class="ghost small" data-comm-action="remove-commissioner" data-id="${p.id}">Remove commissioner</button>`
+          : `<button class="ghost small" data-comm-action="make-commissioner" data-id="${p.id}">Make commissioner</button>`}
+      </div>
+      <div class="note danger" id="commErr-${p.id}"></div>
+    </div>`;
+  }
+
+  function commTradeRow(t){
+    return `<div class="trade-card">
+      <div class="trade-head">
+        <div>
+          <div class="trade-teams">${escapeHtml(t.proposer_team)} → ${t.target_team ? escapeHtml(t.target_team) : 'Free Agency'}</div>
+          <div class="trade-sub">${new Date(t.created_at).toLocaleString()}</div>
+        </div>
+        <span class="status-pill ${t.status}">${t.status}</span>
+      </div>
+      <div class="trade-cols">
+        <div class="trade-col"><h4>Offered</h4><div class="note">${(t.mons_offered||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
+        <div class="trade-col"><h4>Requested</h4><div class="note">${(t.mons_requested||[]).map(escapeHtml).join(', ') || 'Nothing'}</div></div>
+      </div>
+    </div>`;
+  }
+
+  function drawCommissioner(){
+    const pending = COMM_PROFILES.filter(p=>p.status==='pending');
+    const approved = COMM_PROFILES.filter(p=>p.status==='approved');
+    const rejected = COMM_PROFILES.filter(p=>p.status==='rejected');
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Pending Team Claims <span class="badge">${pending.length}</span></h2>
+        ${pending.length ? pending.map(p=>commClaimRow(p,true)).join('') : '<div class="empty-state">No pending claims.</div>'}
+      </div>
+      <div class="panel">
+        <h2>Approved Teams <span class="badge">${approved.length}</span></h2>
+        ${approved.length ? approved.map(p=>commClaimRow(p,false)).join('') : '<div class="empty-state">No approved teams yet.</div>'}
+      </div>
+      ${rejected.length ? `<div class="panel">
+        <h2>Rejected Claims <span class="badge">${rejected.length}</span></h2>
+        ${rejected.map(p=>commClaimRow(p,false)).join('')}
+      </div>` : ''}
+      <div class="panel">
+        <h2>All Trades <span class="badge">${COMM_TRADES.length}</span></h2>
+        <div class="note">Read-only — only the two teams involved in a trade can accept, reject, or withdraw it here.</div>
+        ${COMM_TRADES.length ? COMM_TRADES.map(commTradeRow).join('') : '<div class="empty-state">No trades yet.</div>'}
+      </div>`;
+
+    contentEl.querySelectorAll('button[data-comm-action]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.id;
+        const action = btn.dataset.commAction;
+        const errEl = document.getElementById(`commErr-${id}`);
+        if(errEl) errEl.textContent = '';
+        btn.disabled = true;
+        try{
+          let patch = null;
+          if(action === 'approve') patch = {status:'approved'};
+          else if(action === 'reject') patch = {status:'rejected'};
+          else if(action === 'revoke') patch = {status:'pending'};
+          else if(action === 'make-commissioner') patch = {is_commissioner:true};
+          else if(action === 'remove-commissioner') patch = {is_commissioner:false};
+          if(patch){
+            const {error} = await supabase.from('profiles').update(patch).eq('id', id);
+            if(error) throw error;
+          }
+          await loadCommissionerData();
+          if(activeTab === 'commissioner') drawCommissioner();
+        }catch(e){
+          if(errEl){ errEl.className = 'note danger'; errEl.textContent = e.message; }
+          else showAdminError(e.message);
+          btn.disabled = false;
+        }
+      });
+    });
   }
 
   function renderSettings(){
