@@ -185,22 +185,136 @@
   .theme-swatch.active .check{opacity:1;}
 
 </style>
+<style>
+.page-nav{width:100%;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;padding:10px 16px;margin:0 0 20px;border-bottom:1px solid var(--border,#ddd);background:var(--panel,#fff);box-sizing:border-box;position:relative;z-index:50}
+.page-nav a{display:inline-flex;align-items:center;justify-content:center;padding:8px 13px;border-radius:8px;color:var(--text,#222);text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap;transition:background .15s,border-color .15s,color .15s; border:1px solid transparent}
+.page-nav a:hover{background:var(--panel-alt,#f4f4f4);border-color:var(--border,#ddd)}
+.page-nav a.active{background:var(--panel-alt,#f4f4f4);border-color:var(--border,#ddd);color:var(--amber,var(--accent,#c98b2e))}
+.page-nav.locked a{opacity:.45;cursor:not-allowed}
+.page-nav.locked a:hover{background:transparent;border-color:transparent}
+.page-nav .nav-lock-hint{font-size:11px;color:var(--text-dim,#777);font-weight:600;margin-left:6px}
+@media(max-width:700px){.page-nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding:8px 10px}.page-nav a{flex:0 0 auto}}
+</style>
+<style>
+/* Auto-hiding site navigation */
+body{padding-top:58px;}
+.page-nav{position:fixed;top:0;left:0;right:0;width:100%;height:58px;margin:0;padding:9px 16px;box-shadow:0 6px 18px rgba(0,0,0,.18);transform:translateY(0);transition:transform .22s ease,box-shadow .22s ease;z-index:1000;}
+.page-nav.nav-hidden{transform:translateY(-100%);box-shadow:none;}
+.page-nav a{flex:0 0 auto;}
+.nav-hover-zone{position:fixed;top:0;left:0;right:0;height:9px;z-index:1001;}
+@media(max-width:700px){body{padding-top:52px}.page-nav{height:52px;padding:7px 10px;overflow-x:auto;flex-wrap:nowrap}.nav-hover-zone{height:8px}}
+</style>
+
+<style id="mobile-friendly-overrides">
+/* Site-wide mobile usability pass */
+html{overflow-x:hidden;-webkit-text-size-adjust:100%;}
+body{overflow-x:hidden;max-width:100%;}
+img,video,canvas,svg{max-width:100%;}
+button,input,select,textarea{font:inherit;max-width:100%;}
+button{touch-action:manipulation;}
+
+@media (max-width: 700px){
+  body{font-size:14px;}
+  #app{width:100%;max-width:none;box-sizing:border-box;padding-left:12px !important;padding-right:12px !important;}
+  header{padding-left:0 !important;padding-right:0 !important;}
+  header h1,h1{font-size:clamp(22px,7vw,32px);line-height:1.12;overflow-wrap:anywhere;}
+  h2{font-size:clamp(18px,5.5vw,24px);}
+  h3{font-size:17px;}
+  .sub,.note,.panel-desc{overflow-wrap:anywhere;}
+
+  /* Public header navigation */
+  .page-nav{max-width:100vw;box-sizing:border-box;}
+  .page-nav a{min-height:36px;padding:8px 11px;font-size:12px;}
+  .page-nav::-webkit-scrollbar{height:3px;}
+
+  /* Admin's dropdown navigation */
+  body[data-admin="true"] .page-nav{max-width:calc(100vw - 16px);}
+  body[data-admin="true"] .page-nav select{max-width:calc(100vw - 32px);}
+
+  /* Stacked controls instead of cramped horizontal rows */
+  .toolbar,.toolbar-wide,.banner-controls,.section-head-row,.trade-tab-head,.summary-header,
+  .franchise-header,.franchise-card-head,.team-card-head,.team-card-top,.speed-header,
+  .replay-teams,.replay-row,.compare-team,.trade-filter-panel{max-width:100%;}
+  .toolbar,.toolbar-wide,.banner-controls{flex-wrap:wrap !important;gap:8px !important;}
+  .toolbar > *, .toolbar-wide > *, .banner-controls > *{min-width:0 !important;max-width:100%;}
+
+  /* Form controls become comfortable touch targets */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,textarea{min-height:40px;box-sizing:border-box;}
+  input:not([type="checkbox"]):not([type="radio"]),select,textarea{width:100%;}
+  input[type="checkbox"],input[type="radio"]{width:auto;min-height:auto;}
+  button{min-height:40px;}
+  .foot-actions,.actions,.franchise-actions{flex-wrap:wrap !important;gap:8px !important;}
+  .foot-actions button,.actions button,.franchise-actions button{flex:1 1 auto;}
+
+  /* Panels/cards */
+  .panel,.card,.budget-card,.trade-card,.pokemon-card,.mon-card,.opponent-card,.set-card,
+  .franchise-card,.team-card,.commissioner-budget-card{min-width:0 !important;max-width:100%;box-sizing:border-box;}
+  .panel{padding:14px !important;}
+  .grid,.roster-grid,.roster-cards,.pokemon-grid,.team-card-grid,.franchise-cards,
+  .comparison-grid,.conference-standings,.mon-grid,.theme-grid{grid-template-columns:1fr !important;}
+  .trade-cols,.trade-column-grid,.profile-two-col,.summary-grid,.record-grid{grid-template-columns:1fr !important;}
+  .pick-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+
+  /* Don't let long Pokémon/team names force horizontal scrolling */
+  .pokemon-name,.team-name,.team-card-name,.standings-team-name,.pick-card-name,
+  .mon-name,.opponent-name,.compare-team-name{overflow-wrap:anywhere;word-break:break-word;}
+
+  /* Tables: preserve all columns, allow deliberate horizontal swipe */
+  table{max-width:none;}
+  .table-wrap,.franchise-table-wrap,#globalTable,#pokemonSearchTable,.player-table-wrap,
+  .speed-table,.type-count-table{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .table-wrap table,.franchise-table-wrap table,#globalTable table,#pokemonSearchTable table,
+  .player-table-wrap table,.speed-table table,.type-count-table table{min-width:max-content;}
+  th,td{white-space:nowrap;}
+
+  /* Modals fit inside a phone viewport */
+  .modal,.modalbox,.overview-modal,.replay-summary-box,.pokemon-modal,.audit-modal,
+  .modal-content{width:calc(100vw - 20px) !important;max-width:calc(100vw - 20px) !important;
+    max-height:calc(100vh - 24px);box-sizing:border-box;}
+  .modal-body,.pokemon-modal-body{overflow:auto;max-height:calc(100vh - 150px);}
+
+  /* Stat/analysis rows stack cleanly */
+  .gf-row{max-width:100%;}
+  .death-cause-entry{max-width:100%;box-sizing:border-box;}
+  .statbox{min-width:0 !important;}
+  .speed-row{min-width:560px;}
+
+  /* Draft / admin tab bars can scroll rather than squish buttons */
+  .tabs{max-width:100%;overflow-x:auto;flex-wrap:nowrap !important;-webkit-overflow-scrolling:touch;}
+  .tabs button{flex:0 0 auto;white-space:nowrap;}
+
+  /* Make auth/login cards comfortable */
+  #adminAuth,.gate{width:100%;max-width:420px;box-sizing:border-box;margin-left:auto;margin-right:auto;}
+}
+
+@media (max-width: 480px){
+  #app{padding-left:9px !important;padding-right:9px !important;}
+  .page-nav a{padding:7px 10px;font-size:11px;}
+  .panel{padding:12px !important;}
+  .pick-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  .theme-grid{grid-template-columns:1fr 1fr !important;}
+  .sprite{max-width:44px;}
+  .pokemon-head .sprite,.team-card-top-sprite{width:56px !important;height:56px !important;}
+  .foot-actions button,.actions button,.franchise-actions button{width:100%;flex-basis:100%;}
+  .section-head-row{align-items:flex-start !important;}
+}
+</style>
+
 </head>
 <body>
 
-<div class="page-nav">
-   <span class="lock-hint" id="pageNavLockHint" hidden>Log in to switch pages</span>
-  <select id="pageNavSelect" aria-label="Choose page" disabled>
-    <option value="index.html">My Team</option>
-    <option value="stats.html">Stats Dashboard</option>
-    <option value="rosters.html">Rosters</option>
-    <option value="team-analysis.html">Team Analysis</option>
-    <option value="free-agency.html">Free Agency</option>
-    <option value="draft.html" data-draft-live-only hidden>Draft Room</option>
-    <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
-  </select>
-</div>
-
+<nav class="page-nav" id="pageNav" aria-label="Site navigation">
+  <a href="index.html" data-page="index.html">My Team</a>
+  <a href="stats.html" data-page="stats.html">Stats Dashboard</a>
+  <a href="rosters.html" data-page="rosters.html">Rosters</a>
+  <a href="team-analysis.html" data-page="team-analysis.html">Team Analysis</a>
+  <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
+  <a href="draft.html" data-page="draft.html" data-draft-live-only hidden>Draft Room</a>
+  <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
+</nav>
+<div class="nav-hover-zone" id="navHoverZone" aria-hidden="true"></div>
 <div id="app">
   <header>
     <h1>My Team</h1>
@@ -1321,26 +1435,26 @@
 </script>
 <script>
 (function(){
-  const select=document.getElementById('pageNavSelect');
-  if(!select) return;
-  const lockHint=document.getElementById('pageNavLockHint');
-  const ADMIN='admin.html';
+  const nav=document.getElementById('pageNav');
+  if(!nav) return;
+  const links=[...nav.querySelectorAll('a[data-page]')];
   const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  if(current===ADMIN) select.value=ADMIN;
-  else if(Array.from(select.options).some(o=>o.value===current)) select.value=current;
-
-  function lockNav(locked){
-    select.disabled=locked;
-    select.title=locked ? 'Log in to switch pages' : '';
-    if(lockHint) lockHint.hidden=!locked;
-  }
-
   const client=window.supabase?.createClient(
     'https://dfxdkkemltukxaklhcpo.supabase.co',
     'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
   );
-
-  async function setupCommissionerNav(){
+  links.forEach(a=>{ if(a.dataset.page===current) a.classList.add('active'); });
+  function lockNav(locked){
+    nav.classList.toggle('locked',locked);
+    links.forEach(a=>{
+      a.setAttribute('aria-disabled',locked?'true':'false');
+      if(locked) a.title='Log in to switch pages'; else a.removeAttribute('title');
+    });
+  }
+  links.forEach(a=>a.addEventListener('click',e=>{
+    if(nav.classList.contains('locked')){ e.preventDefault(); return; }
+  }));
+  async function setupNav(){
     try{
       if(!client){ lockNav(true); return; }
       const {data:{session}}=await client.auth.getSession();
@@ -1349,26 +1463,40 @@
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
-        select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
+        nav.querySelectorAll('[data-admin-only]').forEach(a=>{a.hidden=false;});
       }
-      // "Draft Room" is shown to any logged-in team owner, but only while a
-      // draft is actually in progress -- independent of commissioner status.
       try{
         const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
         const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-        if(draftStatus==='live'){
-          select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; });
-        }
+        if(draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
       }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
-      if(current===ADMIN) select.value=ADMIN;
-    }catch(err){ console.warn('Commissioner navigation check failed:',err); lockNav(true); }
+    }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); }
   }
+  setupNav();
+  client?.auth.onAuthStateChange((_event,session)=>lockNav(!session?.user));
+})();
+</script>
 
-  select.addEventListener('change',e=>{
-    if(e.target.value) location.href=e.target.value;
-  });
-  setupCommissionerNav();
-  client?.auth.onAuthStateChange((_event,session)=>{ lockNav(!session?.user); });
+<script>
+(function(){
+  const nav = document.getElementById('pageNav');
+  if(!nav) return;
+  let lastY = window.scrollY || 0;
+  let ticking = false;
+  function hideOnScroll(){
+    const y = window.scrollY || 0;
+    if(y > 12 && y > lastY + 2) nav.classList.add('nav-hidden');
+    lastY = y;
+    ticking = false;
+  }
+  window.addEventListener('scroll', function(){
+    if(!ticking){ ticking = true; requestAnimationFrame(hideOnScroll); }
+  }, {passive:true});
+  nav.addEventListener('mouseenter', function(){ nav.classList.remove('nav-hidden'); });
+  document.addEventListener('mousemove', function(e){
+    if(e.clientY <= 12) nav.classList.remove('nav-hidden');
+  }, {passive:true});
+  nav.classList.remove('nav-hidden');
 })();
 </script>
 </body>
