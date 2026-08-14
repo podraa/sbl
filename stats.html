@@ -695,6 +695,7 @@ button{touch-action:manipulation;}
 }
 </style>
 
+<style>[hidden]{display:none!important}</style>
 </head>
 <body data-admin="false">
 <style>
@@ -2779,12 +2780,17 @@ button{touch-action:manipulation;}
   links.forEach(a=>a.addEventListener('click',e=>{
     if(nav.classList.contains('locked')){ e.preventDefault(); return; }
   }));
+  function hidePrivilegedLinks(){
+    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
+    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
+  }
   async function setupNav(){
+    hidePrivilegedLinks();
     try{
       if(!client){ lockNav(true); return; }
       const {data:{session}}=await client.auth.getSession();
       lockNav(!session?.user);
-      if(!session?.user) return;
+      if(!session?.user){ hidePrivilegedLinks(); return; }
       const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
       if(error) throw error;
       if(profile?.is_commissioner){
@@ -2792,13 +2798,13 @@ button{touch-action:manipulation;}
         try{
           const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
           const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-          if(draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
+          if(profile?.is_commissioner && draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
         }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       }
     }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); }
   }
   setupNav();
-  client?.auth.onAuthStateChange((_event,session)=>lockNav(!session?.user));
+  client?.auth.onAuthStateChange((_event,session)=>{ lockNav(!session?.user); hidePrivilegedLinks(); if(session?.user) setupNav(); });
 })();
 </script>
 
