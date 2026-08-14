@@ -422,7 +422,8 @@ button{touch-action:manipulation;}
 </style>
 <nav class="page-nav" id="pageNav" aria-label="Site navigation">
   <a href="index.html" data-page="index.html">My Team</a>
-  <a href="stats.html" data-page="stats.html">Stats Dashboard</a>
+  <a href="stats.html" data-page="stats.html">Stats</a>
+  <a href="season.html" data-page="season.html">Season</a>
   <a href="rosters.html" data-page="rosters.html">Rosters</a>
   <a href="team-analysis.html" data-page="team-analysis.html">Team Analysis</a>
   <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
@@ -738,6 +739,23 @@ loadRosters().finally(() => clearTimeout(hardTimeout));
     nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
     nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
   }
+  // Commissioner status rarely changes, so we only check it against the
+  // database once per login and cache the result in sessionStorage. That
+  // way navigating between pages (each a fresh document load) doesn't
+  // re-run the permissions check and cause the nav to flicker/reload.
+  const NAV_CACHE_PREFIX='navPerms:';
+  function readNavCache(uid){
+    try{ const raw=sessionStorage.getItem(NAV_CACHE_PREFIX+uid); return raw?JSON.parse(raw):null; }
+    catch(e){ return null; }
+  }
+  function writeNavCache(uid,perms){
+    try{ sessionStorage.setItem(NAV_CACHE_PREFIX+uid, JSON.stringify(perms)); }catch(e){}
+  }
+  function clearNavCache(){
+    try{
+      Object.keys(sessionStorage).forEach(k=>{ if(k.indexOf(NAV_CACHE_PREFIX)===0) sessionStorage.removeItem(k); });
+    }catch(e){}
+  }
   async function setupNav(){
     hidePrivilegedLinks();
     try{
@@ -745,20 +763,30 @@ loadRosters().finally(() => clearTimeout(hardTimeout));
       const {data:{session}}=await client.auth.getSession();
       lockNav(!session?.user);
       if(!session?.user){ hidePrivilegedLinks(); return; }
-      const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
-      if(error) throw error;
-      if(profile?.is_commissioner){
-        nav.querySelectorAll('[data-admin-only]').forEach(a=>{a.hidden=false;});
+      let perms=readNavCache(session.user.id);
+      if(!perms){
+        const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
+        if(error) throw error;
+        perms={isCommissioner:!!profile?.is_commissioner};
+        writeNavCache(session.user.id,perms);
       }
-      try{
-        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-        const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-        if(profile?.is_commissioner && draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
-      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
+      if(perms.isCommissioner){
+        nav.querySelectorAll('[data-admin-only]').forEach(a=>{a.hidden=false;});
+        try{
+          const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
+          const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
+          if(draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
+        }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
+      }
     }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); }
   }
   setupNav();
-  client?.auth.onAuthStateChange((_event,session)=>{ lockNav(!session?.user); hidePrivilegedLinks(); if(session?.user) setupNav(); });
+  client?.auth.onAuthStateChange((_event,session)=>{
+    lockNav(!session?.user);
+    hidePrivilegedLinks();
+    if(_event==='SIGNED_IN'||_event==='SIGNED_OUT'){ clearNavCache(); }
+    if(session?.user) setupNav();
+  });
 })();
 </script>
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>League Damage Dashboard</title>
+<title>Admin Dashboard</title>
 <style>
   :root{
     --bg:#0e1218;
@@ -455,7 +455,8 @@ button{touch-action:manipulation;}
 <div class="page-nav">
   <select id="pageNavSelect" aria-label="Choose page" disabled>
     <option value="index.html">My Team</option>
-    <option value="stats.html">Stats Dashboard</option>
+    <option value="stats.html">Stats</option>
+    <option value="season.html">Season</option>
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
@@ -3766,22 +3767,31 @@ button{touch-action:manipulation;}
   // A fixture is stored as STATE.settings.fixture = {rounds:[{week,matches:[{home,away}]}], source, generatedAt}
   // so both the generated and uploaded paths produce the exact same shape for the
   // public Season page to render.
+  //
+  // League rule (see RULES sheet / League Table & Playoffs #1): every team plays
+  // the other teams in its own conference once each, plus exactly one
+  // inter-conference game, and the league schedules exactly one
+  // inter-conference game per week league-wide.
   function circleRoundRobin(teamNames){
     // Standard "circle method": fix one team, rotate the rest. Produces n-1 rounds
-    // for an even number of teams; a null "bye" slot is added for an odd number.
+    // for an even number of teams. For an odd number, a null "bye" slot is added,
+    // which rotates through every team exactly once — we surface that bye team
+    // per round so generateFixture() can use it for the inter-conference game.
     let arr = teamNames.slice();
     if(arr.length % 2 !== 0) arr.push(null);
     const n = arr.length;
     const rounds = [];
     for(let r=0; r<n-1; r++){
       const round = [];
+      let bye = null;
       for(let i=0; i<n/2; i++){
         const a = arr[i], b = arr[n-1-i];
-        if(a===null || b===null) continue;
+        if(a===null){ bye = b; continue; }
+        if(b===null){ bye = a; continue; }
         // Alternate which side is "home" each round so it isn't always the same team.
         round.push(r % 2 === 0 ? {home:a, away:b} : {home:b, away:a});
       }
-      rounds.push(round);
+      rounds.push({matches:round, bye});
       const fixed = arr[0];
       const rest = arr.slice(1);
       rest.unshift(rest.pop());
@@ -3789,38 +3799,240 @@ button{touch-action:manipulation;}
     }
     return rounds;
   }
-  function generateFixture(teamNames, legs){
-    const first = circleRoundRobin(teamNames);
-    let allRounds = first;
-    if(legs === 2){
-      const second = first.map(round => round.map(m => ({home:m.away, away:m.home})));
-      allRounds = first.concat(second);
+  // conferenceMap: {franchiseName: 'a'|'b'|''} from Settings → Franchise Conferences.
+  function conferenceOf(conferenceMap, team){
+    const map = conferenceMap || {};
+    const exact = map[team];
+    if(exact === 'a' || exact === 'b') return exact;
+    const key = String(team || '').trim().toLowerCase();
+    const found = Object.keys(map).find(k => String(k).trim().toLowerCase() === key);
+    return (found && (map[found] === 'a' || map[found] === 'b')) ? map[found] : '';
+  }
+  function generateFixture(teamNames, numWeeks, conferenceMap){
+    const weeks = Math.max(1, parseInt(numWeeks, 10) || 1);
+    const confA = teamNames.filter(t => conferenceOf(conferenceMap, t) === 'a');
+    const confB = teamNames.filter(t => conferenceOf(conferenceMap, t) === 'b');
+    const fullySplit = confA.length >= 2 && confB.length >= 2 && (confA.length + confB.length) === teamNames.length;
+
+    function buildBaseLeg(){
+      if(!fullySplit) return circleRoundRobin(teamNames).map(r => r.matches);
+      // Schedule each conference as its own round robin. Whichever team has the
+      // rotating "bye" in a given week (only possible for an odd-sized
+      // conference) has no in-conference game that week, so pair that week's
+      // two bye teams together for the single inter-conference match — this is
+      // exactly how the league's own fixture is built when both conferences are
+      // the same odd size (e.g. 11 & 11). Only ever one pairing is pushed per
+      // week, so a week can never end up with more than one cross-conference
+      // match.
+      const roundsA = circleRoundRobin(confA);
+      const roundsB = circleRoundRobin(confB);
+      const baseWeeks = Math.max(roundsA.length, roundsB.length, 1);
+      const out = [];
+      for(let w=0; w<baseWeeks; w++){
+        // Cycle each conference's own round list independently (instead of
+        // indexing straight into it) so unequal conference sizes still get a
+        // full slate every week rather than going empty once the shorter
+        // conference's rounds run out.
+        const a = roundsA.length ? roundsA[w % roundsA.length] : {matches:[], bye:null};
+        const b = roundsB.length ? roundsB[w % roundsB.length] : {matches:[], bye:null};
+        const matches = [...a.matches, ...b.matches];
+        if(a.bye && b.bye) matches.push({home:a.bye, away:b.bye});
+        out.push(matches);
+      }
+      return out;
     }
-    return allRounds.map((matches, i) => ({week:`Week ${i+1}`, matches}));
+
+    const base = buildBaseLeg();
+    const baseLen = base.length || 1;
+    const allRounds = [];
+    for(let w=0; w<weeks; w++){
+      const cycle = Math.floor(w / baseLen);
+      const round = base[w % baseLen];
+      // Every second time we loop back through the base schedule, flip home
+      // and away so a longer requested season reads as a return leg rather
+      // than literally repeating the same week's matches.
+      const matches = (cycle % 2 === 1)
+        ? round.map(m => ({home:m.away, away:m.home}))
+        : round.map(m => ({home:m.home, away:m.away}));
+      allRounds.push({week:`Week ${w + 1}`, matches});
+    }
+    return allRounds;
+  }
+  // No week should ever have more than one cross-conference match (the
+  // league's rule caps it at one). Used to flag uploaded or hand-edited
+  // fixtures that break that rule.
+  function fixtureConferenceIssues(fixture, conferenceMap){
+    const rounds = fixture?.rounds || [];
+    const issues = [];
+    for(const r of rounds){
+      let cross = 0;
+      for(const m of (r.matches || [])){
+        const ca = conferenceOf(conferenceMap, m.home), cb = conferenceOf(conferenceMap, m.away);
+        if(!ca || !cb) continue;
+        if(ca !== cb) cross++;
+      }
+      if(cross > 1) issues.push({week:r.week, cross});
+    }
+    return issues;
+  }
+  // The league's fixture spreadsheet writes each slot as "Team Name (Owner)",
+  // e.g. "The Clodsires (Lynx)" — but the Player -> Team mapping only ever
+  // stores the plain team name. Stripping the trailing "(Owner)" tag here, at
+  // parse time, keeps every fixture team name in the exact format the rest of
+  // the app expects (replay matching, conference lookups, the Season page's
+  // schedule/results). Only strips a *trailing* parenthetical, so a team name
+  // that itself legitimately ends in parentheses elsewhere is left alone.
+  function stripFranchiseSuffix(name){
+    return String(name || '').replace(/\s*\([^()]*\)\s*$/, '').trim();
+  }
+  // ---------- fuzzy reconciliation against established franchise names ----------
+  // Uploaded fixtures sometimes spell a team slightly differently than the
+  // Player -> Team mapping (an apostrophe, a typo'd letter) even after the
+  // owner-suffix strip above. These three helpers find a *confident* single
+  // best match among the known franchise names and correct the fixture's
+  // spelling to it, rather than leaving the two sides silently disagreeing.
+  function normalizeLoose(str){
+    // Case/whitespace/punctuation-insensitive key — catches things like
+    // "N's PP Up" vs "Ns PP Up" (apostrophe-only difference) as identical.
+    return String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+  function levenshteinDistance(a, b){
+    const m = a.length, n = b.length;
+    if(!m) return n;
+    if(!n) return m;
+    const dp = Array.from({length: m + 1}, (_, i) => { const row = new Array(n + 1); row[0] = i; return row; });
+    for(let j = 0; j <= n; j++) dp[0][j] = j;
+    for(let i = 1; i <= m; i++){
+      for(let j = 1; j <= n; j++){
+        dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
+      }
+    }
+    return dp[m][n];
+  }
+  // Returns the established franchise name to use for a fixture-supplied
+  // name, or the original name unchanged if nothing lines up confidently.
+  // knownNames should be the current Player -> Team mapping's franchise list.
+  function reconcileFranchiseName(rawName, knownNames){
+    const name = String(rawName || '').trim();
+    if(!name) return name;
+    const exact = knownNames.find(k => groupKey(k) === groupKey(name));
+    if(exact) return exact; // already matches — nothing to reconcile
+    const looseKey = normalizeLoose(name);
+    const looseMatches = knownNames.filter(k => normalizeLoose(k) === looseKey);
+    if(looseMatches.length === 1) return looseMatches[0]; // punctuation/case-only difference
+    // Small-typo fallback: allow roughly 15% of the name's length in edit
+    // distance (min 1, capped at 3), and only auto-correct when exactly one
+    // known name is the closest match — an ambiguous case (e.g. two
+    // similarly-close franchise names) is left alone rather than guessed at.
+    const maxDist = Math.max(1, Math.min(3, Math.round(name.length * 0.15)));
+    let best = null, bestDist = Infinity, ties = 0;
+    for(const k of knownNames){
+      const d = levenshteinDistance(looseKey, normalizeLoose(k));
+      if(d < bestDist){ bestDist = d; best = k; ties = 1; }
+      else if(d === bestDist){ ties++; }
+    }
+    if(best && bestDist <= maxDist && ties === 1) return best;
+    return name; // no confident match — likely a genuinely new/unplayed franchise
   }
   function parseFixtureWorkbook(wb){
-    const sheetName = wb.SheetNames[0];
+    const sheetName = wb.SheetNames.find(n => /fixture|schedule/i.test(String(n).trim())) || wb.SheetNames[0];
     if(!sheetName) throw new Error('The workbook has no sheets.');
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:''});
-    if(!rows.length) throw new Error('No rows found on the first sheet.');
-    const weekOrder = [];
-    const weekMap = {};
+    const sheet = wb.Sheets[sheetName];
+
+    // Layout 1: one match per row, with Week/Home/Away style column headers.
+    const objRows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+    const simple = parseSimpleFixtureRows(objRows);
+    if(simple) return reconcileParsedFixture(simple);
+
+    // Layout 2: the league's own "FIXTURE" tab layout — several weeks placed
+    // side by side, each a 4-column group (Home / VS / Away / blank) with a
+    // "Week N" + date-range header row above its matches, repeating down and
+    // across the sheet.
+    const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+    const blocked = parseBlockFixtureRows(aoa);
+    if(blocked) return reconcileParsedFixture(blocked);
+
+    throw new Error(`No Week/Home/Away table or "Week N" block layout found on the "${sheetName}" sheet.`);
+  }
+  // Runs every parsed Home/Away name through reconcileFranchiseName() against
+  // the current Player -> Team mapping, so an uploaded fixture's spelling
+  // gets corrected to the established franchise name on the spot — same
+  // place regardless of which of the two sheet layouts it came from.
+  function reconcileParsedFixture(parsed){
+    const knownNames = configuredFranchises().map(f => f.name);
+    let corrected = 0;
+    const corrections = [];
+    const rounds = (parsed.rounds || []).map(r => ({
+      week: r.week,
+      matches: (r.matches || []).map(m => {
+        const home = reconcileFranchiseName(m.home, knownNames);
+        const away = reconcileFranchiseName(m.away, knownNames);
+        if(home !== m.home) { corrected++; corrections.push({from:m.home, to:home}); }
+        if(away !== m.away) { corrected++; corrections.push({from:m.away, to:away}); }
+        return {home, away};
+      })
+    }));
+    return {...parsed, rounds, corrected, corrections};
+  }
+  function parseSimpleFixtureRows(rows){
+    if(!rows.length) return null;
     const fieldValue = (row, candidates) => {
       const keys = Object.keys(row);
       const key = keys.find(k => candidates.includes(String(k).trim().toLowerCase()));
       return key ? String(row[key] ?? '').trim() : '';
     };
-    let skipped = 0;
+    const weekOrder = [];
+    const weekMap = {};
+    let matched = 0, skipped = 0;
     for(const row of rows){
+      const home = stripFranchiseSuffix(fieldValue(row, ['home','home team','hometeam','team a','teama']));
+      const away = stripFranchiseSuffix(fieldValue(row, ['away','away team','awayteam','team b','teamb']));
+      if(!home && !away) continue;
       const week = fieldValue(row, ['week','round','wk']) || 'Week 1';
-      const home = fieldValue(row, ['home','home team','hometeam','team a','teama']);
-      const away = fieldValue(row, ['away','away team','awayteam','team b','teamb']);
       if(!home || !away){ skipped++; continue; }
       if(!weekMap[week]){ weekMap[week] = []; weekOrder.push(week); }
       weekMap[week].push({home, away});
+      matched++;
     }
+    if(!matched) return null; // doesn't look like the simple header layout
     const rounds = weekOrder.map(week => ({week, matches:weekMap[week]}));
-    if(!rounds.length) throw new Error('No valid Home/Away rows found. Check the column headers.');
+    return {rounds, skipped};
+  }
+  function parseBlockFixtureRows(aoa){
+    const WEEK_RE = /week\s*\d+/i;
+    const blocks = [];
+    aoa.forEach((row, r) => {
+      (row || []).forEach((cell, c) => {
+        const text = String(cell ?? '').trim();
+        if(WEEK_RE.test(text)) blocks.push({row:r, col:c, label:text.match(WEEK_RE)[0].replace(/\s+/g,' ')});
+      });
+    });
+    if(!blocks.length) return null;
+
+    const weekMap = {};
+    const weekOrder = [];
+    let skipped = 0;
+    for(const block of blocks){
+      if(!weekMap[block.label]){ weekMap[block.label] = []; weekOrder.push(block.label); }
+      for(let r = block.row + 1; r < aoa.length; r++){
+        const row = aoa[r] || [];
+        const cellHere = String(row[block.col] ?? '').trim();
+        if(WEEK_RE.test(cellHere)) break; // next week-block starts here
+        const home = stripFranchiseSuffix(String(row[block.col] ?? '').trim());
+        const away = stripFranchiseSuffix(String(row[block.col + 2] ?? '').trim());
+        if(!home && !away) continue; // blank spacer row inside the block
+        if(!home || !away){ skipped++; continue; }
+        weekMap[block.label].push({home, away});
+      }
+    }
+    const rounds = weekOrder
+      .sort((a, b) => {
+        const na = parseInt((a.match(/\d+/) || [0])[0], 10);
+        const nb = parseInt((b.match(/\d+/) || [0])[0], 10);
+        return na - nb;
+      })
+      .map(week => ({week, matches:weekMap[week]}));
+    if(!rounds.some(r => r.matches.length)) return null;
     return {rounds, skipped};
   }
   function fixtureMatchCount(fixture){
@@ -3880,21 +4092,29 @@ button{touch-action:manipulation;}
             </div>`).join('') : '<div class="empty-state">No franchise names found in Player → Team name mapping yet. Add mappings below, and each unique team name will appear here.</div>'}
         </div>
       </div>
+      ${(()=>{
+        const fxTeamNames = franchises.map(f=>f.name);
+        const fxConfA = franchises.filter(f=>f.conference==='a').map(f=>f.name);
+        const fxConfB = franchises.filter(f=>f.conference==='b').map(f=>f.name);
+        window.__suggestedFixtureWeeks = fxTeamNames.length < 2 ? '' :
+          (fxConfA.length>=2 && fxConfB.length>=2 && fxConfA.length+fxConfB.length===fxTeamNames.length)
+            ? Math.max(circleRoundRobin(fxConfA).length, circleRoundRobin(fxConfB).length, 1)
+            : circleRoundRobin(fxTeamNames).length;
+        return '';
+      })()}
       <div class="panel">
         <h2>Fixture / Schedule</h2>
         <div class="note">Generate a round-robin schedule from the current franchise list below, or upload a schedule you've already built in Excel. Whatever is saved here shows up on the public Season page alongside standings.</div>
+        <div class="note" style="margin-top:6px;">Assign every franchise to a conference above first — the generator will then schedule each team against the other teams in its own conference, plus at most one inter-conference match per week (the league's actual rule). Uploads are checked against the same rule and flagged if a week ends up with more than one cross-conference game.</div>
         <div id="fixtureSummary" style="margin-top:14px;"></div>
         <div class="row" style="margin-top:14px; gap:12px; align-items:end; flex-wrap:wrap;">
           <div>
-            <label>Legs</label>
-            <select id="fixtureLegs">
-              <option value="1">Single (each team plays once)</option>
-              <option value="2">Double (home &amp; away)</option>
-            </select>
+            <label>Weeks</label>
+            <input type="text" inputmode="numeric" id="fixtureWeeks" value="${window.__suggestedFixtureWeeks || ''}" placeholder="e.g. 11" style="width:90px;">
           </div>
           <button class="primary" id="generateFixtureBtn">Generate fixture</button>
         </div>
-        <div class="note" style="margin-top:8px;">Uses the ${franchises.length} franchise${franchises.length===1?'':'s'} currently in the Player → Team name mapping below. ${franchises.length < 2 ? 'Add at least 2 franchises first.' : ''}</div>
+        <div class="note" style="margin-top:8px;">Uses the ${franchises.length} franchise${franchises.length===1?'':'s'} currently in the Player → Team name mapping below. ${franchises.length < 2 ? 'Add at least 2 franchises first.' : ''} If you ask for more weeks than a single round-robin needs, the schedule repeats with home/away flipped as a return leg; asking for fewer just stops early.</div>
         <div class="row" style="margin-top:18px; gap:12px; align-items:end; flex-wrap:wrap;">
           <div>
             <label>Upload fixture (.xlsx / .xls / .csv)</label>
@@ -3902,9 +4122,12 @@ button{touch-action:manipulation;}
           </div>
           <button class="ghost" id="uploadFixtureBtn">Upload &amp; replace fixture</button>
         </div>
-        <div class="note" style="margin-top:8px;">Expected columns (any order, header names): <code>Week</code>, <code>Home</code>, <code>Away</code> — one row per match.</div>
+        <div class="note" style="margin-top:8px;">Accepts either a simple table with <code>Week</code> / <code>Home</code> / <code>Away</code> columns (any order), or the league's own "FIXTURE" tab layout (multiple "Week N" blocks with Home / VS / Away rows underneath, side by side). If the workbook has a sheet named "FIXTURE" or "Schedule", that sheet is used automatically.</div>
         <div id="fixtureStatus" style="margin-top:8px"></div>
+        <div class="note" style="margin-top:14px;">Once a fixture is saved, this looks at each replay's two franchises, finds which scheduled fixture match they belong to, and sets that replay's week to match — so the Season page picks it up automatically instead of you setting each replay's week by hand. If a pair of teams played each other more than once (e.g. a return leg), games are matched to scheduled meetings in the order they were played.</div>
+        <div id="matchReplaysStatus" style="margin-top:8px;"></div>
         <div class="foot-actions" style="margin-top:14px;">
+          <button class="ghost" id="matchReplaysBtn">Match replays to fixture weeks</button>
           <button class="ghost danger-btn" id="clearFixtureBtn">Clear fixture</button>
         </div>
       </div>
@@ -3978,15 +4201,25 @@ button{touch-action:manipulation;}
         fixtureSummaryEl.innerHTML = '<div class="empty-state">No fixture saved yet.</div>';
         return;
       }
+      const conferenceMap = STATE.settings.franchises || {};
       const matchCount = fixtureMatchCount(fixture);
+      const issues = fixtureConferenceIssues(fixture, conferenceMap);
+      const issuesNote = issues.length
+        ? `<div class="note danger" style="margin-top:6px;">⚠ ${issues.length} week${issues.length===1?'':'s'} with more than one inter-conference match: ${issues.map(i=>`${escapeHtml(i.week)} (${i.cross})`).join(', ')}.</div>`
+        : (Object.keys(conferenceMap).length ? '<div class="note" style="margin-top:6px;">No week has more than one inter-conference match. ✓</div>' : '');
       fixtureSummaryEl.innerHTML = `
         <div class="note" style="margin-top:0;"><strong>${rounds.length} week${rounds.length===1?'':'s'}</strong> · ${matchCount} match${matchCount===1?'':'es'} · ${fixture.source==='upload' ? 'uploaded' : 'generated'}${fixture.generatedAt ? ' on ' + new Date(fixture.generatedAt).toLocaleDateString() : ''}</div>
+        ${issuesNote}
         <div style="margin-top:10px; max-height:260px; overflow-y:auto;">
           ${rounds.map(r=>`
             <div class="map-row" style="align-items:flex-start;">
               <div style="flex:1;">
                 <div style="font-weight:600;">${escapeHtml(r.week||'')}</div>
-                <div class="note" style="margin:4px 0 0;">${(r.matches||[]).map(m=>`${escapeHtml(m.home)} vs ${escapeHtml(m.away)}`).join(' · ') || 'No matches'}</div>
+                <div class="note" style="margin:4px 0 0;">${(r.matches||[]).map(m=>{
+                  const ca=conferenceOf(conferenceMap,m.home), cb=conferenceOf(conferenceMap,m.away);
+                  const inter = ca && cb && ca!==cb;
+                  return `${escapeHtml(m.home)} vs ${escapeHtml(m.away)}${inter?' <span class="badge" title="Inter-conference match">Inter-conf</span>':''}`;
+                }).join(' · ') || 'No matches'}</div>
               </div>
             </div>`).join('')}
         </div>`;
@@ -3994,16 +4227,22 @@ button{touch-action:manipulation;}
     drawFixtureSummary();
 
     document.getElementById('generateFixtureBtn').addEventListener('click', async ()=>{
-      const teamNames = configuredFranchises().map(f=>f.name);
+      const franchiseList = configuredFranchises();
+      const teamNames = franchiseList.map(f=>f.name);
       if(teamNames.length < 2){ alert('Add at least 2 franchises to the Player → Team name mapping before generating a fixture.'); return; }
-      const legs = document.getElementById('fixtureLegs').value === '2' ? 2 : 1;
+      const conferenceMap = {};
+      franchiseList.forEach(f=>{ conferenceMap[f.name] = f.conference; });
+      const unassigned = franchiseList.filter(f=>f.conference!=='a' && f.conference!=='b');
+      if(unassigned.length && !confirm(`${unassigned.length} franchise${unassigned.length===1?' is':'s are'} not assigned to a conference above, so the schedule will be a plain round robin instead of splitting by conference with one inter-conference game per week. Continue anyway?`)) return;
+      const weeksInput = parseInt(document.getElementById('fixtureWeeks').value, 10);
+      if(!weeksInput || weeksInput < 1){ alert('Enter how many weeks the season should run.'); return; }
       if(STATE.settings.fixture && !confirm('This replaces the current fixture. Continue?')) return;
       const btn = document.getElementById('generateFixtureBtn');
       btn.disabled = true;
       try{
-        const rounds = generateFixture(teamNames, legs);
+        const rounds = generateFixture(teamNames, weeksInput, conferenceMap);
         await saveFixture({rounds}, 'generated');
-        await logAdminAction('generate_fixture', `Generated a ${legs===2?'double':'single'}-leg fixture for ${teamNames.length} franchises (${rounds.length} weeks).`, {teams:teamNames.length, legs, weeks:rounds.length});
+        await logAdminAction('generate_fixture', `Generated a ${rounds.length}-week fixture for ${teamNames.length} franchises.`, {teams:teamNames.length, weeks:rounds.length, conferenceSplit:!unassigned.length});
         renderSettings();
       }catch(err){
         alert('Could not generate the fixture: ' + err.message);
@@ -4019,13 +4258,139 @@ button{touch-action:manipulation;}
       status.innerHTML = '<div class="note">Reading workbook…</div>';
       try{
         const wb = XLSX.read(await file.arrayBuffer(), {type:'array'});
-        const {rounds, skipped} = parseFixtureWorkbook(wb);
+        const {rounds, skipped, corrected, corrections} = parseFixtureWorkbook(wb);
         await saveFixture({rounds}, 'upload');
-        await logAdminAction('upload_fixture', `Uploaded a fixture from "${file.name}" (${rounds.length} weeks).`, {source:file.name, weeks:rounds.length, skippedRows:skipped});
-        status.innerHTML = skipped ? `<div class="note">Imported ${rounds.length} week(s); skipped ${skipped} row(s) missing Home/Away.</div>` : '';
+        await logAdminAction('upload_fixture', `Uploaded a fixture from "${file.name}" (${rounds.length} weeks).`, {source:file.name, weeks:rounds.length, skippedRows:skipped, autoCorrected:corrected||0});
+        const issues = fixtureConferenceIssues({rounds}, STATE.settings.franchises || {});
+        const parts = [];
+        if(skipped) parts.push(`skipped ${skipped} row${skipped===1?'':'s'} missing Home/Away`);
+        if(corrected) parts.push(`auto-corrected ${corrected} team name${corrected===1?'':'s'} to match the Player → Team mapping`);
+        if(issues.length) parts.push(`⚠ ${issues.length} week${issues.length===1?'':'s'} have more than one inter-conference match (${issues.map(i=>escapeHtml(i.week)).join(', ')})`);
+        const correctionsList = corrections && corrections.length
+          ? `<div class="note" style="margin-top:6px;">${corrections.map(c=>`"${escapeHtml(c.from)}" → "${escapeHtml(c.to)}"`).join('<br>')}</div>`
+          : '';
+        status.innerHTML = (parts.length ? `<div class="note${issues.length?' danger':''}">Imported ${rounds.length} week(s); ${parts.join('; ')}.</div>` : `<div class="note">Imported ${rounds.length} week(s). ✓</div>`) + correctionsList;
         renderSettings();
       }catch(err){
         status.innerHTML = `<div class="note danger">Could not read that file: ${escapeHtml(err.message)}</div>`;
+      }
+    });
+
+    document.getElementById('matchReplaysBtn').addEventListener('click', async ()=>{
+      const status = document.getElementById('matchReplaysStatus');
+      const fixture = STATE.settings.fixture;
+      const rounds = Array.isArray(fixture?.rounds) ? fixture.rounds : [];
+      if(!rounds.length){ status.innerHTML = '<div class="note danger">Generate or upload a fixture first.</div>'; return; }
+      if(!confirm('This sets the week on every matching replay to whatever the fixture says, overwriting any week currently on it (manual or auto). Continue?')) return;
+      const btn = document.getElementById('matchReplaysBtn');
+      btn.disabled = true;
+      try{
+        // Heal the already-saved fixture's team names against the current
+        // Player -> Team mapping before matching, so a stored fixture from
+        // before this reconciliation existed (or one with a stray typo) gets
+        // fixed in place rather than requiring a fresh re-upload. Persist any
+        // corrections back to the saved fixture so the Season page's schedule
+        // and results — which read the same STATE.settings.fixture — benefit
+        // from the fix immediately too.
+        const knownNames = configuredFranchises().map(f => f.name);
+        const fixtureCorrections = [];
+        let fixtureNamesFixed = false;
+        rounds.forEach(r=>{
+          (r.matches||[]).forEach(m=>{
+            const home = reconcileFranchiseName(m.home, knownNames);
+            const away = reconcileFranchiseName(m.away, knownNames);
+            if(home !== m.home){ fixtureCorrections.push({from:m.home, to:home}); m.home = home; fixtureNamesFixed = true; }
+            if(away !== m.away){ fixtureCorrections.push({from:m.away, to:away}); m.away = away; fixtureNamesFixed = true; }
+          });
+        });
+        if(fixtureNamesFixed) await saveFixture({rounds}, fixture.source);
+
+        // Every scheduled meeting between a given pair of franchises, in the
+        // order the fixture plays them (so a return leg lines up as the 2nd
+        // meeting, not the 1st).
+        const fixtureMeetingsByPair = {};
+        rounds.forEach(r=>{
+          (r.matches||[]).forEach(m=>{
+            const pairKey = [groupKey(m.home), groupKey(m.away)].sort().join('|');
+            if(!fixtureMeetingsByPair[pairKey]) fixtureMeetingsByPair[pairKey] = [];
+            fixtureMeetingsByPair[pairKey].push(r.week);
+          });
+        });
+        // Every actual replay between that same pair, in the order they were played.
+        const replaysByPair = {};
+        for(const r of Object.values(STATE.replays)){
+          if(!r?.players) continue;
+          const t1 = teamFor(r.players.p1), t2 = teamFor(r.players.p2);
+          const pairKey = [groupKey(t1), groupKey(t2)].sort().join('|');
+          if(!replaysByPair[pairKey]) replaysByPair[pairKey] = [];
+          replaysByPair[pairKey].push(r);
+        }
+        Object.values(replaysByPair).forEach(list => list.sort((a,b)=>(a.uploadtime||0)-(b.uploadtime||0) || (a.processedAt||0)-(b.processedAt||0)));
+
+        let changed = 0, alreadyRight = 0, unmatched = 0;
+        for(const pairKey in replaysByPair){
+          const weeks = fixtureMeetingsByPair[pairKey] || [];
+          replaysByPair[pairKey].forEach((replay, i)=>{
+            const week = weeks[i];
+            if(!week){ unmatched++; return; }
+            if(replay.week === week && replay.weekOverride){ alreadyRight++; return; }
+            replay.week = week;
+            replay.weekOverride = true;
+            changed++;
+          });
+        }
+
+        // Diagnostic for the unmatched case: rather than just saying "check the
+        // names line up," work out exactly which franchise-name strings appear
+        // on one side (fixture Home/Away vs. replays-via-Player→Team mapping)
+        // but not the other, so a spelling/whitespace/case mismatch is visible
+        // at a glance instead of requiring a manual side-by-side hunt.
+        let mismatchNote = '';
+        if(unmatched){
+          const fixtureTeamNames = new Map(); // normalized key -> original spelling
+          rounds.forEach(r=>{
+            (r.matches||[]).forEach(m=>{
+              [m.home, m.away].forEach(name=>{
+                const key = groupKey(name);
+                if(!fixtureTeamNames.has(key)) fixtureTeamNames.set(key, name);
+              });
+            });
+          });
+          const replayTeamNames = new Map();
+          for(const r of Object.values(STATE.replays)){
+            if(!r?.players) continue;
+            [teamFor(r.players.p1), teamFor(r.players.p2)].forEach(name=>{
+              const key = groupKey(name);
+              if(!replayTeamNames.has(key)) replayTeamNames.set(key, name);
+            });
+          }
+          const onlyInReplays = [...replayTeamNames.keys()].filter(k=>!fixtureTeamNames.has(k)).map(k=>replayTeamNames.get(k));
+          const onlyInFixture = [...fixtureTeamNames.keys()].filter(k=>!replayTeamNames.has(k)).map(k=>fixtureTeamNames.get(k));
+          const preview = (list) => list.slice(0,6).map(n=>`"${escapeHtml(n)}"`).join(', ') + (list.length>6?`, +${list.length-6} more`:'');
+          if(onlyInReplays.length || onlyInFixture.length){
+            mismatchNote = `<div class="note danger" style="margin-top:6px;">Name mismatch — these don't line up character-for-character (case/spacing counts unless "case-insensitive names" is on in Settings):
+              ${onlyInReplays.length ? `<div style="margin-top:4px;">In replays (via Player → Team mapping) but not in the fixture: ${preview(onlyInReplays)}</div>` : ''}
+              ${onlyInFixture.length ? `<div style="margin-top:4px;">In the fixture but not in any replay's mapped team: ${preview(onlyInFixture)}</div>` : ''}
+            </div>`;
+          }
+        }
+
+        if(changed) await saveReplays();
+        await logAdminAction('match_replays_to_fixture', `Matched replay weeks to the saved fixture: ${changed} updated, ${alreadyRight} already correct, ${unmatched} replay(s) had no corresponding fixture match.${fixtureNamesFixed ? ` Auto-corrected ${fixtureCorrections.length} fixture team name(s) to match the Player → Team mapping.` : ''}`, {changed, alreadyRight, unmatched, fixtureNamesFixed: fixtureCorrections.length});
+        renderTicker();
+        render();
+        // render() just rebuilt the whole settings panel (including this status
+        // box) from scratch, so the old `status` node is gone — re-query it
+        // after the rebuild instead of writing into the stale reference.
+        const freshStatus = document.getElementById('matchReplaysStatus');
+        const correctionNote = fixtureNamesFixed
+          ? `<div class="note" style="margin-top:6px;">Auto-corrected ${fixtureCorrections.length} fixture name${fixtureCorrections.length===1?'':'s'} to match the established franchise spelling:<br>${fixtureCorrections.map(c=>`"${escapeHtml(c.from)}" → "${escapeHtml(c.to)}"`).join('<br>')}</div>`
+          : '';
+        if(freshStatus) freshStatus.innerHTML = `<div class="note${unmatched?' danger':''}">${changed} replay${changed===1?'':'s'} updated${alreadyRight?`, ${alreadyRight} already correct`:''}.${unmatched?` ${unmatched} replay${unmatched===1?'':'s'} didn't match any scheduled fixture matchup — check the two franchises' names line up with the Player → Team name mapping.` : ' ✓'}</div>${correctionNote}${mismatchNote}`;
+      }catch(err){
+        status.innerHTML = `<div class="note danger">Could not match replays: ${escapeHtml(err.message)}</div>`;
+      }finally{
+        btn.disabled = false;
       }
     });
 
@@ -4269,15 +4634,38 @@ button{touch-action:manipulation;}
     'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
   );
 
+  // Commissioner status rarely changes, so we only check it against the
+  // database once per login and cache the result in sessionStorage. That
+  // way navigating between pages (each a fresh document load) doesn't
+  // re-run the permissions check and cause the nav to flicker/reload.
+  const NAV_CACHE_PREFIX='navPerms:';
+  function readNavCache(uid){
+    try{ const raw=sessionStorage.getItem(NAV_CACHE_PREFIX+uid); return raw?JSON.parse(raw):null; }
+    catch(e){ return null; }
+  }
+  function writeNavCache(uid,perms){
+    try{ sessionStorage.setItem(NAV_CACHE_PREFIX+uid, JSON.stringify(perms)); }catch(e){}
+  }
+  function clearNavCache(){
+    try{
+      Object.keys(sessionStorage).forEach(k=>{ if(k.indexOf(NAV_CACHE_PREFIX)===0) sessionStorage.removeItem(k); });
+    }catch(e){}
+  }
+
   async function setupCommissionerNav(){
     try{
       if(!client){ lockNav(true); return; }
       const {data:{session}}=await client.auth.getSession();
       lockNav(!session?.user);
       if(!session?.user) return;
-      const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
-      if(error) throw error;
-      if(profile?.is_commissioner){
+      let perms=readNavCache(session.user.id);
+      if(!perms){
+        const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
+        if(error) throw error;
+        perms={isCommissioner:!!profile?.is_commissioner};
+        writeNavCache(session.user.id,perms);
+      }
+      if(perms.isCommissioner){
         select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
       }
       // "Draft Room" is shown to any logged-in team owner, but only while a
@@ -4297,7 +4685,10 @@ button{touch-action:manipulation;}
     if(e.target.value) location.href=e.target.value;
   });
   setupCommissionerNav();
-  client?.auth.onAuthStateChange((_event,session)=>{ lockNav(!session?.user); });
+  client?.auth.onAuthStateChange((_event,session)=>{
+    lockNav(!session?.user);
+    if(_event==='SIGNED_IN'||_event==='SIGNED_OUT'){ clearNavCache(); }
+  });
 })();
 </script>
 </body>
