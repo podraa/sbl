@@ -460,7 +460,6 @@ button{touch-action:manipulation;}
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="draft.html" data-draft-live-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -4218,7 +4217,8 @@ button{touch-action:manipulation;}
                 <div class="note" style="margin:4px 0 0;">${(r.matches||[]).map(m=>{
                   const ca=conferenceOf(conferenceMap,m.home), cb=conferenceOf(conferenceMap,m.away);
                   const inter = ca && cb && ca!==cb;
-                  return `${escapeHtml(m.home)} vs ${escapeHtml(m.away)}${inter?' <span class="badge" title="Inter-conference match">Inter-conf</span>':''}`;
+                  const style = inter ? 'background:rgba(255,180,84,.16); border:1px solid rgba(255,180,84,.4); border-radius:6px; padding:2px 7px;' : '';
+                  return `<span style="${style}" title="${inter?'Inter-conference match':''}">${escapeHtml(m.home)} vs ${escapeHtml(m.away)}</span>`;
                 }).join(' · ') || 'No matches'}</div>
               </div>
             </div>`).join('')}
@@ -4635,10 +4635,14 @@ button{touch-action:manipulation;}
   );
 
   // Commissioner status rarely changes, so we only check it against the
-  // database once per login and cache the result in sessionStorage. That
-  // way navigating between pages (each a fresh document load) doesn't
-  // re-run the permissions check and cause the nav to flicker/reload.
+  // database once per login and cache the result (plus the last-seen draft
+  // status) in sessionStorage. Crucially, we also paint from that cache
+  // *synchronously* below, before any awaiting -- otherwise the admin-only /
+  // draft-room options sit hidden on every fresh page load and only pop in a
+  // tick later once getSession() resolves, which is the flicker/"reload"
+  // look when swapping between pages.
   const NAV_CACHE_PREFIX='navPerms:';
+  const NAV_LAST_UID_KEY='navLastUid';
   function readNavCache(uid){
     try{ const raw=sessionStorage.getItem(NAV_CACHE_PREFIX+uid); return raw?JSON.parse(raw):null; }
     catch(e){ return null; }
@@ -4646,10 +4650,33 @@ button{touch-action:manipulation;}
   function writeNavCache(uid,perms){
     try{ sessionStorage.setItem(NAV_CACHE_PREFIX+uid, JSON.stringify(perms)); }catch(e){}
   }
+  function readLastUid(){
+    try{ return sessionStorage.getItem(NAV_LAST_UID_KEY); }catch(e){ return null; }
+  }
+  function writeLastUid(uid){
+    try{ sessionStorage.setItem(NAV_LAST_UID_KEY, uid); }catch(e){}
+  }
   function clearNavCache(){
     try{
       Object.keys(sessionStorage).forEach(k=>{ if(k.indexOf(NAV_CACHE_PREFIX)===0) sessionStorage.removeItem(k); });
+      sessionStorage.removeItem(NAV_LAST_UID_KEY);
     }catch(e){}
+  }
+  function showAdminOption(){ select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; }); }
+  function showDraftOption(){ select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; }); }
+  function hideDraftOption(){ select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=true; }); }
+
+  // Paint immediately from whatever was cached on the previous page, before
+  // doing any real check.
+  const lastUid=readLastUid();
+  if(lastUid){
+    const cached=readNavCache(lastUid);
+    if(cached){
+      lockNav(false);
+      if(cached.isCommissioner) showAdminOption();
+      if(cached.draftLive) showDraftOption();
+      if(current===ADMIN) select.value=ADMIN;
+    }
   }
 
   async function setupCommissionerNav(){
@@ -4658,25 +4685,24 @@ button{touch-action:manipulation;}
       const {data:{session}}=await client.auth.getSession();
       lockNav(!session?.user);
       if(!session?.user) return;
+      writeLastUid(session.user.id);
       let perms=readNavCache(session.user.id);
       if(!perms){
         const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
         if(error) throw error;
         perms={isCommissioner:!!profile?.is_commissioner};
-        writeNavCache(session.user.id,perms);
       }
       if(perms.isCommissioner){
-        select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
+        showAdminOption();
       }
       // "Draft Room" is shown to any logged-in team owner, but only while a
       // draft is actually in progress -- independent of commissioner status.
       try{
         const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-        const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-        if(draftStatus==='live'){
-          select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; });
-        }
+        perms.draftLive = stateRow?.replay_data?.settings?.draft?.status === 'live';
       }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
+      if(perms.draftLive) showDraftOption(); else hideDraftOption();
+      writeNavCache(session.user.id,perms);
       if(current===ADMIN) select.value=ADMIN;
     }catch(err){ console.warn('Commissioner navigation check failed:',err); lockNav(true); }
   }
@@ -4688,6 +4714,7 @@ button{touch-action:manipulation;}
   client?.auth.onAuthStateChange((_event,session)=>{
     lockNav(!session?.user);
     if(_event==='SIGNED_IN'||_event==='SIGNED_OUT'){ clearNavCache(); }
+    if(session?.user) setupCommissionerNav();
   });
 })();
 </script>

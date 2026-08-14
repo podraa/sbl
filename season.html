@@ -505,6 +505,7 @@
   .fixture-match:last-child .fixture-vs,
   .fixture-match:last-child .fixture-status{border-bottom:0;}
   .fixture-match.fixture-played .fixture-status{color:var(--teal);}
+  .fixture-match.fixture-inter .fixture-team,.fixture-match.fixture-inter .fixture-vs,.fixture-match.fixture-inter .fixture-status{background:color-mix(in srgb, var(--amber) 16%, transparent);}
   @media(max-width:900px){.fixture-weeks{max-width:100%;}}
   @media(max-width:620px){
     .fixture-matches{grid-template-columns:1fr 22px 1fr;font-size:13px;}
@@ -748,7 +749,6 @@ button{touch-action:manipulation;}
   <a href="rosters.html" data-page="rosters.html">Rosters</a>
   <a href="team-analysis.html" data-page="team-analysis.html">Team Analysis</a>
   <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
-  <a href="draft.html" data-page="draft.html" data-draft-live-only data-admin-only hidden>Draft Room</a>
   <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
 </nav>
 <div class="nav-hover-zone" id="navHoverZone" aria-hidden="true"></div>
@@ -2783,11 +2783,11 @@ button{touch-action:manipulation;}
               const inter = ca && cb && ca !== cb;
               const scoreline = res.played ? (res.winner ? `${res.winnerScore}\u2013${res.loserScore}` : `${res.homeScore}\u2013${res.awayScore}`) : '';
               const statusText = res.played ? (res.winner ? `${escapeHtml(res.winner)} won ${scoreline}` : `Played ${scoreline}`) : 'Not played yet';
-              return `<div class="fixture-match ${res.played?'fixture-played':''}">
+              return `<div class="fixture-match ${res.played?'fixture-played':''} ${inter?'fixture-inter':''}"${inter?' title="Inter-conference match"':''}>
                 <span class="fixture-team ${homeWin?'fixture-winner':''}">${escapeHtml(m.home)}</span>
                 <span class="fixture-vs">vs</span>
                 <span class="fixture-team ${awayWin?'fixture-winner':''}">${escapeHtml(m.away)}</span>
-                <span class="fixture-status">${statusText}${inter ? ' <span class="badge" title="Inter-conference match">Inter-conf</span>' : ''}</span>
+                <span class="fixture-status">${statusText}</span>
               </div>`;
             }).join('') : '<div class="conference-empty">No matches this week.</div>'}
           </div>
@@ -3396,11 +3396,21 @@ button{touch-action:manipulation;}
     nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
     nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
   }
+  function showAdminLinks(){
+    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=false; });
+  }
+  function showDraftLink(){
+    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=false; });
+  }
   // Commissioner status rarely changes, so we only check it against the
-  // database once per login and cache the result in sessionStorage. That
-  // way navigating between pages (each a fresh document load) doesn't
-  // re-run the permissions check and cause the nav to flicker/reload.
+  // database once per login and cache the result (plus the last-seen draft
+  // status) in sessionStorage. Crucially, we also paint from that cache
+  // *synchronously* below, before any awaiting -- otherwise hidePrivilegedLinks()
+  // hides the admin-only / draft-room links on every fresh page load, and they
+  // only pop back in a tick later once getSession() resolves. That pop-in is
+  // the flicker/"reload" look when swapping between pages.
   const NAV_CACHE_PREFIX='navPerms:';
+  const NAV_LAST_UID_KEY='navLastUid';
   function readNavCache(uid){
     try{ const raw=sessionStorage.getItem(NAV_CACHE_PREFIX+uid); return raw?JSON.parse(raw):null; }
     catch(e){ return null; }
@@ -3408,41 +3418,68 @@ button{touch-action:manipulation;}
   function writeNavCache(uid,perms){
     try{ sessionStorage.setItem(NAV_CACHE_PREFIX+uid, JSON.stringify(perms)); }catch(e){}
   }
+  function readLastUid(){
+    try{ return sessionStorage.getItem(NAV_LAST_UID_KEY); }catch(e){ return null; }
+  }
+  function writeLastUid(uid){
+    try{ sessionStorage.setItem(NAV_LAST_UID_KEY, uid); }catch(e){}
+  }
   function clearNavCache(){
     try{
       Object.keys(sessionStorage).forEach(k=>{ if(k.indexOf(NAV_CACHE_PREFIX)===0) sessionStorage.removeItem(k); });
+      sessionStorage.removeItem(NAV_LAST_UID_KEY);
     }catch(e){}
   }
+  // Paint immediately from whatever was cached on the previous page, before
+  // doing any real check -- this is what removes the flash. Only falls back
+  // to hiding everything when there's nothing to paint from yet (first load
+  // of the session, or a signed-out visitor).
+  let paintedFromCache=false;
+  const lastUid=readLastUid();
+  if(lastUid){
+    const cached=readNavCache(lastUid);
+    if(cached){
+      lockNav(false);
+      if(cached.isCommissioner) showAdminLinks();
+      if(cached.draftLive) showDraftLink();
+      paintedFromCache=true;
+    }
+  }
+  if(!paintedFromCache) hidePrivilegedLinks();
   async function setupNav(){
-    hidePrivilegedLinks();
     try{
-      if(!client){ lockNav(true); return; }
+      if(!client){ lockNav(true); hidePrivilegedLinks(); return; }
       const {data:{session}}=await client.auth.getSession();
       lockNav(!session?.user);
       if(!session?.user){ hidePrivilegedLinks(); return; }
+      writeLastUid(session.user.id);
       let perms=readNavCache(session.user.id);
       if(!perms){
         const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
         if(error) throw error;
         perms={isCommissioner:!!profile?.is_commissioner};
-        writeNavCache(session.user.id,perms);
       }
       if(perms.isCommissioner){
-        nav.querySelectorAll('[data-admin-only]').forEach(a=>{a.hidden=false;});
-        try{
-          const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-          const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-          if(draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
-        }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
+        showAdminLinks();
+      }else{
+        nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
       }
-    }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); }
+      // "Draft Room" is shown to any logged-in team owner, but only while a
+      // draft is actually in progress -- independent of commissioner status.
+      try{
+        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
+        perms.draftLive = stateRow?.replay_data?.settings?.draft?.status === 'live';
+      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
+      if(perms.draftLive) showDraftLink();
+      else nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
+      writeNavCache(session.user.id,perms);
+    }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); hidePrivilegedLinks(); }
   }
   setupNav();
   client?.auth.onAuthStateChange((_event,session)=>{
     lockNav(!session?.user);
-    hidePrivilegedLinks();
     if(_event==='SIGNED_IN'||_event==='SIGNED_OUT'){ clearNavCache(); }
-    if(session?.user) setupNav();
+    if(session?.user) setupNav(); else hidePrivilegedLinks();
   });
 })();
 </script>
