@@ -327,7 +327,7 @@ body::-webkit-scrollbar,
   <a href="stats.html" data-page="stats.html">Stats</a>
   <a href="season.html" data-page="season.html">Season</a>
   <a href="rosters.html" data-page="rosters.html">Rosters</a>
-  <a href="team-analysis.html" data-page="team-analysis.html">Team Analysis</a>
+  <a href="team-analysis.html" data-page="team-analysis.html">Match Prep</a>
   <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
   <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
 </nav>
@@ -1653,6 +1653,94 @@ body::-webkit-scrollbar,
     if(e.clientY <= 12) nav.classList.remove('nav-hidden');
   }, {passive:true});
   nav.classList.remove('nav-hidden');
+})();
+</script>
+<script id="sitewide-sprite-fix">
+(function(){
+  const BASE='https://play.pokemonshowdown.com/sprites/';
+  const aliases={
+    'ogerpon-teal-mask':['ogerpon'],
+    'ogerpon-wellspring-mask':['ogerpon-wellspring'],
+    'ogerpon-hearthflame-mask':['ogerpon-hearthflame'],
+    'ogerpon-cornerstone-mask':['ogerpon-cornerstone'],
+    'squawkabilly-green-plumage':['squawkabilly-green'],
+    'squawkabilly-blue-plumage':['squawkabilly-blue'],
+    'squawkabilly-yellow-plumage':['squawkabilly-yellow'],
+    'squawkabilly-white-plumage':['squawkabilly-white'],
+    'dudunsparce-three-segment':['dudunsparce-3'],
+    'dudunsparce-two-segment':['dudunsparce-2'],
+    'maushold-family-of-three':['maushold-family3'],
+    'maushold-family-of-four':['maushold'],
+    'zygarde-10-percent':['zygarde-10'],
+    'zygarde-50-percent':['zygarde'],
+    'zygarde-complete':['zygarde-complete'],
+    'necrozma-dusk-mane':['necrozma-dusk'],
+    'necrozma-dawn-wings':['necrozma-dawn'],
+    'lycanroc-midday':['lycanroc'],
+    'lycanroc-midnight':['lycanroc-midnight'],
+    'lycanroc-dusk':['lycanroc-dusk'],
+    'wishiwashi-school':['wishiwashi-school'],
+    'eiscue-ice':['eiscue'],
+    'eiscue-noice':['eiscue-noice'],
+    'morpeko-hangry':['morpeko-hangry'],
+    'palafin-zero':['palafin'],
+    'palafin-hero':['palafin-hero'],
+    'minior-red-meteor':['minior-red'],
+    'minior-orange-meteor':['minior-orange'],
+    'minior-yellow-meteor':['minior-yellow'],
+    'minior-green-meteor':['minior-green'],
+    'minior-blue-meteor':['minior-blue'],
+    'minior-indigo-meteor':['minior-indigo'],
+    'minior-violet-meteor':['minior-violet']
+  };
+  function slug(s){
+    return String(s||'').trim().toLowerCase()
+      .replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
+      .replace(/[.:]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  }
+  function urlsFor(img){
+    let id=slug(img.getAttribute('data-sprite-species')||img.alt||'');
+    if(!id){
+      const m=(img.src||'').match(/sprites\/[^/]+\/([^/?#]+)\.png/i);
+      id=m?m[1].toLowerCase():'';
+    }
+    if(!id)return [];
+    const ids=[]; const add=x=>{if(x&&!ids.includes(x))ids.push(x)};
+    add(id); (aliases[id]||[]).forEach(add);
+    add(id.replace(/-plumage$/,'')); add(id.replace(/-mask$/,''));
+    add(id.replace(/-forme$/,'')); add(id.replace(/-form$/,''));
+    add(id.replace(/-standard$/,'')); add(id.replace(/-normal$/,''));
+    const parts=id.split('-');
+    for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
+    const out=[];
+    for(const x of ids){
+      out.push(BASE+'gen9/'+x+'.png');
+      out.push(BASE+'gen5/'+x+'.png');
+      out.push(BASE+'dex/'+x+'.png');
+    }
+    return out;
+  }
+  function install(img){
+    if(!(img instanceof HTMLImageElement)||img.dataset.sitewideSpriteFix)return;
+    const src=img.src||'';
+    if(!src.includes('/sprites/'))return;
+    img.dataset.sitewideSpriteFix='1';
+    img.dataset.sitewideSpriteUrls=JSON.stringify(urlsFor(img));
+    img.dataset.sitewideSpriteIndex='-1';
+    img.onerror=function(){
+      const urls=JSON.parse(img.dataset.sitewideSpriteUrls||'[]');
+      let i=Number(img.dataset.sitewideSpriteIndex||-1)+1;
+      while(i<urls.length && urls[i]===img.src)i++;
+      if(i<urls.length){img.dataset.sitewideSpriteIndex=String(i);img.style.opacity='';img.src=urls[i];}
+      else{img.onerror=null;img.removeAttribute('src');img.style.opacity='.25';}
+    };
+  }
+  function scan(root){
+    if(root instanceof HTMLImageElement)install(root);
+    else if(root&&root.querySelectorAll)root.querySelectorAll('img[src*="/sprites/"]').forEach(install);
+  }
+  function start(){scan(document); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(scan))).observe(document.documentElement,{subtree:true,childList:true});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
 })();
 </script>
 </body>
