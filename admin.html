@@ -3032,9 +3032,23 @@
 
   async function logAdminAction(actionType, message, metadata={}){
     const user = adminUser || (await supabase.auth.getUser()).data?.user;
+    // Keep the existing admin_email column for backwards compatibility, but
+    // store the admin's username in it for all new log entries.
+    let adminUsername = null;
+    try{
+      const cachedProfile = (COMM_PROFILES || []).find(p => String(p.id) === String(user?.id));
+      adminUsername = cachedProfile?.username || null;
+      if(!adminUsername && user?.id){
+        const {data: profileRow} = await supabase.from('profiles')
+          .select('username').eq('id', user.id).maybeSingle();
+        adminUsername = profileRow?.username || null;
+      }
+    }catch(e){
+      console.warn('Could not load admin username for audit log:', e);
+    }
     const entry = {
       admin_id: user?.id || null,
-      admin_email: user?.email || null,
+      admin_email: adminUsername || user?.email || null,
       action_type: actionType,
       message,
       metadata: Object.assign({
