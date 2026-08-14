@@ -480,6 +480,21 @@
   @media(max-width:900px){.conference-standings{grid-template-columns:1fr;}.conference-block.unassigned{grid-column:auto;}}
   @media(max-width:620px){.standings-row{grid-template-columns:30px minmax(0,1fr) 54px 54px;gap:8px;padding:11px 12px;}.standings-row .standings-stat:nth-last-child(-n+2){display:none;}.standings-stat-label{font-size:8px;}.standings-team-name{font-size:13px;}}
 
+  /* ---------- Fixture ---------- */
+  .fixture-weeks{display:flex;flex-direction:column;gap:14px;margin-top:16px;}
+  .fixture-week{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .fixture-week-title{font-size:13px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--text-dim);padding:12px 16px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--panel-alt),var(--panel));}
+  .fixture-matches{display:flex;flex-direction:column;}
+  .fixture-match{display:grid;grid-template-columns:1fr 24px 1fr auto;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;}
+  .fixture-match:last-child{border-bottom:0;}
+  .fixture-team{font-weight:650;overflow-wrap:anywhere;}
+  .fixture-team:first-child{text-align:right;}
+  .fixture-winner{color:var(--amber);}
+  .fixture-vs{text-align:center;font:700 10px var(--mono);color:var(--text-dim);text-transform:uppercase;}
+  .fixture-status{font-size:11px;color:var(--text-dim);white-space:nowrap;}
+  .fixture-match.fixture-played .fixture-status{color:var(--teal);}
+  @media(max-width:620px){.fixture-match{grid-template-columns:1fr 20px 1fr;}.fixture-status{grid-column:1 / -1;text-align:center;margin-top:2px;}}
+
   /* ---------- Franchise Stats revamp ---------- */
   .franchise-shell{display:flex;flex-direction:column;gap:14px;}
   .franchise-header{display:flex;justify-content:space-between;align-items:flex-end;gap:22px;}
@@ -730,8 +745,9 @@ button{touch-action:manipulation;}
     <button data-tab="pokemonsearch">Pokémon Search</button>
     <button data-tab="global">Damage Board</button>
     <button data-tab="goldenfist">Golden Fist</button>
+    <button data-tab="luckiest">Luckiest Team</button>
     <button data-tab="causes">Death Stats</button>
-    <button data-tab="teamcompare">Standings</button>
+    <button data-tab="season">Season</button>
     <button data-tab="teams">Franchise Stats</button>
     <button data-tab="replays">Replay Browser</button>
   </nav>
@@ -1028,6 +1044,125 @@ button{touch-action:manipulation;}
     let lastMove = null; // {source, target, move}
     let currentTurn = 0;
     let winner = null;
+    const luck = {p1:newLuckSide(), p2:newLuckSide()};
+    const luckPokemon = {};
+    function pokemonLuckForSlot(slot){
+      const mk = monKey(slot);
+      if(!mk) return null;
+      if(!luckPokemon[mk]) luckPokemon[mk] = Object.assign({species:(slots[slot] && slots[slot].species) || ''}, newLuckSide());
+      return luckPokemon[mk];
+    }
+    function addLuckEvent(target, type, score, detail){
+      if(!target || !Array.isArray(target.luckEvents)) return;
+      target.luckEvents.push({turn:currentTurn, type, score:Number(score||0), detail:String(detail||'')});
+    }
+    const sleeping = {};
+    const frozen = {};
+    const pendingStatusChecks = {};
+    const currentMajorStatus = {};
+    // Accuracy comes from the same move data used by Pokemon Showdown, rather
+    // than a manually maintained list. The replay itself tells us which move
+    // was used; this lookup tells us that move's base accuracy.
+    const MOVE_DATA_URL = 'https://play.pokemonshowdown.com/data/moves.json';
+    let MOVE_DATA = null;
+    let MOVE_ACCURACY_PROMISE = null;
+    function moveKey(name){ return String(name || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+    async function ensureMoveAccuracyData(){
+      if(MOVE_DATA) return MOVE_DATA;
+      if(MOVE_ACCURACY_PROMISE) return MOVE_ACCURACY_PROMISE;
+      MOVE_ACCURACY_PROMISE = fetch(MOVE_DATA_URL, {cache:'force-cache'})
+        .then(r=>{ if(!r.ok) throw new Error('could not load Showdown move data (' + r.status + ')'); return r.json(); })
+        .then(data=>{
+          const out = {};
+          for(const [id, move] of Object.entries(data || {})){
+            if(!move) continue;
+            const acc = move.accuracy;
+            const value = (typeof acc === 'number') ? acc : null;
+            const statusChances = {};
+            if(move.status) statusChances[move.status] = 100;
+            const secondaries = Array.isArray(move.secondaries) ? move.secondaries : (move.secondary && move.secondary !== false ? [move.secondary] : []);
+            for(const sec of secondaries){
+              if(sec && sec.status){
+                const chance = typeof sec.chance === 'number' ? sec.chance : 100;
+                statusChances[sec.status] = Math.max(statusChances[sec.status] || 0, chance);
+              }
+            }
+            // willCrit (e.g. Frost Breath, Storm Throw, Zippy Zap, Wicked Blow, Surging
+            // Strikes) marks a move as an automatic, deterministic critical hit. Showdown
+            // encodes this separately from critRatio, not as critRatio:4, so both must be
+            // captured or guaranteed crits get scored as lucky.
+            const entry = {accuracy:value, statusChances, critRatio:(typeof move.critRatio === 'number' ? move.critRatio : 1), willCrit:!!move.willCrit};
+            out[moveKey(id)] = entry;
+            if(move.name) out[moveKey(move.name)] = entry;
+          }
+          MOVE_DATA = out;
+          return out;
+        })
+        .catch(err=>{
+          console.warn('Move accuracy data unavailable; accuracy-sensitive luck events will be skipped.', err);
+          MOVE_DATA = {};
+          return MOVE_DATA;
+        });
+      return MOVE_ACCURACY_PROMISE;
+    }
+    function getMoveAccuracy(name){
+      if(!MOVE_DATA) return null;
+      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
+      return entry && typeof entry.accuracy === 'number' ? entry.accuracy : null;
+    }
+    function getMoveStatusChance(name, status){
+      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
+      if(!entry || !entry.statusChances) return null;
+      const value = entry.statusChances[status];
+      return typeof value === 'number' ? value : null;
+    }
+    function isLowAccuracyMove(name){
+      const acc = getMoveAccuracy(name);
+      return acc !== null && acc <= 85;
+    }
+    // Luck is weighted by how unlikely the observed event was.
+    // p=1 is guaranteed and contributes 0; rarer events contribute more.
+    function rarityLuck(probability){
+      if(typeof probability !== 'number' || probability <= 0 || probability > 1) return 0;
+      return (1 / probability) - 1;
+    }
+    function statusDodgeLuck(chance){
+      // The event is FAILURE of the status roll. A 10% status therefore has a
+      // 90% dodge probability, while a 30% status has a 70% dodge probability.
+      // This makes dodging Discharge's 30% paralysis luckier than dodging
+      // Thunderbolt's 10% paralysis, as intended. 100% status has no roll.
+      if(typeof chance !== 'number' || chance <= 0 || chance >= 100) return 0;
+      return rarityLuck(1 - (chance / 100));
+    }
+    function moveDodgeLuck(accuracy){
+      if(typeof accuracy !== 'number' || accuracy < 0 || accuracy >= 100) return 0;
+      return rarityLuck(1 - (accuracy / 100));
+    }
+    function lowAccuracyHitLuck(accuracy){
+      if(typeof accuracy !== 'number' || accuracy <= 0 || accuracy > 100) return 0;
+      return rarityLuck(accuracy / 100);
+    }
+    function critChance(name){
+      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
+      const ratio = entry && typeof entry.critRatio === 'number' ? entry.critRatio : 1;
+      // Guaranteed-crit moves are deterministic and excluded from luck scoring.
+      // Guaranteed crits are flagged via willCrit (Frost Breath, Storm Throw,
+      // Zippy Zap, Wicked Blow, Surging Strikes), not via critRatio.
+      if((entry && entry.willCrit) || ratio >= 4) return null;
+      if(ratio >= 3) return 0.5;
+      if(ratio >= 2) return 0.125;
+      return 1 / 24;
+    }
+    function critLuck(name){
+      const chance = critChance(name);
+      return chance === null ? 0 : rarityLuck(chance);
+    }
+    function paralysisDodgeLuck(){ return rarityLuck(0.75); }
+    function durationLuck(turns){
+      if(!Number.isFinite(turns) || turns <= 0) return 0;
+      return 2 - turns; // 1 turn = +1, 2 = neutral, 3 = -1, etc.
+    }
+    function newLuckSide(){ return {crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0,luckEvents:[]}; }
     // NOTE: these three all store direct references to a mon's *stats object*
     // (captured at the moment of the event via ensureMon), never a slot label.
     // A slot label like "p1a" gets reused by a different mon later in the game,
@@ -1076,6 +1211,44 @@ button{touch-action:manipulation;}
       return mons[k];
     }
 
+    function addStatusDodgeLuck(targetSide, chance, targetMk){
+      const score = statusDodgeLuck(chance);
+      if(luck[targetSide]) { luck[targetSide].statusDodgeLuck += score; addLuckEvent(luck[targetSide], 'status-dodge', score, `${chance}% status chance avoided`); }
+      if(targetMk && luckPokemon[targetMk]) { luckPokemon[targetMk].statusDodgeLuck += score; addLuckEvent(luckPokemon[targetMk], 'status-dodge', score, `${chance}% status chance avoided`); }
+    }
+    function finalizePendingStatusChecks(){
+      for(const key of Object.keys(pendingStatusChecks)){
+        const checks = pendingStatusChecks[key];
+        for(const check of checks){
+          if(!check.resolved && !check.cancelled){
+            addStatusDodgeLuck(check.targetSide, check.chance, check.targetMk || key);
+            check.resolved = true;
+          }
+        }
+        delete pendingStatusChecks[key];
+      }
+    }
+    function finalizeStatusDuration(mk, status){
+      const store = status === 'slp' ? sleeping : frozen;
+      const st = store[mk];
+      if(!st) return;
+      const side = mk.split('|')[0];
+      const score = durationLuck(st.turns);
+      if(luck[side]){
+        if(status === 'slp') luck[side].sleepDurationLuck += score;
+        if(status === 'frz') luck[side].freezeDurationLuck += score;
+      }
+      const monLuck = luckPokemon[mk];
+      if(monLuck){
+        if(status === 'slp') monLuck.sleepDurationLuck += score;
+        if(status === 'frz') monLuck.freezeDurationLuck += score;
+        addLuckEvent(monLuck, status === 'slp' ? 'sleep' : 'freeze', score, `${st.turns} turn${st.turns===1?'':'s'} ${status === 'slp' ? 'sleep' : 'freeze'}`);
+      }
+      const sideLuck = luck[side];
+      if(sideLuck) addLuckEvent(sideLuck, status === 'slp' ? 'sleep' : 'freeze', score, `${st.turns} turn${st.turns===1?'':'s'} ${status === 'slp' ? 'sleep' : 'freeze'}`);
+      delete store[mk];
+    }
+
     for(const raw of lines){
       if(!raw.startsWith('|')) continue;
       const parts = raw.split('|');
@@ -1090,7 +1263,30 @@ button{touch-action:manipulation;}
         if(side === 'p1' || side === 'p2') players[side] = parts[3];
       } else if(cmd === 'turn'){
         const t = parseInt(parts[2], 10);
-        if(!isNaN(t)) currentTurn = t;
+        if(!isNaN(t)){
+          currentTurn = t;
+          for(const mk of Object.keys(sleeping)){
+            const st = sleeping[mk];
+            if(st && st.lastCountedTurn < currentTurn){
+              const side = mk.split('|')[0];
+              if(luck[side]) luck[side].sleepTurns += 1;
+              if(luckPokemon[mk]) luckPokemon[mk].sleepTurns += 1;
+              st.turns += 1;
+              st.lastCountedTurn = currentTurn;
+            }
+          }
+          for(const mk of Object.keys(frozen)){
+            const st = frozen[mk];
+            if(st && st.lastCountedTurn < currentTurn){
+              const side = mk.split('|')[0];
+              if(luck[side]) luck[side].freezeTurns += 1;
+              if(luckPokemon[mk]) luckPokemon[mk].freezeTurns += 1;
+              st.turns += 1;
+              st.lastCountedTurn = currentTurn;
+            }
+          }
+          finalizePendingStatusChecks();
+        }
       } else if(cmd === 'win'){
         winner = (parts[2] || '').trim() || null;
       } else if(cmd === 'switch' || cmd === 'drag'){
@@ -1111,10 +1307,21 @@ button{touch-action:manipulation;}
         delete pendingDelayedHit[slot];
         ensureMon(slot);
       } else if(cmd === 'move'){
+        finalizePendingStatusChecks();
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
         const target = parts[4] ? parts[4].split(':')[0].trim() : null;
         const moveName = parts[3] ? parts[3].trim() : '';
-        if(source) lastMove = {source, target, move: moveName};
+        if(source){
+          lastMove = {source, target, move: moveName, accuracy:getMoveAccuracy(moveName), hitCounted:false};
+          if(target && sideOf(source) !== sideOf(target)){
+            const targetMk = monKey(target);
+            const statusChances = ['par','slp','frz'].map(st => getMoveStatusChance(moveName, st)).filter(v => v !== null);
+            const combinedStatusChance = statusChances.length ? Math.min(100, statusChances.reduce((a,b)=>a+b,0)) : null;
+            if(targetMk && combinedStatusChance !== null && !currentMajorStatus[targetMk]){
+              (pendingStatusChecks[targetMk] ||= []).push({targetSide:sideOf(target), chance:combinedStatusChance, resolved:false, cancelled:false});
+            }
+          }
+        }
         if(source && HAZARD_MOVES.includes(moveName)){
           const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
           const setterStats = ensureMon(source);
@@ -1159,6 +1366,46 @@ button{touch-action:manipulation;}
             };
           }
         }
+      } else if(cmd === '-miss'){
+        const source = parts[2] ? parts[2].split(':')[0].trim() : null;
+        const target = parts[3] ? parts[3].split(':')[0].trim() : null;
+        if(source && target && sideOf(source) !== sideOf(target)){
+          const targetSide = sideOf(target);
+          // A miss is a dodge for the target. We also resolve the actual move
+          // accuracy so the replay records whether this was a low-accuracy
+          // dodge, rather than guessing from a hard-coded move list.
+          if(luck[targetSide]){
+            luck[targetSide].dodges += 1;
+            if(lastMove && lastMove.source === source && lastMove.target === target){
+              if(isLowAccuracyMove(lastMove.move)) luck[targetSide].lowAccuracyDodges += 1;
+              const missChances = ['par','slp','frz'].map(st => getMoveStatusChance(lastMove.move, st)).filter(v => v !== null);
+              if(missChances.length){
+                const combinedMissChance = Math.min(100, missChances.reduce((a,b)=>a+b,0));
+                addStatusDodgeLuck(targetSide, combinedMissChance);
+              }
+            }
+          }
+          if(lastMove && lastMove.source === source && lastMove.target === target){
+            lastMove.missed = true;
+            lastMove.accuracy = getMoveAccuracy(lastMove.move);
+          }
+        }
+      } else if(cmd === '-crit'){
+        const target = parts[2] ? parts[2].split(':')[0].trim() : null;
+        if(lastMove && target && lastMove.source && sideOf(lastMove.source) !== sideOf(target)){
+          const attackerSide = sideOf(lastMove.source);
+          // Guaranteed-crit moves are deterministic and must not count as lucky crits.
+          const critChanceValue = critChance(lastMove.move);
+          if(critChanceValue !== null){
+            if(luck[attackerSide]){
+              luck[attackerSide].crits += 1;
+              luck[attackerSide].critLuck += rarityLuck(critChanceValue);
+              addLuckEvent(luck[attackerSide], 'crit', rarityLuck(critChanceValue), `${lastMove.move} crit (${critChanceValue.toFixed(1)}% chance)`);
+            }
+            const monLuck = pokemonLuckForSlot(lastMove.source);
+            if(monLuck){ monLuck.crits += 1; monLuck.critLuck += rarityLuck(critChanceValue); addLuckEvent(monLuck, 'crit', rarityLuck(critChanceValue), `${lastMove.move} crit (${critChanceValue.toFixed(1)}% chance)`); }
+          }
+        }
       } else if(cmd === '-status'){
         const slotFull = parts[2];
         if(!slotFull) continue;
@@ -1179,6 +1426,55 @@ button{touch-action:manipulation;}
         }
         if(inflictorStats) {
           statusSourceByMon[mk] = inflictorStats;
+          const inflictorSide = inflictorStats.side;
+          const statusCode = statusTags.includes('par') ? 'par' : (statusTags.includes('slp') ? 'slp' : (statusTags.includes('frz') ? 'frz' : null));
+          currentMajorStatus[mk] = statusCode || currentMajorStatus[mk] || null;
+          if(statusCode && lastMove && lastMove.target === slot){
+            const pending = pendingStatusChecks[mk] || [];
+            for(const check of pending) check.resolved = true;
+            delete pendingStatusChecks[mk];
+          }
+          if(statusCode === 'slp'){
+            sleeping[mk] = {startTurn:currentTurn, lastCountedTurn:currentTurn, turns:0};
+            if(inflictorSide && luck[inflictorSide]) luck[inflictorSide].sleepEvents += 1;
+            const targetLuck = pokemonLuckForSlot(slot);
+            if(targetLuck) targetLuck.sleepEvents += 1;
+          } else if(statusCode === 'frz'){
+            frozen[mk] = {startTurn:currentTurn, lastCountedTurn:currentTurn, turns:0};
+            if(inflictorSide && luck[inflictorSide]) luck[inflictorSide].freezeEvents += 1;
+            const targetLuck = pokemonLuckForSlot(slot);
+            if(targetLuck) targetLuck.freezeEvents += 1;
+          } else if(statusCode === 'par'){
+            // The status itself is not automatically treated as lucky/unlucky.
+            // Luck comes from avoiding the status roll or from the duration/turn
+            // behaviour of the status.
+          }
+          if(lastMove && !lastMove.hitCounted && lastMove.target === slot && isLowAccuracyMove(lastMove.move)){
+            if(luck[inflictorSide]) luck[inflictorSide].lowAccuracyHits += 1;
+            lastMove.hitCounted = true;
+          }
+        }
+      } else if(cmd === 'cant'){
+        const slotFull = parts[2];
+        const reason = parts[3] ? parts[3].trim() : '';
+        if(slotFull && reason === 'par'){
+          const slot = slotFull.split(':')[0].trim();
+          const side = sideOf(slot);
+          if(luck[side]) luck[side].fullParalysis += 1;
+        }
+      } else if(cmd === '-block' || cmd === '-fail' || cmd === '-notarget'){
+        const slotFull = parts[2];
+        if(slotFull){
+          const slot = slotFull.split(':')[0].trim();
+          const mk = monKey(slot);
+          if(mk && pendingStatusChecks[mk]) delete pendingStatusChecks[mk];
+        }
+      } else if(cmd === '-immune'){
+        const slotFull = parts[2];
+        if(slotFull){
+          const slot = slotFull.split(':')[0].trim();
+          const mk = monKey(slot);
+          if(mk && pendingStatusChecks[mk]) delete pendingStatusChecks[mk];
         }
       } else if(cmd === '-curestatus'){
         const slotFull = parts[2];
@@ -1187,7 +1483,13 @@ button{touch-action:manipulation;}
         const mk = monKey(slot);
         // status is gone — clear credit so it can't be reused if this individual
         // is somehow attributed residual status damage again later
-        if(mk) delete statusSourceByMon[mk];
+        if(mk){
+          const curedStatus = parts[3] ? parts[3].split('|')[0].trim() : currentMajorStatus[mk];
+          if(curedStatus === 'slp') finalizeStatusDuration(mk, 'slp');
+          if(curedStatus === 'frz') finalizeStatusDuration(mk, 'frz');
+          delete currentMajorStatus[mk];
+          delete statusSourceByMon[mk];
+        }
       } else if(cmd === '-damage'){
         const slotFull = parts[2];
         if(!slotFull) continue;
@@ -1199,6 +1501,24 @@ button{touch-action:manipulation;}
         slots[slot].hp = newHp;
         const targetStats = ensureMon(slot);
         if(targetStats) targetStats.damageTaken += dmg;
+        if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
+          if(!lastMove.hitCounted && isLowAccuracyMove(lastMove.move)){
+            const attackerSide = sideOf(lastMove.source);
+            const hitScore = lowAccuracyHitLuck(getMoveAccuracy(lastMove.move));
+            if(luck[attackerSide]){
+              luck[attackerSide].lowAccuracyHits += 1;
+              luck[attackerSide].lowAccuracyHitLuck += hitScore;
+              addLuckEvent(luck[attackerSide], 'low-accuracy-hit', hitScore, `${lastMove.move} hit (${getMoveAccuracy(lastMove.move)}% accurate)`);
+            }
+            const monLuck = pokemonLuckForSlot(lastMove.source);
+            if(monLuck){
+              monLuck.lowAccuracyHits += 1;
+              monLuck.lowAccuracyHitLuck += hitScore;
+              addLuckEvent(monLuck, 'low-accuracy-hit', hitScore, `${lastMove.move} hit (${getMoveAccuracy(lastMove.move)}% accurate)`);
+            }
+            lastMove.hitCounted = true;
+          }
+        }
         if(dmg <= 0) continue;
 
         const tags = parts.slice(4).join('|');
@@ -1289,6 +1609,15 @@ button{touch-action:manipulation;}
         const killerStats = killerInfo ? killerInfo.stats : null;
         const credited = !!(killerStats && killerStats.side !== slots[slot].side);
         if(deadStats){
+          const deadKey = monKey(slot);
+          if(deadKey){
+            if(sleeping[deadKey]) finalizeStatusDuration(deadKey, 'slp');
+            if(frozen[deadKey]) finalizeStatusDuration(deadKey, 'frz');
+            delete currentMajorStatus[deadKey];
+            delete sleeping[deadKey];
+            delete frozen[deadKey];
+            delete pendingStatusChecks[deadKey];
+          }
           deadStats.deaths += 1;
           deadStats.deathLog.push({
             replayId, turn: currentTurn,
@@ -1310,7 +1639,7 @@ button{touch-action:manipulation;}
     }
 
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner, teamRoster,
+      players, mons, winner, teamRoster, luck, luckPokemon,
       };
   }
 
@@ -1351,6 +1680,7 @@ button{touch-action:manipulation;}
   }
 
   async function processUrls(urlsRaw, week, logEl){
+    await ensureMoveAccuracyData();
     const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
     let added = 0, skipped = 0, failed = 0;
@@ -1388,7 +1718,10 @@ button{touch-action:manipulation;}
 
   // ---------- aggregation ----------
   function allReplays(weekFilter){
-    return Object.values(STATE.replays).filter(r => !weekFilter || weekFilter === 'ALL' || r.week === weekFilter);
+    const all = Object.values(STATE.replays);
+    if(!weekFilter || weekFilter === 'ALL') return all;
+    if(weekFilter === 'LAST4') return all.slice().sort((a,b)=>replayTimestamp(b)-replayTimestamp(a)).slice(0,4);
+    return all.filter(r => r.week === weekFilter);
   }
   function weeksList(){
     const set = new Set(Object.values(STATE.replays).map(r=>r.week || 'Unassigned'));
@@ -1839,16 +2172,17 @@ button{touch-action:manipulation;}
 
 
   function render(){
-    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'teamcompare' || activeTab === 'replays' || activeTab === 'overview');
+    document.getElementById('app').classList.toggle('wide', activeTab === 'teams' || activeTab === 'global' || activeTab === 'goldenfist' || activeTab === 'luckiest' || activeTab === 'pokemonsearch' || activeTab === 'causes' || activeTab === 'season' || activeTab === 'replays' || activeTab === 'overview');
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     if(activeTab === 'overview') return renderLeagueOverview();
     if(activeTab === 'process') return renderProcess();
     if(activeTab === 'global') return renderLeaderboards();
     if(activeTab === 'pokemonsearch') return renderPokemonSearch();
     if(activeTab === 'goldenfist') return renderGoldenFist();
+    if(activeTab === 'luckiest') return renderLuckiestTeam();
     if(activeTab === 'causes') return renderDeathCauses();
     if(activeTab === 'teams') return renderTeams();
-    if(activeTab === 'teamcompare') return renderTeamComparison();
+    if(activeTab === 'season') return renderSeason();
     if(activeTab === 'replays') return renderReplayBrowser();
     if(activeTab === 'settings') return renderSettings();
   }
@@ -1932,6 +2266,7 @@ button{touch-action:manipulation;}
   }
 
   async function reprocessAll(logEl){
+    await ensureMoveAccuracyData();
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
     for(const id of ids){
@@ -1989,6 +2324,7 @@ button{touch-action:manipulation;}
     const weeks = weeksList();
     return `<select id="${id}">
       <option value="ALL">All season</option>
+      <option value="LAST4">Last 4 games</option>
       ${weeks.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('')}
     </select>`;
   }
@@ -2154,6 +2490,126 @@ button{touch-action:manipulation;}
     </div>`;
   }
 
+  function luckTeamData(scope){
+    const out={};
+    for(const r of allReplays(scope)){
+      if(!r || !r.players || !r.luck) continue;
+      for(const side of ['p1','p2']){
+        const team=teamFor(r.players[side]);
+        if(!team) continue;
+        const key=groupKey(team);
+        if(!out[key]) out[key]={team,games:0,crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0};
+        const t=out[key];
+        t.games++;
+        const l=r.luck[side] || {};
+        for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) t[k]+=Number(l[k]||0);
+      }
+    }
+    return Object.values(out).map(t=>{
+      t.score=t.critLuck+t.moveDodgeLuck+t.lowAccuracyHitLuck+t.statusDodgeLuck+t.paralysisDodgeLuck+t.sleepDurationLuck+t.freezeDurationLuck;
+      return t;
+    }).sort((a,b)=>b.score-a.score || b.games-a.games || a.team.localeCompare(b.team,undefined,{sensitivity:'base'}));
+  }
+
+  function luckPokemonData(scope){
+    const out={};
+    for(const r of allReplays(scope)){
+      if(!r || !r.luckPokemon) continue;
+      for(const [mk,l] of Object.entries(r.luckPokemon)){
+        const species=String(l.species||mk.split('|')[1]||'').trim();
+        if(!species) continue;
+        const side=mk.split('|')[0];
+        const team=teamFor(r.players?.[side]);
+        const key=normName(species);
+        if(!out[key]) out[key]={species,team,teams:new Set(),games:0,crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0};
+        const p=out[key];
+        if(team) p.teams.add(team);
+        p.games++;
+        for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) p[k]+=Number(l[k]||0);
+      }
+    }
+    return Object.values(out).map(p=>{
+      p.team=Array.from(p.teams).join(', ');
+      p.score=p.critLuck+p.moveDodgeLuck+p.lowAccuracyHitLuck+p.statusDodgeLuck+p.paralysisDodgeLuck+p.sleepDurationLuck+p.freezeDurationLuck;
+      return p;
+    }).sort((a,b)=>b.score-a.score || b.games-a.games || a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
+  }
+
+  function luckGameData(scope){
+    const rows=[];
+    for(const r of allReplays(scope)){
+      if(!r || !r.luck) continue;
+      let score=0;
+      const totals={crits:0,dodges:0,lowAccuracyHits:0,statusDodges:0,fullParalysis:0,sleep:0,freeze:0};
+      for(const side of ['p1','p2']){
+        const l=r.luck[side]||{};
+        score += Number(l.critLuck||0)+Number(l.moveDodgeLuck||0)+Number(l.lowAccuracyHitLuck||0)+Number(l.statusDodgeLuck||0)+Number(l.paralysisDodgeLuck||0)+Number(l.sleepDurationLuck||0)+Number(l.freezeDurationLuck||0);
+        totals.crits += Number(l.crits||0);
+        totals.dodges += Number(l.dodges||0);
+        totals.lowAccuracyHits += Number(l.lowAccuracyHits||0);
+        totals.statusDodges += Number(l.statusDodgeLuck||0);
+        totals.fullParalysis += Number(l.fullParalysis||0);
+        totals.sleep += Number(l.sleepDurationLuck||0);
+        totals.freeze += Number(l.freezeDurationLuck||0);
+      }
+      const p1=r.players?.p1||'?'; const p2=r.players?.p2||'?';
+      rows.push({id:r.id||'',p1, p2, team1:teamFor(p1), team2:teamFor(p2), winner:r.winner||'', score, ...totals, uploadtime:Number(r.uploadtime||0)});
+    }
+    return rows.sort((a,b)=>b.score-a.score || b.uploadtime-a.uploadtime);
+  }
+
+  function openLuckPokemonSummary(species, scope){
+    const rows=[];
+    for(const r of allReplays(scope)){
+      if(!r || !r.luckPokemon) continue;
+      for(const [mk,l] of Object.entries(r.luckPokemon)){
+        const sp=String(l.species||mk.split('|')[1]||'');
+        if(normName(sp)!==normName(species)) continue;
+        const events=Array.isArray(l.luckEvents)?l.luckEvents:[];
+        if(!events.length) continue;
+        const side=mk.split('|')[0];
+        rows.push({replayId:r.id,turnEvents:events,team:teamFor(r.players?.[side]),opponent:teamFor(r.players?.[side==='p1'?'p2':'p1']),uploadtime:Number(r.uploadtime||0)});
+      }
+    }
+    rows.sort((a,b)=>b.uploadtime-a.uploadtime);
+    const events=rows.flatMap(x=>x.turnEvents.map(e=>({...e,replayId:x.replayId,team:x.team,opponent:x.opponent})));
+    const score=events.reduce((n,e)=>n+Number(e.score||0),0);
+    const byTurn={};
+    for(const e of events){ const k=String(e.turn||0); (byTurn[k] ||= []).push(e); }
+    const root=document.createElement('div');
+    root.innerHTML=`<div class="pokemon-overlay" id="luckPokemonModal"><div class="pokemon-modal" role="dialog" aria-modal="true" aria-label="Luck summary for ${escapeHtml(species)}"><div class="pokemon-modal-head"><div style="display:flex;align-items:center;gap:10px;">${spriteImg(species,'sprite-xl')}<div><strong>${escapeHtml(species)}</strong><div class="note">Luck summary · ${score>=0?'+':''}${score.toFixed(2)} luck</div></div></div><button class="ghost small" id="luckPokemonClose" type="button">Close ✕</button></div><div class="pokemon-modal-body"><div class="profile-grid"><div><span>Lucky events</span><strong>${events.filter(e=>e.score>0).length}</strong></div><div><span>Unlucky events</span><strong>${events.filter(e=>e.score<0).length}</strong></div><div><span>Games</span><strong>${rows.length}</strong></div><div><span>Net luck</span><strong>${score>=0?'+':''}${score.toFixed(2)}</strong></div></div><div class="section-divider"></div><h3 class="mini-heading">What turns did ${escapeHtml(species)} get lucky?</h3>${Object.keys(byTurn).sort((a,b)=>Number(a)-Number(b)).map(turn=>`<div style="margin:0 0 12px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;"><strong>Turn ${escapeHtml(turn)}</strong>${byTurn[turn].map(e=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-top:7px;">${e.score>=0?'🍀':'💀'}<div><strong>${escapeHtml(e.type.replace(/-/g,' '))}</strong> <span class="note">${e.score>=0?'+':''}${Number(e.score).toFixed(2)}</span><div class="note">${escapeHtml(e.detail)} · ${escapeHtml(e.team)} vs ${escapeHtml(e.opponent)} · <a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(e.replayId)}" target="_blank" rel="noopener">Replay</a></div></div></div>`).join('')}</div>`).join('') || '<div class="empty-state">No turn-by-turn luck events are stored yet. Reprocess the replays with the latest parser.</div>'}</div></div></div>`;
+    document.body.appendChild(root.firstElementChild); document.body.style.overflow='hidden';
+    const modal=document.getElementById('luckPokemonModal');
+    document.getElementById('luckPokemonClose').addEventListener('click',()=>{modal.remove();document.body.style.overflow='';});
+    modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();document.body.style.overflow='';}});
+  }
+
+  function renderLuckiestTeam(){
+    contentEl.innerHTML=`<div class="panel">
+      <h2>🍀 Luckiest</h2>
+      <div class="note" style="margin-bottom:14px;">Luck is weighted by how unlikely each event was. Move misses use the move's actual accuracy, status dodges use the probability of the status roll failing, crits use the move's crit stage, and low-accuracy hits use the move's actual hit chance. 1-turn sleep is lucky; longer sleep and freeze are increasingly unlucky.</div>
+      <div class="row" style="align-items:flex-end;gap:12px;"><div><label>View</label><select id="luckView"><option value="team">Team</option><option value="pokemon">Pokemon</option><option value="game">Luckiest Game</option></select></div><div><label>Scope</label>${weekSelectorHtml('luckWeek')}</div></div>
+      <div id="luckTable"></div>
+    </div>`;
+    const scopeSel=document.getElementById('luckWeek');
+    const viewSel=document.getElementById('luckView');
+    function draw(){
+      const view=viewSel.value;
+      if(view==='game'){
+        const rows=luckGameData(scopeSel.value);
+        document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>Game</th><th>Matchup</th><th>Winner</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(r.id)}" target="_blank" rel="noopener">${escapeHtml(r.id||'Replay')}</a></td><td><strong>${escapeHtml(r.team1)}</strong> vs <strong>${escapeHtml(r.team2)}</strong></td><td>${escapeHtml(r.winner||'—')}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodges.toFixed(2)}</td><td class="num">${r.sleep>=0?'+':''}${r.sleep.toFixed(2)}</td><td class="num">${r.freeze>=0?'+':''}${r.freeze.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
+        return;
+      }
+      const pokemon=view==='pokemon';
+      const rows=pokemon?luckPokemonData(scopeSel.value):luckTeamData(scopeSel.value);
+      document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>${pokemon?'Pokemon':'Team'}</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status Dodges</th><th class="num">Full Paras</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${pokemon?`<span class="pokemon-click luck-pokemon-row" role="button" tabindex="0" data-luck-pokemon="${escapeHtml(r.species)}" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;">${spriteImg(r.species,'sprite')}<strong>${escapeHtml(r.species)}</strong></span><div class="note">${escapeHtml(r.team||'')}</div>`:`<strong>${escapeHtml(r.team)}</strong><div class="note">${r.games} game${r.games===1?'':'s'}</div>`}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodgeLuck.toFixed(2)}</td><td class="num">${r.fullParalysis}</td><td class="num">${r.sleepTurns} turns <span class="note">(${r.sleepDurationLuck>=0?'+':''}${r.sleepDurationLuck.toFixed(1)})</span></td><td class="num">${r.freezeTurns} turns <span class="note">(${r.freezeDurationLuck>=0?'+':''}${r.freezeDurationLuck.toFixed(1)})</span></td></tr>`).join('')}</tbody></table></div>`;
+      if(pokemon){ document.querySelectorAll('[data-luck-pokemon]').forEach(el=>{el.addEventListener('click',()=>openLuckPokemonSummary(el.dataset.luckPokemon,scopeSel.value)); el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openLuckPokemonSummary(el.dataset.luckPokemon,scopeSel.value);}});}); }
+    }
+    scopeSel.addEventListener('change',draw);
+    viewSel.addEventListener('change',draw);
+    draw();
+  }
+
   function renderDeathCauses(){
     contentEl.innerHTML=`<div class="panel"><h2>Death Causes</h2><div class="cause-subheading">Top victims</div><div id="causeBody"></div></div>`;
     const sel={value:'ALL'};
@@ -2196,7 +2652,67 @@ button{touch-action:manipulation;}
     return Object.values(out).sort((a,b)=>b.wins-a.wins || (b.kills-b.deaths)-(a.kills-a.deaths) || b.dealt-a.dealt);
   }
 
-  function renderTeamComparison(){
+  // ---------- fixture (schedule) ----------
+  // The fixture is generated/uploaded from Admin -> Settings and stored in the
+  // same shared settings blob, so it's already present in STATE.settings.fixture
+  // by the time this renders. Matches are cross-referenced against processed
+  // replays (by week + the two franchise names) to show a result once played.
+  function findFixtureResult(week, home, away){
+    const target = new Set([groupKey(home), groupKey(away)]);
+    for(const r of Object.values(STATE.replays)){
+      if(!r || !r.players) continue;
+      if((r.week || 'Unassigned') !== week) continue;
+      const t1 = teamFor(r.players.p1), t2 = teamFor(r.players.p2);
+      const pair = new Set([groupKey(t1), groupKey(t2)]);
+      if(pair.size !== 2 || ![...pair].every(x => target.has(x))) continue;
+      let winnerTeam = null;
+      if(r.winner){
+        const wLower = String(r.winner).trim().toLowerCase();
+        if(wLower === String(r.players.p1 || '').trim().toLowerCase()) winnerTeam = t1;
+        else if(wLower === String(r.players.p2 || '').trim().toLowerCase()) winnerTeam = t2;
+      }
+      return {played:true, winner:winnerTeam};
+    }
+    return {played:false};
+  }
+  function renderFixturePanel(){
+    const fixture = STATE.settings?.fixture;
+    const rounds = Array.isArray(fixture?.rounds) ? fixture.rounds : [];
+    if(!rounds.length){
+      return `<div class="panel">
+        <h2>Fixture</h2>
+        <div class="empty-state">No fixture has been published yet. The commissioner can generate or upload one from Admin → Settings.</div>
+      </div>`;
+    }
+    const matchCount = rounds.reduce((sum,r)=>sum+(r.matches?r.matches.length:0),0);
+    return `<div class="panel">
+      <h2>Fixture</h2>
+      <div class="note">${rounds.length} week${rounds.length===1?'':'s'} · ${matchCount} match${matchCount===1?'':'es'}${fixture.source==='upload'?' · uploaded':''}</div>
+      <div class="fixture-weeks">
+        ${rounds.map(r=>{
+          const matches = Array.isArray(r.matches) ? r.matches : [];
+          return `<div class="fixture-week">
+            <div class="fixture-week-title">${escapeHtml(r.week||'')}</div>
+            <div class="fixture-matches">
+              ${matches.length ? matches.map(m=>{
+                const res = findFixtureResult(r.week, m.home, m.away);
+                const homeWin = res.played && res.winner && groupKey(res.winner)===groupKey(m.home);
+                const awayWin = res.played && res.winner && groupKey(res.winner)===groupKey(m.away);
+                return `<div class="fixture-match ${res.played?'fixture-played':''}">
+                  <span class="fixture-team ${homeWin?'fixture-winner':''}">${escapeHtml(m.home)}</span>
+                  <span class="fixture-vs">vs</span>
+                  <span class="fixture-team ${awayWin?'fixture-winner':''}">${escapeHtml(m.away)}</span>
+                  <span class="fixture-status">${res.played ? (res.winner ? `${escapeHtml(res.winner)} won` : 'Played') : 'Not played yet'}</span>
+                </div>`;
+              }).join('') : '<div class="conference-empty">No matches this week.</div>'}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  function standingsPanelHtml(){
     const data = teamComparisonData('ALL');
     const assignments = STATE.settings?.franchises || {};
     const configuredNames = STATE.settings?.conferenceNames || {};
@@ -2259,15 +2775,19 @@ button{touch-action:manipulation;}
       ? 'Standings are split using the conference assignments saved in Admin → Settings. Unassigned franchises remain visible below.'
       : 'No conference assignments have been saved yet. Assign each franchise to a conference from Admin → Settings.';
 
-    contentEl.innerHTML = `<div class="panel">
+    return `<div class="panel">
       <h2>Standings</h2>
       <div class="note">${escapeHtml(note)}</div>
       <div class="conference-standings">
         ${ladder(conferenceNames.one,groups.one,'Conference standings')}
         ${ladder(conferenceNames.two,groups.two,'Conference standings')}
-        ${groups.Unassigned.length ? ladder('Unassigned',''+groups.Unassigned.length ? groups.Unassigned : [],'Franchises without an East/West assignment','unassigned') : ''}
+        ${groups.Unassigned.length ? ladder('Unassigned',groups.Unassigned,'Franchises without an East/West assignment','unassigned') : ''}
       </div>
     </div>`;
+  }
+
+  function renderSeason(){
+    contentEl.innerHTML = renderFixturePanel() + standingsPanelHtml();
 
     // Reuse the exact same franchise summary card used by League Overview.
     contentEl.querySelectorAll('[data-standings-team]').forEach(row=>{
