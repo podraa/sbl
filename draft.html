@@ -252,6 +252,22 @@ button{touch-action:manipulation;}
 }
 </style>
 
+
+<style id="sitewide-hidden-scrollbars">
+/* Site-wide: keep every scroll area usable while never showing a scrollbar. */
+html, body, *, *::before, *::after {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+</style>
 </head>
 <body>
 

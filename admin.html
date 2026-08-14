@@ -287,6 +287,20 @@
   @media(max-width:800px){.admin-log-row{grid-template-columns:1fr;gap:5px}}
 
 .admin-log-admin-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:2px}
+
+  /* Admin operation navigation: grouped, collapsible, and self-closing after selection. */
+  .admin-nav{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;margin:0 0 18px;}
+  .admin-nav-group{position:relative;flex:0 0 auto;min-width:190px;}
+  .admin-nav-group-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--panel-alt);color:var(--text);font-weight:700;cursor:pointer;}
+  .admin-nav-group-toggle span{font-size:13px;transition:transform .16s ease;}
+  .admin-nav-group.open .admin-nav-group-toggle{border-bottom-left-radius:7px;border-bottom-right-radius:7px;}
+  .admin-nav-group.open .admin-nav-group-toggle span{transform:rotate(180deg);}
+  .admin-nav-submenu{display:none;margin-top:6px;padding:6px;border:1px solid var(--border);border-radius:10px;background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.12);}
+  .admin-nav-group.open .admin-nav-submenu{display:flex;flex-direction:column;gap:3px;}
+  .admin-nav-item{width:100%;text-align:left;padding:9px 11px;border:0;border-radius:7px;background:transparent;color:var(--text);cursor:pointer;font:inherit;font-size:13px;}
+  .admin-nav-item:hover{background:var(--panel-alt);}
+  .admin-nav-item.active{background:var(--teal);color:inherit;}
+  @media(max-width:700px){.admin-nav{display:block}.admin-nav-group{width:100%;margin-bottom:7px}.admin-nav-submenu{position:static}.admin-nav-group.open .admin-nav-submenu{max-height:55vh;overflow:auto;}}
 </style>
 <script>
 // Site-wide theme: picked on the My Team page's Account tab, saved to
@@ -441,6 +455,81 @@ button{touch-action:manipulation;}
 </style>
 
 <style>[hidden]{display:none!important}</style>
+
+<style>
+html,body,*{scrollbar-width:none;-ms-overflow-style:none;}
+html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{width:0;height:0;background:transparent;}
+</style>
+
+<style id="admin-ui-cleanup">
+/* Admin UI cleanup: compact header + collapsed navigation by default */
+.admin-nav, .admin-navigation, .ops-nav, .operations-nav {
+  border-radius: 14px !important;
+  padding: 10px !important;
+  gap: 8px !important;
+}
+.admin-header, .page-header, header {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+.admin-header h1, .page-header h1 {
+  margin: 0 !important;
+  line-height: 1.1 !important;
+}
+.admin-header p, .page-header p { margin: 4px 0 0 !important; }
+/* Keep scrollbar hidden sitewide without disabling scrolling */
+html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+</style>
+<style id="soft-admin-nav-ui">
+/* Softer Admin navigation: preserve interaction, remove harsh visual highlights. */
+.admin-nav button,
+.admin-nav .nav-item,
+.admin-nav .nav-subitem,
+.admin-nav button:hover,
+.admin-nav .nav-item:hover,
+.admin-nav .nav-subitem:hover,
+.admin-nav button.active,
+.admin-nav .nav-item.active,
+.admin-nav .nav-subitem.active,
+.admin-nav button[aria-current="page"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+.admin-nav button:hover,
+.admin-nav .nav-item:hover,
+.admin-nav .nav-subitem:hover { opacity: .82; }
+.admin-nav button.active,
+.admin-nav .nav-item.active,
+.admin-nav .nav-subitem.active,
+.admin-nav button[aria-current="page"] { opacity: 1; font-weight: 600; }
+</style>
+<style id="admin-uniform-ui-final">
+/* Unified Admin UI: every operation uses the same spacious content frame. */
+#app{max-width:1400px !important;width:100%;box-sizing:border-box;padding:28px 28px 72px !important;}
+#app > header{margin:0 0 20px !important;padding:14px 0 !important;border:0 !important;}
+#app > header h1{font-size:26px !important;font-weight:700 !important;line-height:1.15 !important;margin:0 !important;}
+#content{width:100%;max-width:none !important;}
+#content > .panel,#content > .empty-state{width:100%;max-width:none !important;box-sizing:border-box;}
+#content > .panel{padding:24px !important;border-radius:12px !important;}
+#content > .panel h2{font-size:15px !important;margin-bottom:14px !important;}
+/* Replays by Player uses the same panel/card language as every other operation. */
+#content .player-group{border:1px solid var(--border) !important;border-radius:10px !important;background:var(--panel-alt) !important;margin:0 0 10px !important;overflow:hidden;}
+#content .player-group summary{background:transparent !important;padding:12px 14px !important;min-height:42px;box-sizing:border-box;}
+#content .player-group .player-table-wrap{background:var(--panel) !important;padding:8px 14px 14px !important;}
+/* Trade/draft/free-agency/admin subcards use the same restrained surfaces. */
+#content .trade-card,#content .roster-admin-card,#content .audit-box{border-color:var(--border) !important;background:var(--panel-alt) !important;border-radius:10px !important;}
+/* Navigation has one consistent, quiet appearance. */
+.admin-nav{width:100%;display:flex;gap:10px;align-items:flex-start;margin:0 0 20px !important;}
+.admin-nav-group{flex:1 1 0 !important;min-width:220px !important;}
+.admin-nav-group-toggle{min-height:42px;box-sizing:border-box;background:var(--panel) !important;border-color:var(--border) !important;box-shadow:none !important;}
+.admin-nav-item{background:transparent !important;color:var(--text-dim) !important;}
+.admin-nav-item:hover,.admin-nav-item.active{background:transparent !important;color:var(--text) !important;}
+.admin-nav-submenu{box-shadow:none !important;}
+@media(max-width:900px){.admin-nav{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));}.admin-nav-group{min-width:0 !important;}}
+@media(max-width:600px){#app{padding-left:14px !important;padding-right:14px !important;}.admin-nav{grid-template-columns:1fr !important;}#content > .panel{padding:16px !important;}}
+</style>
 </head>
 <body data-admin="true">
 <style>
@@ -469,18 +558,31 @@ button{touch-action:manipulation;}
     <h1> Admin Dashboard <span class="badge" id="seasonBadge" style="vertical-align:middle;"></span></h1>
   </header>
 
-  <nav class="tabs" id="tabs">
-    <button data-tab="process" class="active">Process Replays</button>
-    <button data-tab="players">Replays by Player</button>
-        <button data-tab="draft">Draft</button>
-    <button data-tab="freeagency">Free Agency</button>
-    <button data-tab="trades">Trades</button>
-    <button data-tab="commissioner">User Control</button>
-    <button data-tab="admin-log">Admin Log</button>
-    <button data-tab="settings">Settings</button>
-
-
-  </nav>
+  <nav class="tabs admin-nav" id="tabs">
+  <div class="admin-nav-group" data-nav-group="replays">
+    <button type="button" class="admin-nav-group-toggle">Replay Management <span>⌄</span></button>
+    <div class="admin-nav-submenu">
+      <button data-tab="process" class="admin-nav-item active">Process Replays</button>
+      <button data-tab="players" class="admin-nav-item">Replays by Player</button>
+    </div>
+  </div>
+  <div class="admin-nav-group" data-nav-group="league">
+    <button type="button" class="admin-nav-group-toggle">League Operations <span>⌄</span></button>
+    <div class="admin-nav-submenu">
+      <button data-tab="draft" class="admin-nav-item">Draft</button>
+      <button data-tab="freeagency" class="admin-nav-item">Free Agency</button>
+      <button data-tab="trades" class="admin-nav-item">Trades</button>
+    </div>
+  </div>
+  <div class="admin-nav-group" data-nav-group="admin">
+    <button type="button" class="admin-nav-group-toggle">Administration <span>⌄</span></button>
+    <div class="admin-nav-submenu">
+      <button data-tab="commissioner" class="admin-nav-item">User Control</button>
+      <button data-tab="admin-log" class="admin-nav-item">Admin Log</button>
+      <button data-tab="settings" class="admin-nav-item">Settings</button>
+    </div>
+  </div>
+</nav>
 
   
 <!-- User Control UI: budgets and administration only; franchise rosters are intentionally not shown here. -->
@@ -512,6 +614,7 @@ button{touch-action:manipulation;}
   const DEFAULT_SEASON = 'Season 15';
   function seasonKey(name){ return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'season'; }
   let adminUser = null;
+  let adminIsCommissioner = false;
   let loadingFromRemote = false;
 
   function requireAdmin(){
@@ -804,7 +907,7 @@ button{touch-action:manipulation;}
       showAdminLogin();
       return false;
     }
-    const {data:profile, error:profErr} = await supabase.from('profiles').select('team_name').eq('id', data.session.user.id).maybeSingle();
+    const {data:profile, error:profErr} = await supabase.from('profiles').select('team_name,is_commissioner').eq('id', data.session.user.id).maybeSingle();
     if(profErr) throw profErr;
     if(!profile?.team_name){
       // Logged in but hasn't claimed/been assigned a team yet — no access to the
@@ -813,6 +916,7 @@ button{touch-action:manipulation;}
       return false;
     }
     adminUser = data.session.user;
+    adminIsCommissioner = !!profile?.is_commissioner;
     document.getElementById('app').style.display = '';
     return true;
   }
@@ -1976,9 +2080,20 @@ button{touch-action:manipulation;}
   let activeTab = 'process';
 
   tabsEl.addEventListener('click', (e)=>{
-    if(e.target.tagName !== 'BUTTON') return;
-    activeTab = e.target.dataset.tab;
-    [...tabsEl.children].forEach(b=>b.classList.toggle('active', b.dataset.tab===activeTab));
+    const groupToggle = e.target.closest('.admin-nav-group-toggle');
+    if(groupToggle){
+      const group = groupToggle.closest('.admin-nav-group');
+      const shouldOpen = !group.classList.contains('open');
+      tabsEl.querySelectorAll('.admin-nav-group').forEach(g=>g.classList.remove('open'));
+      if(shouldOpen) group.classList.add('open');
+      return;
+    }
+    const item = e.target.closest('.admin-nav-item');
+    if(!item) return;
+    activeTab = item.dataset.tab;
+    tabsEl.querySelectorAll('.admin-nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab===activeTab));
+    // Selecting an operation automatically closes the navigation group.
+    tabsEl.querySelectorAll('.admin-nav-group').forEach(g=>g.classList.remove('open'));
     render();
   });
 
@@ -2048,9 +2163,6 @@ button{touch-action:manipulation;}
     if(seasonBadge) seasonBadge.textContent = loaded ? (STATE.settings.activeSeason || DEFAULT_SEASON) : '';
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     if(activeTab === 'process') return renderProcess();
-    if(activeTab === 'global') return renderLeaderboards();
-    if(activeTab === 'goldenfist') return renderGoldenFist();
-    if(activeTab === 'teams') return renderTeams();
     if(activeTab === 'players') return renderPlayers();
     if(activeTab === 'draft') return renderDraft();
     if(activeTab === 'freeagency') return renderFreeAgency();
@@ -2059,7 +2171,7 @@ button{touch-action:manipulation;}
     if(activeTab === 'admin-log') return drawAdminLog();
     if(activeTab === 'settings') return renderSettings();
   }
-  // jump to another tab programmatically (e.g. the Franchise Stats hyperlink)
+  // jump to another tab programmatically
   function goToTab(tab){
     activeTab = tab;
     [...tabsEl.children].forEach(b=>b.classList.toggle('active', b.dataset.tab===activeTab));
@@ -2247,10 +2359,8 @@ button{touch-action:manipulation;}
           <div style="flex:0;"><button class="ghost" id="exportGlobal">Export CSV</button></div>
         </div>
         <div id="globalTable"></div>
-        <a class="nav-link" id="toTeamsLink">Want per-team breakdowns? → View Franchise Stats</a>
       </div>`;
 
-    document.getElementById('toTeamsLink').addEventListener('click', ()=> goToTab('teams'));
 
     const sel = document.getElementById('globalWeek');
     function drawGlobal(){
@@ -3277,9 +3387,11 @@ button{touch-action:manipulation;}
         ` : `
           <button class="ghost small" data-comm-action="revoke" data-id="${p.id}">Set to pending</button>
         `}
-        ${p.is_commissioner
-          ? `<button class="ghost small" data-comm-action="remove-commissioner" data-id="${p.id}">Remove commissioner</button>`
-          : `<button class="ghost small" data-comm-action="make-commissioner" data-id="${p.id}">Make commissioner</button>`}
+        ${adminIsCommissioner
+          ? ''
+          : (p.is_commissioner
+            ? `<button class="ghost small" data-comm-action="remove-commissioner" data-id="${p.id}">Remove commissioner</button>`
+            : `<button class="ghost small" data-comm-action="make-commissioner" data-id="${p.id}">Make commissioner</button>`)}
         <button class="ghost small" data-comm-action="edit-profile" data-id="${p.id}">Edit profile</button>
       </div>
       <div class="note danger" id="commErr-${p.id}"></div>
@@ -3696,6 +3808,9 @@ button{touch-action:manipulation;}
         btn.disabled=true;
         try{
           let patch=null;
+          if((action==='make-commissioner' || action==='remove-commissioner') && adminIsCommissioner){
+            throw new Error('Commissioners cannot change commissioner permissions. Only the owner can change permissions at the commissioner level.');
+          }
           if(action==='edit-profile'){
             const profile = (COMM_PROFILES || []).find(p => String(p.id) === String(id));
             if(!profile) throw new Error('Profile not found.');
@@ -4819,6 +4934,24 @@ button{touch-action:manipulation;}
     if(session?.user) setupCommissionerNav();
   });
 })();
+</script>
+
+<script id="admin-ui-initial-collapse">
+document.addEventListener('DOMContentLoaded', function(){
+  // Start with every navigation category collapsed.
+  document.querySelectorAll('[aria-expanded="true"]').forEach(function(el){
+    var label=(el.textContent||'').trim();
+    if (/Replay Management|League Operations|Administration/.test(label)) {
+      el.setAttribute('aria-expanded','false');
+    }
+  });
+  document.querySelectorAll('.nav-group.open, .admin-nav-group.open, .ops-group.open, .navigation-group.open').forEach(function(el){
+    el.classList.remove('open');
+  });
+  document.querySelectorAll('.nav-group.active, .admin-nav-group.active').forEach(function(el){
+    el.classList.remove('active');
+  });
+});
 </script>
 </body>
 </html>
