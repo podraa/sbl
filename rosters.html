@@ -235,6 +235,7 @@ h1{
   border-radius:12px;
   background:var(--panel);
 }
+ .page-nav a[hidden]{display:none !important;}
 </style>
 <script>
 // Site-wide theme: picked on the My Team page's Account tab, saved to
@@ -425,7 +426,7 @@ button{touch-action:manipulation;}
   <a href="rosters.html" data-page="rosters.html">Rosters</a>
   <a href="team-analysis.html" data-page="team-analysis.html">Team Analysis</a>
   <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
-  <a href="draft.html" data-page="draft.html" data-draft-live-only hidden>Draft Room</a>
+  <a href="draft.html" data-page="draft.html" data-draft-live-only data-admin-only hidden>Draft Room</a>
   <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
 </nav>
 <div class="nav-hover-zone" id="navHoverZone" aria-hidden="true"></div>
@@ -743,12 +744,12 @@ loadRosters().finally(() => clearTimeout(hardTimeout));
       if(error) throw error;
       if(profile?.is_commissioner){
         nav.querySelectorAll('[data-admin-only]').forEach(a=>{a.hidden=false;});
+        try{
+          const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
+          const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
+          if(draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
+        }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       }
-      try{
-        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-        const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-        if(draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
-      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
     }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); }
   }
   setupNav();

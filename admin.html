@@ -287,6 +287,7 @@
   @media(max-width:800px){.admin-log-row{grid-template-columns:1fr;gap:5px}}
 
 .admin-log-admin-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:2px}
+ .page-nav a[hidden]{display:none !important;}
 </style>
 <script>
 // Site-wide theme: picked on the My Team page's Account tab, saved to
@@ -458,7 +459,7 @@ button{touch-action:manipulation;}
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="draft.html" data-draft-live-only hidden>Draft Room</option>
+    <option value="draft.html" data-draft-live-only data-admin-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -3727,16 +3728,12 @@ button{touch-action:manipulation;}
       if(error) throw error;
       if(profile?.is_commissioner){
         select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
+        try{
+          const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
+          const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
+          if(draftStatus==='live') select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; });
+        }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       }
-      // "Draft Room" is shown to any logged-in team owner, but only while a
-      // draft is actually in progress -- independent of commissioner status.
-      try{
-        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-        const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-        if(draftStatus==='live'){
-          select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; });
-        }
-      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       if(current===ADMIN) select.value=ADMIN;
     }catch(err){ console.warn('Commissioner navigation check failed:',err); lockNav(true); }
   }
