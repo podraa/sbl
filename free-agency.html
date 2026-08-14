@@ -398,10 +398,22 @@ function normalizeRosters(raw){
   return out;
 }
 
+function pokemonMatchKey(n){
+  return key(n)
+    .replace(/(^|-)paldea(?=-|$)/g,'')
+    .replace(/-+/g,'-')
+    .replace(/^-|-$/g,'');
+}
+function pokemonSameSpeciesForm(a,b){
+  const left=pokemonMatchKey(a);
+  const right=pokemonMatchKey(b);
+  return !!left && !!right && left===right;
+}
+
 function owner(name){
-  const k=key(name);
   for(const [team,list] of Object.entries(allRosters))
-    for(const mon of list) if(key(mon.name)===k) return team;
+    for(const mon of list)
+      if(pokemonSameSpeciesForm(name, mon.name)) return team;
   return null;
 }
 

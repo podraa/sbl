@@ -549,6 +549,30 @@
     .franchise-total-grid{grid-template-columns:repeat(2,1fr);}
   }
  .page-nav a[hidden]{display:none !important;}
+
+  .next-opponent-wide{
+    width:100%;
+    box-sizing:border-box;
+    margin-top:14px;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--panel-2, rgba(255,255,255,.025));
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .next-opponent-wide > span{
+    color:var(--text-dim);
+    font-size:.72rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .next-opponent-wide > strong{font-size:1rem;}
+  .next-opponent-wide .note{margin-left:auto !important;}
+
 </style>
 
 <style id="all-popouts-animation">
@@ -2249,7 +2273,24 @@ button{touch-action:manipulation;}
     );
     const confIndex = confList.findIndex(x=>x.team===team);
     const ordinal = idx => { const n=idx+1; return `${n}${n===1?'st':n===2?'nd':n===3?'rd':'th'}`; };
-    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">${escapeHtml(confName)} Position</div><h3>${ordinal(confIndex)} — ${escapeHtml(team)}</h3><div class="summary-result" style="color:var(--text-dim);font-weight:600;">${ordinal(i)} overall in the league</div></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${t.kills-t.deaths>0?'+':''}${t.kills-t.deaths}</strong></div></div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.appearances} games · ${m.kills} K · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
+
+    // Find this team's next unplayed fixture using the same fixture/replay
+    // matching logic used by the main Fixture panel.
+    const fixtureRounds = Array.isArray(STATE.settings?.fixture?.rounds) ? STATE.settings.fixture.rounds : [];
+    let nextOpponent = null;
+    let nextWeek = null;
+    for(const round of fixtureRounds){
+      const match = (round.matches || []).find(m =>
+        (groupKey(m.home) === groupKey(team) || groupKey(m.away) === groupKey(team)) &&
+        !findFixtureResult(round.week, m.home, m.away).played
+      );
+      if(match){
+        nextWeek = round.week;
+        nextOpponent = groupKey(match.home) === groupKey(team) ? match.away : match.home;
+        break;
+      }
+    }
+    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">${escapeHtml(confName)} Position</div><h3>${ordinal(confIndex)} — ${escapeHtml(team)}</h3><div class="summary-result" style="color:var(--text-dim);font-weight:600;">${ordinal(i)} overall in the league</div></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${t.kills-t.deaths>0?'+':''}${t.kills-t.deaths}</strong></div></div><div class="next-opponent-wide"><span>Next opponent</span><strong>${nextOpponent ? escapeHtml(nextOpponent) : '—'}</strong>${nextWeek ? `<div class="note" style="margin-top:4px;">${escapeHtml(nextWeek)}</div>` : ''}</div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.appearances} games · ${m.kills} K · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
     document.getElementById('teamOverviewClose').addEventListener('click',closeAudit); document.getElementById('teamOverviewOverlay').addEventListener('click',e=>{if(e.target.id==='teamOverviewOverlay')closeAudit();});
   }
   function renderProcess(){

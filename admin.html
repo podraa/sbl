@@ -4071,6 +4071,26 @@ button{touch-action:manipulation;}
             </div>`).join('') : '<div class="empty-state">No archived seasons yet.</div>'}
         </div>
       </div>
+
+      <div class="panel">
+        <h2>Roster Management</h2>
+        <div class="note">
+          Upload the season's rosters from Excel or CSV. The existing roster importer supports the league's
+          Season 15 workbook format (one team per sheet, points in Column A and Pokémon in Column C), as well
+          as a generic Team / Franchise + Pokémon / Species table. Uploaded rosters are only previewed until you
+          click <strong>Publish rosters</strong>.
+        </div>
+        <div class="row" style="margin-top:14px; align-items:end; flex-wrap:wrap;">
+          <div style="flex:1; min-width:260px;">
+            <label>Roster workbook (.xlsx / .xls / .csv)</label>
+            <input type="file" id="rosterFile" accept=".xlsx,.xls,.csv">
+          </div>
+          <button class="ghost" id="loadRosterFileBtn">Read roster file</button>
+          <button class="primary" id="publishRostersBtn" disabled>Publish rosters</button>
+        </div>
+        <div id="rosterUploadStatus"></div>
+        <div id="rosterPreview" style="margin-top:14px;"></div>
+      </div>
       <div class="panel">
         <h2>Franchise Conferences</h2>
         <div class="note">Every franchise from the published roster is listed below. Click its conference dropdown to assign it. This setting is stored in Admin only and does not change the roster data.</div>
@@ -4191,6 +4211,88 @@ button{touch-action:manipulation;}
       });
     }
     drawMap();
+
+
+    let pendingRosterUpload = null;
+    const rosterStatus = document.getElementById('rosterUploadStatus');
+    const rosterPreview = document.getElementById('rosterPreview');
+    const rosterFile = document.getElementById('rosterFile');
+    const loadRosterFileBtn = document.getElementById('loadRosterFileBtn');
+    const publishRostersBtn = document.getElementById('publishRostersBtn');
+
+    function drawRosterPreview(rosters, title){
+      const normalized = normalizeStoredRosters(rosters);
+      const teams = Object.entries(normalized).sort((a,b)=>a[0].localeCompare(b[0]));
+      if(!teams.length){
+        rosterPreview.innerHTML = '<div class="empty-state">No rosters found in that file.</div>';
+        return;
+      }
+      const totalMons = teams.reduce((sum,[,list])=>sum + list.length, 0);
+      rosterPreview.innerHTML = `
+        <div class="note" style="margin-bottom:10px;">
+          <strong>${escapeHtml(title || 'Roster preview')}</strong> ·
+          ${teams.length} franchise${teams.length===1?'':'s'} · ${totalMons} Pokémon
+        </div>
+        <div class="roster-admin-grid">
+          ${teams.map(([team,list])=>`
+            <div class="roster-admin-card">
+              <h3>${escapeHtml(team)} <span class="badge">${list.length}</span></h3>
+              <div class="roster-admin-mons">
+                ${list.map(mon=>rosterDisplay(mon)).join('<br>')}
+              </div>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    drawRosterPreview(STATE.settings.rosters || {}, 'Currently published rosters');
+
+    loadRosterFileBtn.addEventListener('click', async ()=>{
+      const file = rosterFile.files?.[0];
+      if(!file){
+        rosterStatus.innerHTML = '<div class="note danger">Choose a roster file first.</div>';
+        return;
+      }
+      loadRosterFileBtn.disabled = true;
+      publishRostersBtn.disabled = true;
+      rosterStatus.innerHTML = '<div class="note">Reading roster workbook…</div>';
+      try{
+        const wb = XLSX.read(await file.arrayBuffer(), {type:'array'});
+        const parsed = parseRosterWorkbook(wb);
+        if(!Object.keys(parsed).length) throw new Error('No valid rosters were found in that file.');
+        pendingRosterUpload = normalizeStoredRosters(parsed);
+        drawRosterPreview(pendingRosterUpload, `Preview: ${file.name}`);
+        rosterStatus.innerHTML = `<div class="note">Loaded ${Object.keys(pendingRosterUpload).length} franchise${Object.keys(pendingRosterUpload).length===1?'':'s'} from <strong>${escapeHtml(file.name)}</strong>. Review the preview, then publish when ready.</div>`;
+        publishRostersBtn.disabled = false;
+      }catch(err){
+        pendingRosterUpload = null;
+        rosterPreview.innerHTML = '';
+        rosterStatus.innerHTML = `<div class="note danger">Could not read that roster file: ${escapeHtml(err.message)}</div>`;
+      }finally{
+        loadRosterFileBtn.disabled = false;
+      }
+    });
+
+    publishRostersBtn.addEventListener('click', async ()=>{
+      if(!pendingRosterUpload || !Object.keys(pendingRosterUpload).length) return;
+      const teams = Object.keys(pendingRosterUpload);
+      const monCount = Object.values(pendingRosterUpload).reduce((sum,list)=>sum+list.length,0);
+      if(!confirm(`Replace the current published rosters with ${teams.length} franchise${teams.length===1?'':'s'} and ${monCount} Pokémon?`)) return;
+      publishRostersBtn.disabled = true;
+      loadRosterFileBtn.disabled = true;
+      rosterStatus.innerHTML = '<div class="note">Publishing rosters…</div>';
+      try{
+        await publishRosters(pendingRosterUpload);
+        rosterStatus.innerHTML = `<div class="note">Published ${teams.length} franchise${teams.length===1?'':'s'} and ${monCount} Pokémon. ✓</div>`;
+        pendingRosterUpload = null;
+        rosterFile.value = '';
+        drawRosterPreview(STATE.settings.rosters || {}, 'Currently published rosters');
+      }catch(err){
+        rosterStatus.innerHTML = `<div class="note danger">Could not publish rosters: ${escapeHtml(err.message)}</div>`;
+      }finally{
+        loadRosterFileBtn.disabled = false;
+        publishRostersBtn.disabled = true;
+      }
+    });
 
     const fixtureSummaryEl = document.getElementById('fixtureSummary');
     function drawFixtureSummary(){

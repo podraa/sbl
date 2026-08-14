@@ -462,16 +462,70 @@ button{touch-action:manipulation;}
     for(const roster of Object.values(DASH.settings?.rosters || {})){
       for(const mon of (Array.isArray(roster) ? roster : [])){
         const name = typeof mon === 'string' ? mon : mon?.name;
-        if(name) drafted.add(normName(name));
+        if(name) drafted.add(pokemonMatchKey(name));
       }
     }
 
-    return pool.filter(mon => mon?.name && !drafted.has(normName(mon.name)));
+    return pool.filter(mon => mon?.name && !drafted.has(pokemonMatchKey(mon.name)));
   }
 
   // ---------- pokémon stat aggregation (mirrors stats.html) ----------
   function normName(n){
     return String(n??'').trim().toLowerCase().replace(/-/g,' ').replace(/_/g,' ').replace(/\s+/g,' ');
+  }
+
+  // Pokémon forms can be named differently between the Free Agency board,
+  // published rosters, and trade records. Treat the optional "Paldea"
+  // regional token as equivalent while preserving the actual stored name.
+  function pokemonMatchKey(n){
+    return normName(n)
+      .replace(/\bpaldea\b/g,'')
+      .replace(/\bform\b/g,'')
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+
+  function pokemonSameSpeciesForm(a,b){
+    const left=pokemonMatchKey(a), right=pokemonMatchKey(b);
+    return !!left && !!right && left===right;
+  }
+
+  function canonicalPokemonName(name,candidates){
+    const exact=String(name??'').trim();
+    const exactMatch=(candidates||[]).find(c=>normName(c)===normName(exact));
+    if(exactMatch) return exactMatch;
+    const k=pokemonMatchKey(exact);
+    return (candidates||[]).find(c=>pokemonMatchKey(c)===k) || exact;
+  }
+
+  // Pokémon forms can be named differently between the Free Agency board,
+  // published rosters, and trade records. In particular, Paldean Tauros
+  // forms may appear as either "Tauros Paldea Blaze" or "Tauros Blaze".
+  // Build a comparison key that treats the explicit "Paldea" token as
+  // optional, while preserving the actual stored roster name as canonical.
+  function pokemonMatchKey(n){
+    return normName(n)
+      .replace(/\bpaldea\b/g,'')
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+
+  function canonicalPokemonName(name, candidates){
+    const target = normName(name);
+    const exact = (candidates||[]).find(c => normName(c) === target);
+    if(exact) return exact;
+
+    const key = pokemonMatchKey(name);
+    const match = (candidates||[]).find(c => pokemonMatchKey(c) === key);
+    return match || name;
+  }
+
+  function canonicalTradePokemonName(name, roster, freeAgencyPool){
+    const candidates = [
+      ...(Array.isArray(roster) ? roster : []).map(m => typeof m === 'string' ? m : m?.name),
+      ...(Array.isArray(freeAgencyPool) ? freeAgencyPool : []).map(m => typeof m === 'string' ? m : m?.name)
+    ].filter(Boolean);
+    return canonicalPokemonName(name, candidates);
   }
   function teamFor(username){
     const key = (username||'').trim().toLowerCase();
@@ -1052,11 +1106,21 @@ button{touch-action:manipulation;}
       const btn = document.getElementById('submitTradeBtn'); btn.disabled = true;
       msgEl.className='note'; msgEl.textContent='Sending…';
       try{
+        // Always submit the canonical Pokémon name used by the published
+        // roster/Free Agency data. This prevents form-name differences such
+        // as "Tauros Blaze" vs "Tauros Paldea Blaze" from breaking accept_trade.
+        const canonicalOffered = Array.from(draft.offered).map(name =>
+          canonicalTradePokemonName(name, roster, [])
+        );
+        const canonicalRequested = Array.from(draft.requested).map(name =>
+          canonicalTradePokemonName(name, targetIsFA ? [] : targetRoster, targetIsFA ? freeAgencyMons() : [])
+        );
+
         const {error} = await supabase.from('trade_requests').insert({
           proposer_team: profile.team_name,
           target_team: targetIsFA ? null : draft.target,
-          mons_offered: Array.from(draft.offered),
-          mons_requested: Array.from(draft.requested)
+          mons_offered: canonicalOffered,
+          mons_requested: canonicalRequested
         });
         if(error) throw error;
         draft = { target:'', offered:new Set(), requested:new Set(), faQuery:'' };
