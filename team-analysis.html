@@ -585,7 +585,9 @@ async function speedTableForTeam(team){
     const max=maxSpeedFromBase(base,100);
     return {...m,baseSpeed:base,minSpeed:min,maxSpeed:max,scarfSpeed:scarfSpeedFromMax(max),names:[m.species]};
   }));
-  const grouped=groupEquivalentVariants(entries);
+  // Keep every Pokémon as its own row, even when multiple Pokémon share identical speed stats.
+  // Previously equivalent stat lines were grouped together (e.g. Jumpluff + Ogerpon-Wellspring).
+  const grouped=entries.slice();
 
   const sortMode=$('speedOrderSelect')?.value||'speed-desc';
   const nameOf=x=>displaySpecies(x);
@@ -593,7 +595,7 @@ async function speedTableForTeam(team){
   else if(sortMode==='name') grouped.sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
   else grouped.sort((a,b)=>(b.maxSpeed??-Infinity)-(a.maxSpeed??-Infinity)||nameOf(a).localeCompare(nameOf(b)));
 
-  const renderRow=x=>`<tr><td><div class="speed-tab-mon">${sprite(x.names?.[0]||x.species,'sprite-small')}<span>${esc(nameOf(x))}</span></div></td><td class="num">${x.minSpeed===null?'—':x.minSpeed}</td><td class="num">${x.maxSpeed===null?'—':x.maxSpeed}</td><td class="num">${x.scarfSpeed===null?'—':x.scarfSpeed}</td></tr>`;
+  const renderRow=x=>`<tr><td><div class="speed-tab-mon">${sprite(x.species,'sprite-small')}<span>${esc(nameOf(x))}</span></div></td><td class="num">${x.minSpeed===null?'—':x.minSpeed}</td><td class="num">${x.maxSpeed===null?'—':x.maxSpeed}</td><td class="num">${x.scarfSpeed===null?'—':x.scarfSpeed}</td></tr>`;
 
   return `<section class="panel">
     <div class="speed-header"><div><h2>Speed</h2><p class="panel-desc">Level 100 Speed benchmarks. Min Speed assumes 0 IVs, 0 Speed EVs and a hindering nature. Max Speed assumes 31 IVs, 252 Speed EVs and a beneficial Speed nature. Choice Scarf is 1.5× maximum Speed.</p></div><div class="speed-order"><label for="speedOrderSelect">Order by</label><select id="speedOrderSelect"><option value="speed-desc" ${sortMode==='speed-desc'?'selected':''}>Speed descending</option><option value="speed-asc" ${sortMode==='speed-asc'?'selected':''}>Speed ascending</option><option value="name" ${sortMode==='name'?'selected':''}>Name</option></select></div></div>
