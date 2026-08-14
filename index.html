@@ -184,7 +184,6 @@
   .theme-swatch .check{color:var(--theme-accent); font-weight:800; opacity:0;}
   .theme-swatch.active .check{opacity:1;}
 
- .page-nav a[hidden]{display:none !important;}
 </style>
 <style>
 .page-nav{width:100%;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;padding:10px 16px;margin:0 0 20px;border-bottom:1px solid var(--border,#ddd);background:var(--panel,#fff);box-sizing:border-box;position:relative;z-index:50}
@@ -312,7 +311,7 @@ button{touch-action:manipulation;}
   <a href="rosters.html" data-page="rosters.html">Rosters</a>
   <a href="team-analysis.html" data-page="team-analysis.html">Team Analysis</a>
   <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
-  <a href="draft.html" data-page="draft.html" data-draft-live-only data-admin-only hidden>Draft Room</a>
+  <a href="draft.html" data-page="draft.html" data-draft-live-only hidden>Draft Room</a>
   <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
 </nav>
 <div class="nav-hover-zone" id="navHoverZone" aria-hidden="true"></div>
@@ -1465,12 +1464,12 @@ button{touch-action:manipulation;}
       if(error) throw error;
       if(profile?.is_commissioner){
         nav.querySelectorAll('[data-admin-only]').forEach(a=>{a.hidden=false;});
-        try{
-          const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-          const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-          if(draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
-        }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       }
+      try{
+        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
+        const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
+        if(draftStatus==='live') nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{a.hidden=false;});
+      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
     }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); }
   }
   setupNav();
@@ -1482,16 +1481,22 @@ button{touch-action:manipulation;}
 (function(){
   const nav = document.getElementById('pageNav');
   if(!nav) return;
-  let lastY = window.scrollY || 0;
   let ticking = false;
-  function hideOnScroll(){
-    const y = window.scrollY || 0;
-    if(y > 12 && y > lastY + 2) nav.classList.add('nav-hidden');
-    lastY = y;
+  function updateNav(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+
+    // Keep the nav visible at the top and automatically reveal it as the
+    // user approaches the top. The moment the page is scrolled away from
+    // the top, hide it without requiring another interaction.
+    if(y <= 140){
+      nav.classList.remove('nav-hidden');
+    } else {
+      nav.classList.add('nav-hidden');
+    }
     ticking = false;
   }
   window.addEventListener('scroll', function(){
-    if(!ticking){ ticking = true; requestAnimationFrame(hideOnScroll); }
+    if(!ticking){ ticking = true; requestAnimationFrame(updateNav); }
   }, {passive:true});
   nav.addEventListener('mouseenter', function(){ nav.classList.remove('nav-hidden'); });
   document.addEventListener('mousemove', function(e){

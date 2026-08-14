@@ -287,7 +287,6 @@
   @media(max-width:800px){.admin-log-row{grid-template-columns:1fr;gap:5px}}
 
 .admin-log-admin-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:2px}
- .page-nav a[hidden]{display:none !important;}
 </style>
 <script>
 // Site-wide theme: picked on the My Team page's Account tab, saved to
@@ -459,7 +458,7 @@ button{touch-action:manipulation;}
     <option value="rosters.html">Rosters</option>
     <option value="team-analysis.html">Team Analysis</option>
     <option value="free-agency.html">Free Agency</option>
-    <option value="draft.html" data-draft-live-only data-admin-only hidden>Draft Room</option>
+    <option value="draft.html" data-draft-live-only hidden>Draft Room</option>
     <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
   </select>
 </div>
@@ -3259,34 +3258,6 @@ button{touch-action:manipulation;}
         <div class="note">User control settings only. Franchise rosters are not displayed on this page; budgets remain visible for every franchise. Trade management has its own tab.</div>
       </div>
 
-      <div class="panel commissioner-only-ui" data-commissioner-ui="budgets-no-rosters">
-        <div class="section-head-row">
-          <h2>Franchise Budgets <span class="badge">${franchises.length}</span></h2>
-          <span class="badge">${escapeHtml(STATE.settings.activeSeason || DEFAULT_SEASON)}</span>
-        </div>
-        ${franchises.length ? `
-          <div class="commissioner-budget-grid" style="--budget-scale:${budgetScale}">
-            ${franchises.map(team => {
-              const cap = Number.isFinite(Number(draft.budgets[team]))
-                ? Number(draft.budgets[team])
-                : Number(draft.defaultBudget) || 0;
-              const spent = spentByTeam[team] || 0;
-              const remaining = cap - spent;
-              return `<div class="commissioner-budget-card">
-                <div class="commissioner-budget-team" title="${escapeHtml(team)}">${escapeHtml(team)}</div>
-                <div class="commissioner-budget-main">${cap}</div>
-                <div class="commissioner-budget-meta">
-                  <span>Spent <strong>${spent}</strong></span>
-                  <span class="${remaining < 0 ? 'budget-over' : ''}">Remaining <strong>${remaining}</strong></span>
-                </div>
-                ${draft.budgets[team] != null ? '<div class="commissioner-budget-override">Custom budget</div>' : '<div class="commissioner-budget-override">League default</div>'}
-              </div>`;
-            }).join('')}
-          </div>
-          <div class="note">Each franchise shows its full budget, amount spent, and amount remaining. Custom franchise budgets are marked separately.</div>
-        ` : '<div class="empty-state">No approved franchises yet.</div>'}
-      </div>
-
       <div class="panel">
         <h2>Pending User / Franchise Claims <span class="badge">${pending.length}</span></h2>
         ${pending.length ? pending.map(p=>commClaimRow(p,true)).join('') : '<div class="empty-state">No pending claims.</div>'}
@@ -3728,12 +3699,16 @@ button{touch-action:manipulation;}
       if(error) throw error;
       if(profile?.is_commissioner){
         select.querySelectorAll('option[data-admin-only]').forEach(opt=>{ opt.hidden=false; });
-        try{
-          const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-          const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
-          if(draftStatus==='live') select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; });
-        }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       }
+      // "Draft Room" is shown to any logged-in team owner, but only while a
+      // draft is actually in progress -- independent of commissioner status.
+      try{
+        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
+        const draftStatus=stateRow?.replay_data?.settings?.draft?.status;
+        if(draftStatus==='live'){
+          select.querySelectorAll('option[data-draft-live-only]').forEach(opt=>{ opt.hidden=false; });
+        }
+      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
       if(current===ADMIN) select.value=ADMIN;
     }catch(err){ console.warn('Commissioner navigation check failed:',err); lockNav(true); }
   }

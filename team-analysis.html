@@ -1248,16 +1248,22 @@ load();
 (function(){
   const nav = document.getElementById('pageNav');
   if(!nav) return;
-  let lastY = window.scrollY || 0;
   let ticking = false;
-  function hideOnScroll(){
-    const y = window.scrollY || 0;
-    if(y > 12 && y > lastY + 2) nav.classList.add('nav-hidden');
-    lastY = y;
+  function updateNav(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+
+    // Keep the nav visible at the top and automatically reveal it as the
+    // user approaches the top. The moment the page is scrolled away from
+    // the top, hide it without requiring another interaction.
+    if(y <= 140){
+      nav.classList.remove('nav-hidden');
+    } else {
+      nav.classList.add('nav-hidden');
+    }
     ticking = false;
   }
   window.addEventListener('scroll', function(){
-    if(!ticking){ ticking = true; requestAnimationFrame(hideOnScroll); }
+    if(!ticking){ ticking = true; requestAnimationFrame(updateNav); }
   }, {passive:true});
   nav.addEventListener('mouseenter', function(){ nav.classList.remove('nav-hidden'); });
   document.addEventListener('mousemove', function(e){
