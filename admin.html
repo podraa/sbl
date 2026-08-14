@@ -294,20 +294,41 @@
 // If nothing has been explicitly chosen yet, this page keeps its own default colors.
 (function(){
   var THEMES={
-    amber:  {bg:'#0e1218',panel:'#161c26',panelAlt:'#1c2432',border:'#2a3444',text:'#e8edf5',textDim:'#8996a8',accent:'#ffb454',accentText:'#1a1206'},
-    teal:   {bg:'#071614',panel:'#0d2220',panelAlt:'#122d2a',border:'#1f4a44',text:'#eafffa',textDim:'#8fc7bb',accent:'#5eead4',accentText:'#062521'},
-    sky:    {bg:'#071426',panel:'#0d2038',panelAlt:'#142b47',border:'#2b4c70',text:'#eef6ff',textDim:'#9db4cc',accent:'#60a5fa',accentText:'#0b1a33'},
+    amber: {bg:'#0e1218',panel:'#161c26',panelAlt:'#1c2432',border:'#2a3444',text:'#e8edf5',textDim:'#8996a8',accent:'#ffb454',accentText:'#1a1206'},
+    teal: {bg:'#071614',panel:'#0d2220',panelAlt:'#122d2a',border:'#1f4a44',text:'#eafffa',textDim:'#8fc7bb',accent:'#5eead4',accentText:'#062521'},
+    sky: {bg:'#071426',panel:'#0d2038',panelAlt:'#142b47',border:'#2b4c70',text:'#eef6ff',textDim:'#9db4cc',accent:'#60a5fa',accentText:'#0b1a33'},
     violet: {bg:'#171224',panel:'#241b38',panelAlt:'#302448',border:'#51406f',text:'#f7f2ff',textDim:'#b9aecf',accent:'#a78bfa',accentText:'#1e1033'},
-    rose:   {bg:'#1c0510',panel:'#2c0a1c',panelAlt:'#3a0f26',border:'#5a1c3c',text:'#fdeef4',textDim:'#c99cb2',accent:'#f472b6',accentText:'#3b0a24'},
-    emerald:{bg:'#071410',panel:'#0d2119',panelAlt:'#122c22',border:'#1f4a37',text:'#eafff3',textDim:'#8fc7a8',accent:'#4ade80',accentText:'#052e12'},
+    rose: {bg:'#1c0510',panel:'#2c0a1c',panelAlt:'#3a0f26',border:'#5a1c3c',text:'#fdeef4',textDim:'#c99cb2',accent:'#f472b6',accentText:'#3b0a24'},
+    emerald: {bg:'#071410',panel:'#0d2119',panelAlt:'#122c22',border:'#1f4a37',text:'#eafff3',textDim:'#8fc7a8',accent:'#4ade80',accentText:'#052e12'},
     orange: {bg:'#1a0f05',panel:'#2a1a0a',panelAlt:'#38220e',border:'#5a3a1a',text:'#fdf3e8',textDim:'#cbab84',accent:'#fb923c',accentText:'#341102'},
     yellow: {bg:'#17150a',panel:'#26220f',panelAlt:'#332d14',border:'#544b1f',text:'#fdfaea',textDim:'#c9c08a',accent:'#facc15',accentText:'#332600'},
-    cyan:   {bg:'#051519',panel:'#0a2129',panelAlt:'#0f2c35',border:'#1c4a57',text:'#eafcff',textDim:'#8bc2cf',accent:'#22d3ee',accentText:'#032a30'},
-    indigo: {bg:'#0e0f1f',panel:'#171a30',panelAlt:'#1f2340',border:'#38406a',text:'#eef0ff',textDim:'#a3a8cf',accent:'#818cf8',accentText:'#141033'}
+    cyan: {bg:'#051519',panel:'#0a2129',panelAlt:'#0f2c35',border:'#1c4a57',text:'#eafcff',textDim:'#8bc2cf',accent:'#22d3ee',accentText:'#032a30'},
+    indigo: {bg:'#0e0f1f',panel:'#171a30',panelAlt:'#1f2340',border:'#38406a',text:'#eef0ff',textDim:'#a3a8cf',accent:'#818cf8',accentText:'#141033'},
+    crimson: {bg:'#16070c',panel:'#250b13',panelAlt:'#32101b',border:'#5a1d2b',text:'#fff0f4',textDim:'#d39aaa',accent:'#f43f5e',accentText:'#3a0714'},
+    plum: {bg:'#120817',panel:'#200d29',panelAlt:'#2c1238',border:'#4c245d',text:'#faefff',textDim:'#c6a6d4',accent:'#c084fc',accentText:'#260a33'},
+    lavender: {bg:'#110f1c',panel:'#1d1930',panelAlt:'#292342',border:'#453b67',text:'#f6f1ff',textDim:'#b9add3',accent:'#c4b5fd',accentText:'#21153d'},
+    magenta: {bg:'#170712',panel:'#280b20',panelAlt:'#38102c',border:'#5c1e4a',text:'#fff0fa',textDim:'#d39abb',accent:'#f0a',accentText:'#3d062c'},
+    coral: {bg:'#1b0b08',panel:'#2b1410',panelAlt:'#3a1c16',border:'#63352a',text:'#fff2ed',textDim:'#d2a69a',accent:'#fb7185',accentText:'#3b0d0a'},
+    mint: {bg:'#071511',panel:'#0d241d',panelAlt:'#143129',border:'#245346',text:'#edfff8',textDim:'#94c9b4',accent:'#6ee7b7',accentText:'#06271d'},
+    lime: {bg:'#101507',panel:'#1b240b',panelAlt:'#26330f',border:'#43541c',text:'#f5ffe8',textDim:'#b4c58c',accent:'#a3e635',accentText:'#1e2d05'},
+    forest: {bg:'#06120c',panel:'#0c1d14',panelAlt:'#12291c',border:'#1d4630',text:'#e9fff1',textDim:'#87b69a',accent:'#34d399',accentText:'#052416'},
+    olive: {bg:'#121307',panel:'#22230d',panelAlt:'#303113',border:'#4b4c1b',text:'#f7f8e8',textDim:'#c0c18f',accent:'#bef264',accentText:'#283006'},
+    navy: {bg:'#060d19',panel:'#0c1727',panelAlt:'#132237',border:'#243c5e',text:'#edf5ff',textDim:'#8fa7c5',accent:'#38bdf8',accentText:'#062039'},
+    royal: {bg:'#080b1a',panel:'#111832',panelAlt:'#19234a',border:'#304275',text:'#eef2ff',textDim:'#9daee0',accent:'#6366f1',accentText:'#10133a'},
+    aqua: {bg:'#041315',panel:'#082127',panelAlt:'#0d3038',border:'#1b5661',text:'#e9feff',textDim:'#8dc8ce',accent:'#2dd4bf',accentText:'#032522'},
+    tropical: {bg:'#061610',panel:'#0d281d',panelAlt:'#143a28',border:'#266044',text:'#effff6',textDim:'#8fcbb0',accent:'#34d399',accentText:'#052b1c'},
+    sunset: {bg:'#180a08',panel:'#29130e',panelAlt:'#3a1b12',border:'#623622',text:'#fff3e8',textDim:'#d3aa8d',accent:'#fb923c',accentText:'#3a1605'},
+    coffee: {bg:'#110c09',panel:'#211610',panelAlt:'#2e1e15',border:'#50382a',text:'#f9f1e8',textDim:'#c4a995',accent:'#d6a77a',accentText:'#2e1708'},
+    slate: {bg:'#0b0f14',panel:'#151b23',panelAlt:'#1e2630',border:'#303b49',text:'#edf2f7',textDim:'#9ba9b8',accent:'#94a3b8',accentText:'#10151d'},
+    arctic: {bg:'#081319',panel:'#0e2029',panelAlt:'#15303c',border:'#27505f',text:'#eefcff',textDim:'#91bac5',accent:'#67e8f9',accentText:'#06252e'},
+    cyberpunk: {bg:'#10051a',panel:'#1d0a2d',panelAlt:'#2a1040',border:'#4e1d69',text:'#fff1ff',textDim:'#c59bd5',accent:'#e879f9',accentText:'#30073a'},
+    neon: {bg:'#07110b',panel:'#0d2114',panelAlt:'#12341c',border:'#1d572c',text:'#edfff2',textDim:'#8fc79d',accent:'#a3ff12',accentText:'#142b04'},
+    monochrome: {bg:'#0b0b0d',panel:'#17171a',panelAlt:'#222226',border:'#38383d',text:'#f1f1f3',textDim:'#a7a7ad',accent:'#d4d4d8',accentText:'#18181b'}
   };
   var id; try{ id = localStorage.getItem('sbl_dashboard_theme'); }catch(e){}
   var t = THEMES[id];
   if(!t) return;
+  window.addEventListener('storage', function(e){ if(e.key==='sbl_dashboard_theme' && e.newValue){ var nt=THEMES[e.newValue]; if(nt){ var r=document.documentElement.style; r.setProperty('--bg',nt.bg); r.setProperty('--panel',nt.panel); r.setProperty('--panel-alt',nt.panelAlt); r.setProperty('--border',nt.border); r.setProperty('--text',nt.text); r.setProperty('--text-dim',nt.textDim); r.setProperty('--amber',nt.accent); r.setProperty('--amber-text',nt.accentText); } } });
   var root = document.documentElement.style;
   root.setProperty('--bg', t.bg);
   root.setProperty('--panel', t.panel);
