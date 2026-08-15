@@ -60,13 +60,6 @@
   .budget-chip .amt{font-family:var(--mono); font-size:15px;}
   .budget-chip .amt.neg{color:var(--red);}
   .budget-chip .amt.pos{color:var(--teal);}
-  .section-head-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
-  .section-head-row h2{margin:0;}
-  .roster-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
-  .roster-chip{display:flex;align-items:center;gap:9px;flex:0 0 auto;min-width:150px;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
-  .roster-chip img{width:42px;height:42px;object-fit:contain;image-rendering:auto;}
-  .roster-name{font-weight:700;font-size:13px;white-space:nowrap;}
-  .roster-points{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:2px;}
 
   .pool-toolbar{display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
   .pool-toolbar input{flex:1; min-width:200px;}
@@ -81,8 +74,6 @@
   .mon-card:hover{border-color:var(--amber);}
   .mon-card.taken{opacity:.4; cursor:default;}
   .mon-card.taken:hover{border-color:var(--border);}
-  .mon-card.view-only{cursor:default;}
-  .mon-card.view-only:hover{border-color:var(--border);}
   .mon-card img{width:56px; height:56px; object-fit:contain; image-rendering:pixelated;}
   .mon-card .name{font-size:12px; font-weight:700;}
   .mon-card .pts{font-size:11px; color:var(--amber); font-family:var(--mono);}
@@ -100,181 +91,27 @@
   .page-nav .lock-hint{font-size:10.5px;color:var(--text-dim);opacity:.85}
   @media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}.page-nav .lock-hint{display:none}}
 </style>
-<script>
-// Site-wide theme: picked on the My Team page's Account tab, saved to
-// localStorage, and applied here so every page matches once a choice is made.
-// If nothing has been explicitly chosen yet, this page keeps its own default colors.
-(function(){
-  var THEMES={
-    amber: {bg:'#0e1218',panel:'#161c26',panelAlt:'#1c2432',border:'#2a3444',text:'#e8edf5',textDim:'#8996a8',accent:'#ffb454',accentText:'#1a1206'},
-    teal: {bg:'#071614',panel:'#0d2220',panelAlt:'#122d2a',border:'#1f4a44',text:'#eafffa',textDim:'#8fc7bb',accent:'#5eead4',accentText:'#062521'},
-    sky: {bg:'#071426',panel:'#0d2038',panelAlt:'#142b47',border:'#2b4c70',text:'#eef6ff',textDim:'#9db4cc',accent:'#60a5fa',accentText:'#0b1a33'},
-    violet: {bg:'#171224',panel:'#241b38',panelAlt:'#302448',border:'#51406f',text:'#f7f2ff',textDim:'#b9aecf',accent:'#a78bfa',accentText:'#1e1033'},
-    rose: {bg:'#1c0510',panel:'#2c0a1c',panelAlt:'#3a0f26',border:'#5a1c3c',text:'#fdeef4',textDim:'#c99cb2',accent:'#f472b6',accentText:'#3b0a24'},
-    emerald: {bg:'#071410',panel:'#0d2119',panelAlt:'#122c22',border:'#1f4a37',text:'#eafff3',textDim:'#8fc7a8',accent:'#4ade80',accentText:'#052e12'},
-    orange: {bg:'#1a0f05',panel:'#2a1a0a',panelAlt:'#38220e',border:'#5a3a1a',text:'#fdf3e8',textDim:'#cbab84',accent:'#fb923c',accentText:'#341102'},
-    yellow: {bg:'#17150a',panel:'#26220f',panelAlt:'#332d14',border:'#544b1f',text:'#fdfaea',textDim:'#c9c08a',accent:'#facc15',accentText:'#332600'},
-    cyan: {bg:'#051519',panel:'#0a2129',panelAlt:'#0f2c35',border:'#1c4a57',text:'#eafcff',textDim:'#8bc2cf',accent:'#22d3ee',accentText:'#032a30'},
-    indigo: {bg:'#0e0f1f',panel:'#171a30',panelAlt:'#1f2340',border:'#38406a',text:'#eef0ff',textDim:'#a3a8cf',accent:'#818cf8',accentText:'#141033'},
-    crimson: {bg:'#16070c',panel:'#250b13',panelAlt:'#32101b',border:'#5a1d2b',text:'#fff0f4',textDim:'#d39aaa',accent:'#f43f5e',accentText:'#3a0714'},
-    plum: {bg:'#120817',panel:'#200d29',panelAlt:'#2c1238',border:'#4c245d',text:'#faefff',textDim:'#c6a6d4',accent:'#c084fc',accentText:'#260a33'},
-    lavender: {bg:'#110f1c',panel:'#1d1930',panelAlt:'#292342',border:'#453b67',text:'#f6f1ff',textDim:'#b9add3',accent:'#c4b5fd',accentText:'#21153d'},
-    magenta: {bg:'#170712',panel:'#280b20',panelAlt:'#38102c',border:'#5c1e4a',text:'#fff0fa',textDim:'#d39abb',accent:'#f0a',accentText:'#3d062c'},
-    coral: {bg:'#1b0b08',panel:'#2b1410',panelAlt:'#3a1c16',border:'#63352a',text:'#fff2ed',textDim:'#d2a69a',accent:'#fb7185',accentText:'#3b0d0a'},
-    mint: {bg:'#071511',panel:'#0d241d',panelAlt:'#143129',border:'#245346',text:'#edfff8',textDim:'#94c9b4',accent:'#6ee7b7',accentText:'#06271d'},
-    lime: {bg:'#101507',panel:'#1b240b',panelAlt:'#26330f',border:'#43541c',text:'#f5ffe8',textDim:'#b4c58c',accent:'#a3e635',accentText:'#1e2d05'},
-    forest: {bg:'#06120c',panel:'#0c1d14',panelAlt:'#12291c',border:'#1d4630',text:'#e9fff1',textDim:'#87b69a',accent:'#34d399',accentText:'#052416'},
-    olive: {bg:'#121307',panel:'#22230d',panelAlt:'#303113',border:'#4b4c1b',text:'#f7f8e8',textDim:'#c0c18f',accent:'#bef264',accentText:'#283006'},
-    navy: {bg:'#060d19',panel:'#0c1727',panelAlt:'#132237',border:'#243c5e',text:'#edf5ff',textDim:'#8fa7c5',accent:'#38bdf8',accentText:'#062039'},
-    royal: {bg:'#080b1a',panel:'#111832',panelAlt:'#19234a',border:'#304275',text:'#eef2ff',textDim:'#9daee0',accent:'#6366f1',accentText:'#10133a'},
-    aqua: {bg:'#041315',panel:'#082127',panelAlt:'#0d3038',border:'#1b5661',text:'#e9feff',textDim:'#8dc8ce',accent:'#2dd4bf',accentText:'#032522'},
-    tropical: {bg:'#061610',panel:'#0d281d',panelAlt:'#143a28',border:'#266044',text:'#effff6',textDim:'#8fcbb0',accent:'#34d399',accentText:'#052b1c'},
-    sunset: {bg:'#180a08',panel:'#29130e',panelAlt:'#3a1b12',border:'#623622',text:'#fff3e8',textDim:'#d3aa8d',accent:'#fb923c',accentText:'#3a1605'},
-    coffee: {bg:'#110c09',panel:'#211610',panelAlt:'#2e1e15',border:'#50382a',text:'#f9f1e8',textDim:'#c4a995',accent:'#d6a77a',accentText:'#2e1708'},
-    slate: {bg:'#0b0f14',panel:'#151b23',panelAlt:'#1e2630',border:'#303b49',text:'#edf2f7',textDim:'#9ba9b8',accent:'#94a3b8',accentText:'#10151d'},
-    arctic: {bg:'#081319',panel:'#0e2029',panelAlt:'#15303c',border:'#27505f',text:'#eefcff',textDim:'#91bac5',accent:'#67e8f9',accentText:'#06252e'},
-    cyberpunk: {bg:'#10051a',panel:'#1d0a2d',panelAlt:'#2a1040',border:'#4e1d69',text:'#fff1ff',textDim:'#c59bd5',accent:'#e879f9',accentText:'#30073a'},
-    neon: {bg:'#07110b',panel:'#0d2114',panelAlt:'#12341c',border:'#1d572c',text:'#edfff2',textDim:'#8fc79d',accent:'#a3ff12',accentText:'#142b04'},
-    monochrome: {bg:'#0b0b0d',panel:'#17171a',panelAlt:'#222226',border:'#38383d',text:'#f1f1f3',textDim:'#a7a7ad',accent:'#d4d4d8',accentText:'#18181b'}
-  };
-  var id; try{ id = localStorage.getItem('sbl_dashboard_theme'); }catch(e){}
-  var t = THEMES[id];
-  if(!t) return;
-  window.addEventListener('storage', function(e){ if(e.key==='sbl_dashboard_theme' && e.newValue){ var nt=THEMES[e.newValue]; if(nt){ var r=document.documentElement.style; r.setProperty('--bg',nt.bg); r.setProperty('--panel',nt.panel); r.setProperty('--panel-alt',nt.panelAlt); r.setProperty('--border',nt.border); r.setProperty('--text',nt.text); r.setProperty('--text-dim',nt.textDim); r.setProperty('--amber',nt.accent); r.setProperty('--amber-text',nt.accentText); } } });
-  var root = document.documentElement.style;
-  root.setProperty('--bg', t.bg);
-  root.setProperty('--panel', t.panel);
-  root.setProperty('--panel-alt', t.panelAlt);
-  root.setProperty('--border', t.border);
-  root.setProperty('--text', t.text);
-  root.setProperty('--text-dim', t.textDim);
-  root.setProperty('--amber', t.accent);
-  root.setProperty('--amber-text', t.accentText);
-  root.setProperty('--teal', '#5eead4');
-  root.setProperty('--red', '#ff7a7a');
-})();
-</script>
 
-<style id="mobile-friendly-overrides">
-/* Site-wide mobile usability pass */
-html{overflow-x:hidden;-webkit-text-size-adjust:100%;}
-body{overflow-x:hidden;max-width:100%;}
-img,video,canvas,svg{max-width:100%;}
-button,input,select,textarea{font:inherit;max-width:100%;}
-button{touch-action:manipulation;}
-
-@media (max-width: 700px){
-  body{font-size:14px;}
-  #app{width:100%;max-width:none;box-sizing:border-box;padding-left:12px !important;padding-right:12px !important;}
-  header{padding-left:0 !important;padding-right:0 !important;}
-  header h1,h1{font-size:clamp(22px,7vw,32px);line-height:1.12;overflow-wrap:anywhere;}
-  h2{font-size:clamp(18px,5.5vw,24px);}
-  h3{font-size:17px;}
-  .sub,.note,.panel-desc{overflow-wrap:anywhere;}
-
-  /* Public header navigation */
-  .page-nav{max-width:100vw;box-sizing:border-box;}
-  .page-nav a{min-height:36px;padding:8px 11px;font-size:12px;}
-  .page-nav::-webkit-scrollbar{height:3px;}
-
-  /* Admin's dropdown navigation */
-  body[data-admin="true"] .page-nav{max-width:calc(100vw - 16px);}
-  body[data-admin="true"] .page-nav select{max-width:calc(100vw - 32px);}
-
-  /* Stacked controls instead of cramped horizontal rows */
-  .toolbar,.toolbar-wide,.banner-controls,.section-head-row,.trade-tab-head,.summary-header,
-  .franchise-header,.franchise-card-head,.team-card-head,.team-card-top,.speed-header,
-  .replay-teams,.replay-row,.compare-team,.trade-filter-panel{max-width:100%;}
-  .toolbar,.toolbar-wide,.banner-controls{flex-wrap:wrap !important;gap:8px !important;}
-  .toolbar > *, .toolbar-wide > *, .banner-controls > *{min-width:0 !important;max-width:100%;}
-
-  /* Form controls become comfortable touch targets */
-  input:not([type="checkbox"]):not([type="radio"]),
-  select,textarea{min-height:40px;box-sizing:border-box;}
-  input:not([type="checkbox"]):not([type="radio"]),select,textarea{width:100%;}
-  input[type="checkbox"],input[type="radio"]{width:auto;min-height:auto;}
-  button{min-height:40px;}
-  .foot-actions,.actions,.franchise-actions{flex-wrap:wrap !important;gap:8px !important;}
-  .foot-actions button,.actions button,.franchise-actions button{flex:1 1 auto;}
-
-  /* Panels/cards */
-  .panel,.card,.budget-card,.trade-card,.pokemon-card,.mon-card,.opponent-card,.set-card,
-  .franchise-card,.team-card,.commissioner-budget-card{min-width:0 !important;max-width:100%;box-sizing:border-box;}
-  .panel{padding:14px !important;}
-  .grid,.roster-grid,.roster-cards,.pokemon-grid,.team-card-grid,.franchise-cards,
-  .comparison-grid,.conference-standings,.mon-grid,.theme-grid{grid-template-columns:1fr !important;}
-  .trade-cols,.trade-column-grid,.profile-two-col,.summary-grid,.record-grid{grid-template-columns:1fr !important;}
-  .pick-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-  .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-
-  /* Don't let long Pokémon/team names force horizontal scrolling */
-  .pokemon-name,.team-name,.team-card-name,.standings-team-name,.pick-card-name,
-  .mon-name,.opponent-name,.compare-team-name{overflow-wrap:anywhere;word-break:break-word;}
-
-  /* Tables: preserve all columns, allow deliberate horizontal swipe */
-  table{max-width:none;}
-  .table-wrap,.franchise-table-wrap,#globalTable,#pokemonSearchTable,.player-table-wrap,
-  .speed-table,.type-count-table{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .table-wrap table,.franchise-table-wrap table,#globalTable table,#pokemonSearchTable table,
-  .player-table-wrap table,.speed-table table,.type-count-table table{min-width:max-content;}
-  th,td{white-space:nowrap;}
-
-  /* Modals fit inside a phone viewport */
-  .modal,.modalbox,.overview-modal,.replay-summary-box,.pokemon-modal,.audit-modal,
-  .modal-content{width:calc(100vw - 20px) !important;max-width:calc(100vw - 20px) !important;
-    max-height:calc(100vh - 24px);box-sizing:border-box;}
-  .modal-body,.pokemon-modal-body{overflow:auto;max-height:calc(100vh - 150px);}
-
-  /* Stat/analysis rows stack cleanly */
-  .gf-row{max-width:100%;}
-  .death-cause-entry{max-width:100%;box-sizing:border-box;}
-  .statbox{min-width:0 !important;}
-  .speed-row{min-width:560px;}
-
-  /* Draft / admin tab bars can scroll rather than squish buttons */
-  .tabs{max-width:100%;overflow-x:auto;flex-wrap:nowrap !important;-webkit-overflow-scrolling:touch;}
-  .tabs button{flex:0 0 auto;white-space:nowrap;}
-
-  /* Make auth/login cards comfortable */
-  #adminAuth,.gate{width:100%;max-width:420px;box-sizing:border-box;margin-left:auto;margin-right:auto;}
-}
-
-@media (max-width: 480px){
-  #app{padding-left:9px !important;padding-right:9px !important;}
-  .page-nav a{padding:7px 10px;font-size:11px;}
-  .panel{padding:12px !important;}
-  .pick-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-  .theme-grid{grid-template-columns:1fr 1fr !important;}
-  .sprite{max-width:44px;}
-  .pokemon-head .sprite,.team-card-top-sprite{width:56px !important;height:56px !important;}
-  .foot-actions button,.actions button,.franchise-actions button{width:100%;flex-basis:100%;}
-  .section-head-row{align-items:flex-start !important;}
-}
-</style>
-
-
-<style id="sitewide-hidden-scrollbars">
-/* Site-wide: keep every scroll area usable while never showing a scrollbar. */
-html, body, *, *::before, *::after {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-html::-webkit-scrollbar,
-body::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
-  background: transparent !important;
-}
-</style>
+<script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
 </head>
 <body>
 
-<div id="app" style="display:none">
+<div class="page-nav">
+  <select id="pageNavSelect" aria-label="Choose page" disabled>
+    <option value="index.html">My Team</option>
+    <option value="stats.html">Stats Dashboard</option>
+    <option value="rosters.html">Rosters</option>
+    <option value="team-analysis.html">Team Analysis</option>
+    <option value="free-agency.html">Free Agency</option>
+    <option value="draft.html" data-admin-only hidden>Draft Room</option>
+    <option value="admin.html" data-admin-only hidden>Admin Dashboard</option>
+  </select>
+</div>
+
+<div id="app">
   <header>
     <h1>Draft Room</h1>
-    <div class="sub"><span id="draftSubText">Live draft board.</span> <span id="seasonLabel" class="badge">Current season</span></div>
+    <div class="sub">Make picks live. Every pick updates budgets and published rosters immediately. <span id="seasonLabel" class="badge">Current season</span></div>
   </header>
   <div id="content"></div>
 </div>
@@ -292,14 +129,11 @@ body::-webkit-scrollbar,
   let PROFILES = [];
   let loaded = false;
   let poolFilter = '';
-  let poolTypeFilter = 'all';
-  let isCommissioner = false;
-  let myTeamName = null;
   const contentEl = document.getElementById('content');
 
   const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
-  function requireAdmin(){ if(!isCommissioner) throw new Error('Only commissioners can make draft picks.'); }
+  function requireAdmin(){ if(!adminUser) throw new Error('Admin login required to make picks.'); }
 
   function defaultDraftState(){
     return { status:'setup', mode:'manual', defaultBudget:120, budgets:{}, pool:[], order:[], currentPick:0, picks:[], updatedAt:null };
@@ -309,7 +143,6 @@ body::-webkit-scrollbar,
     d.budgets = d.budgets && typeof d.budgets === 'object' ? d.budgets : {};
     d.pool = Array.isArray(d.pool) ? d.pool.map(m => ({
       id: String(m?.id ?? ''), name: String(m?.name ?? '').trim(), points: Number(m?.points) || 0,
-      types: Array.isArray(m?.types) ? m.types.map(t => String(t).trim()).filter(Boolean) : [],
       drafted: !!m?.drafted, draftedBy: m?.draftedBy || null, pickNumber: m?.pickNumber ?? null
     })).filter(m => m.id && m.name) : [];
     d.order = Array.isArray(d.order) ? d.order.map(String) : [];
@@ -390,137 +223,18 @@ body::-webkit-scrollbar,
   }
 
   // ---------- sprites ----------
-  // Pokémon Showdown sprite filenames don't always match the names
-  // used in the league draft list. Resolve the common competitive
-  // / alternate-form names here, then let the <img> element try each
-  // candidate until one actually loads.
-  const SPRITE_ALIASES = {
-    'aegislash':'aegislash-shield',
-    'darmanitan':'darmanitan',
-    'darmanitan-galar':'darmanitan-galar',
-    'darmanitan-galar-zen':'darmanitan-galar-zen',
-    'terapagos-middle':'terapagos-terastal',
-    'terapagos':'terapagos',
-    'keldeo':'keldeo-ordinary',
-    'zygarde':'zygarde-50',
-    'mimikyu':'mimikyu',
-    'meloetta':'meloetta-aria',
-    'shaymin':'shaymin-land',
-    'maushold':'maushold-four',
-    'maushold-four':'maushold-four',
-    'maushold-three':'maushold-three',
-    'tauros-paldea-combat':'tauros-paldea-combat',
-    'tauros-paldea-blaze':'tauros-paldea-blaze',
-    'tauros-paldea-aqua':'tauros-paldea-aqua',
-    'toxtricity':'toxtricity-amped',
-    'toxtricity-amped':'toxtricity-amped',
-    'toxtricity-low-key':'toxtricity-low-key',
-    'dudunsparce':'dudunsparce-two-segment',
-    'oricorio':'oricorio-baile',
-    'oricorio-baile':'oricorio-baile',
-    'oricorio-pom-pom':'oricorio-pom-pom',
-    'oricorio-pau':'oricorio-pau',
-    'oricorio-sensu':'oricorio-sensu',
-    'minior':'minior-red-meteor',
-    'tatsugiri':'tatsugiri-curly',
-    'wishiwashi':'wishiwashi-solo',
-    'eiscue':'eiscue-ice',
-    'morpeko':'morpeko-full-belly',
-    'squawkabilly-b':'squawkabilly-blue',
-    'squawkabilly-w':'squawkabilly-white',
-    'squawkabilly-y':'squawkabilly-yellow',
-    'squawkabilly-g':'squawkabilly-green',
-    'ogerpon':'ogerpon',
-    'ogerpon-teal':'ogerpon',
-    'ogerpon-hearthflame':'ogerpon-hearthflame',
-    'ogerpon-wellspring':'ogerpon-wellspring',
-    'ogerpon-cornerstone':'ogerpon-cornerstone',
-    'palafin':'palafin-zero',
-    'palafin-hero':'palafin-hero',
-    'basculegion':'basculegion-male',
-    'basculegion-m':'basculegion-male',
-    'basculegion-f':'basculegion-female',
-    'indeedee-m':'indeedee-male',
-    'indeedee-f':'indeedee-female',
-    'meowstic-m':'meowstic-male',
-    'meowstic-f':'meowstic-female',
-    'frillish-m':'frillish',
-    'frillish-f':'frillish',
-    'jellicent-m':'jellicent',
-    'jellicent-f':'jellicent',
-    'indeedee-male':'indeedee-male',
-    'indeedee-female':'indeedee-female'
-  };
-
-  function spriteKey(name){
-    return String(name || '')
-      .trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-      .replace(/[’']/g,'')
-      .replace(/[♀]/g,'-f')
-      .replace(/[♂]/g,'-m')
-      .replace(/[_\s]+/g,'-')
-      .replace(/[^a-z0-9-]/g,'')
-      .replace(/-+/g,'-')
-      .replace(/^-|-$/g,'');
-  }
-
   function spriteCandidates(name){
-    const key = spriteKey(name);
+    const raw = String(name || '').trim().toLowerCase().replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m');
+    const hyphenated = raw.replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    const compact = hyphenated.replace(/-/g,'');
     const candidates = [];
-    const add = id => {
-      if(id && !candidates.includes(id)) candidates.push(id);
-    };
-
-    add(SPRITE_ALIASES[key]);
-    add(key);
-
-    // Common form-name variants.
-    if(key.endsWith('-galar')) add(key);
-    if(key.endsWith('-hisui')) add(key);
-    if(key.endsWith('-alola')) add(key);
-    if(key.endsWith('-paldea')) add(key);
-
-    // For league shorthand forms, fall back to the base Pokémon rather
-    // than displaying a broken image.
-    const base = key
-      .replace(/-paldea-(combat|blaze|aqua)$/,'')
-      .replace(/-galar(?:-zen)?$/,'')
-      .replace(/-hisui$/,'')
-      .replace(/-alola$/,'')
-      .replace(/-hearthflame$/,'')
-      .replace(/-wellspring$/,'')
-      .replace(/-cornerstone$/,'');
-    add(base);
-
+    const add = id => { if(id && !candidates.includes(id)) candidates.push(id); };
+    add(hyphenated); add(compact);
     return candidates;
   }
-
-  function spriteUrl(name, index=0){
-    const candidates = spriteCandidates(name);
-    const slug = candidates[index] || candidates[0] || '';
-    return `https://play.pokemonshowdown.com/sprites/gen5/${slug}.png`;
-  }
-
-  function spriteFallback(img, name){
-    const next = Number(img.dataset.spriteAttempt || 0) + 1;
-    const candidates = spriteCandidates(name);
-
-    if(next < candidates.length){
-      img.dataset.spriteAttempt = String(next);
-      img.src = spriteUrl(name, next);
-      return;
-    }
-
-    // Last resort: use a generic base sprite from Showdown's gen5 set
-    // if a form-specific sprite isn't available.
-    if(!img.dataset.spriteGeneric){
-      img.dataset.spriteGeneric = '1';
-      img.src = 'https://play.pokemonshowdown.com/sprites/gen5/substitute.png';
-      return;
-    }
-
-    img.style.opacity = '0';
+  function spriteUrl(name){
+    const c = spriteCandidates(name)[0] || '';
+    return `https://play.pokemonshowdown.com/sprites/gen5/${c}.png`;
   }
 
   // ---------- pick flow ----------
@@ -558,23 +272,6 @@ body::-webkit-scrollbar,
   }
 
   // ---------- render ----------
-  function updatePoolFilter(){
-    const query = String(poolFilter || '').trim().toLowerCase();
-
-    document.querySelectorAll('.tier-block').forEach(tier => {
-      let anyVisible = false;
-
-      tier.querySelectorAll('.mon-card').forEach(card => {
-        const name = String(card.querySelector('.name')?.textContent || '').toLowerCase();
-        const visible = !query || name.includes(query);
-        card.style.display = visible ? '' : 'none';
-        if(visible) anyVisible = true;
-      });
-
-      tier.style.display = anyVisible ? '' : 'none';
-    });
-  }
-
   function render(){
     if(!loaded){ contentEl.innerHTML = `<div class="empty-state">Loading…</div>`; return; }
     const d = STATE.settings.draft;
@@ -583,21 +280,14 @@ body::-webkit-scrollbar,
       contentEl.innerHTML = `<div class="panel">
         <h2>Draft not started</h2>
         <div class="note">Set up the draft board, budgets, and order in the Admin Dashboard's Draft tab, then start the draft from there.</div>
-        ${isCommissioner ? `<div class="foot-actions"><a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Go to Admin Dashboard ↗</a></div>` : ''}
+        <div class="foot-actions"><a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Go to Admin Dashboard ↗</a></div>
       </div>`;
       return;
     }
 
     const teams = franchises();
     const oc = currentTeam();
-    const rosterTeam = isCommissioner ? (oc || teams[0] || null) : myTeamName;
-    const currentRoster = rosterTeam ? (STATE.settings.rosters[rosterTeam] || []) : [];
-    const availableTypes = [...new Set(d.pool.flatMap(m => m.types || []))].sort((a,b) => a.localeCompare(b));
-    const filtered = d.pool.filter(m => {
-      const matchesSearch = !poolFilter || m.name.toLowerCase().includes(poolFilter.toLowerCase());
-      const matchesType = poolTypeFilter === 'all' || (m.types || []).some(t => t.toLowerCase() === poolTypeFilter.toLowerCase());
-      return matchesSearch && matchesType;
-    });
+    const filtered = d.pool.filter(m => !poolFilter || m.name.toLowerCase().includes(poolFilter.toLowerCase()));
     const groups = {};
     filtered.forEach(m => { (groups[m.points] ??= []).push(m); });
     const tiers = Object.keys(groups).map(Number).sort((a,b) => b - a);
@@ -609,49 +299,26 @@ body::-webkit-scrollbar,
             ${d.status === 'complete'
               ? `<div class="who">Draft complete</div>`
               : d.mode === 'ordered'
-                ? `<div class="who">Current Pick: <span class="amber">${oc ? esc(oc) : '—'}</span></div><div class="pickno">Pick #${d.currentPick + 1} of ${d.order.length}</div>`
-                : `<div class="who">Current Pick: <span class="amber">Manual</span></div><div class="pickno">Pick a Pokémon, then choose the franchise</div>`}
+                ? `<div class="who">On the clock: <span class="amber">${oc ? esc(oc) : '—'}</span></div><div class="pickno">Pick #${d.currentPick + 1} of ${d.order.length}</div>`
+                : `<div class="who">Manual mode</div><div class="pickno">Pick a Pokémon, then choose the franchise</div>`}
           </div>
           <div class="foot-actions" style="margin-top:0">
-            ${isCommissioner && d.picks.length ? `<button class="ghost danger-btn" id="undoBtn">Undo last pick</button>` : ''}
-            ${isCommissioner ? `<a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Draft setup ↗</a>` : ''}
+            ${d.picks.length ? `<button class="ghost danger-btn" id="undoBtn">Undo last pick</button>` : ''}
+            <a class="ghost" href="admin.html" style="text-decoration:none;display:inline-flex;align-items:center;">Draft setup ↗</a>
           </div>
         </div>
       </div>
 
-      ${rosterTeam ? `
       <div class="panel">
-        <div class="section-head-row">
-          <h2>${isCommissioner ? 'Current roster' : 'My roster'}</h2>
-          <span class="badge">${esc(rosterTeam)}</span>
-        </div>
-        ${currentRoster.length ? `
-          <div class="roster-strip">
-            ${currentRoster.map(mon => `
-              <div class="roster-chip">
-                <img src="${spriteUrl(mon.name)}" alt="${esc(mon.name)}" loading="lazy" data-sprite-attempt="0" onerror="spriteFallback(this, '${esc(mon.name).replace("'","\\'")}')">
-                <div>
-                  <div class="roster-name">${esc(mon.name)}</div>
-                  ${mon.points != null ? `<div class="roster-points">${Number(mon.points) || 0} pts</div>` : ''}
-                </div>
-              </div>`).join('')}
-          </div>
-        ` : `<div class="empty-state">No Pokémon drafted yet.</div>`}
-      </div>` : ''}
-
-      <div class="panel">
-        <h2>${isCommissioner ? 'Budgets' : 'My budget'}</h2>
+        <h2>Budgets</h2>
         <div class="budget-strip">
-          ${(() => {
-            const budgetTeams = isCommissioner ? teams : (myTeamName ? [myTeamName] : []);
-            return budgetTeams.length ? budgetTeams.map(t => {
-              const spent = draftSpent(t), budget = draftBudget(t), remain = budget - spent;
-              return `<div class="budget-chip ${t === oc ? 'oc' : ''}">
-                <div class="team">${esc(t)}</div>
-                <div class="amt ${remain < 0 ? 'neg' : 'pos'}">${remain} / ${budget} pts</div>
-              </div>`;
-            }).join('') : '<div class="empty-state">No franchise assigned.</div>';
-          })()}
+          ${teams.length ? teams.map(t => {
+            const spent = draftSpent(t), budget = draftBudget(t), remain = budget - spent;
+            return `<div class="budget-chip ${t === oc ? 'oc' : ''}">
+              <div class="team">${esc(t)}</div>
+              <div class="amt ${remain < 0 ? 'neg' : 'pos'}">${remain} / ${budget} pts</div>
+            </div>`;
+          }).join('') : '<div class="empty-state">No approved franchises found.</div>'}
         </div>
       </div>
 
@@ -659,10 +326,6 @@ body::-webkit-scrollbar,
         <h2>Draft board</h2>
         <div class="pool-toolbar">
           <input type="text" id="poolSearch" placeholder="Search Pokémon…" value="${esc(poolFilter)}">
-          <select id="poolTypeFilter" style="max-width:180px">
-            <option value="all">All Types</option>
-            ${availableTypes.map(type => `<option value="${esc(type)}" ${poolTypeFilter.toLowerCase() === type.toLowerCase() ? 'selected' : ''}>${esc(type)}</option>`).join('')}
-          </select>
           <span class="badge">${d.pool.filter(m=>!m.drafted).length} available</span>
           <span class="badge">${d.pool.filter(m=>m.drafted).length} drafted</span>
         </div>
@@ -671,11 +334,10 @@ body::-webkit-scrollbar,
             <div class="tier-title">${pts} points</div>
             <div class="mon-grid">
               ${groups[pts].sort((a,b)=>a.name.localeCompare(b.name)).map(m => `
-                <div class="mon-card ${m.drafted ? 'taken' : ''} ${!isCommissioner ? 'view-only' : ''}" ${m.drafted || !isCommissioner ? '' : `data-pick="${esc(m.id)}"`}>
-                  <img src="${spriteUrl(m.name)}" alt="${esc(m.name)}" loading="lazy" data-sprite-attempt="0" onerror="spriteFallback(this, '${esc(m.name).replace("'","\\'")}')">
+                <div class="mon-card ${m.drafted ? 'taken' : ''}" ${m.drafted ? '' : `data-pick="${esc(m.id)}"`}>
+                  <img src="${spriteUrl(m.name)}" alt="${esc(m.name)}" loading="lazy" onerror="this.style.opacity=.2">
                   <div class="name">${esc(m.name)}</div>
                   <div class="pts">${m.points} pts</div>
-                  ${m.types?.length ? `<div class="note" style="margin:0;font-size:10px">${m.types.map(esc).join(' / ')}</div>` : ''}
                   ${m.drafted ? `<div class="taken-to">→ ${esc(m.draftedBy || '')}</div>` : ''}
                 </div>`).join('')}
             </div>
@@ -689,15 +351,9 @@ body::-webkit-scrollbar,
       catch(e){ alert(e.message); }
     });
     document.getElementById('poolSearch')?.addEventListener('input', (e) => {
-      // Keep the existing input element alive while filtering. Re-rendering
-      // here replaces the input DOM node and resets the caret, which makes
-      // normal typing appear backwards.
       poolFilter = e.target.value;
-      updatePoolFilter();
-    });
-    document.getElementById('poolTypeFilter')?.addEventListener('change', (e) => {
-      poolTypeFilter = e.target.value;
       render();
+      document.getElementById('poolSearch')?.focus();
     });
     contentEl.querySelectorAll('[data-pick]').forEach(card => {
       card.addEventListener('click', () => openPickModal(card.dataset.pick));
@@ -766,33 +422,48 @@ body::-webkit-scrollbar,
     el.style.display = 'block';
   }
   function showAdminLogin(){
-    // Not logged in (or no assigned team) — bounce to the login page instead of
-    // rendering an inline form here.
-    location.replace('index.html');
-    return;
+    const app = document.getElementById('app');
+    app.style.display = 'none';
+    document.getElementById('adminAuth')?.remove();
+    const wrap = document.createElement('div');
+    wrap.id = 'adminAuth';
+    wrap.style.cssText = 'max-width:420px;margin:80px auto;padding:24px;background:var(--panel);border:1px solid var(--border);border-radius:10px;';
+    wrap.innerHTML = `
+      <h1 style="margin:0 0 6px;font-size:22px;">Draft Room</h1>
+      <div class="sub">Sign in to run the draft.</div>
+      <label>Email</label><input id="adminEmail" type="email" autocomplete="username" placeholder="you@example.com" style="width:100%;margin-bottom:12px;">
+      <label>Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password" style="width:100%;margin-bottom:14px;">
+      <button class="primary" id="adminLoginBtn" style="width:100%;">Log in</button>
+      <div id="adminError" class="note danger" style="margin-top:10px;"></div>`;
+    document.body.appendChild(wrap);
+    document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
+    document.getElementById('adminPassword').addEventListener('keydown', e => { if(e.key === 'Enter') adminLogin(); });
+  }
+  async function adminLogin(){
+    const email = document.getElementById('adminEmail').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    if(!email || !password){ showAdminError('Enter your email and password.'); return; }
+    const btn = document.getElementById('adminLoginBtn');
+    btn.disabled = true; btn.textContent = 'Logging in…';
+    const {data, error} = await supabase.auth.signInWithPassword({email, password});
+    btn.disabled = false; btn.textContent = 'Log in';
+    if(error){ showAdminError(error.message); return; }
+    adminUser = data.user;
+    document.getElementById('adminAuth')?.remove();
+    document.getElementById('app').style.display = '';
+    try{ await loadState(); render(); }
+    catch(e){ showAdminError('Could not load draft data: ' + e.message); }
   }
   async function initAuth(){
     const {data, error} = await supabase.auth.getSession();
     if(error) throw error;
-    if(!data.session){
-      showAdminLogin();
-      return false;
+    if(data.session){
+      adminUser = data.session.user;
+      document.getElementById('app').style.display = '';
+      return true;
     }
-    const {data:profile, error:profErr} = await supabase.from('profiles').select('team_name,is_commissioner').eq('id', data.session.user.id).maybeSingle();
-    if(profErr) throw profErr;
-    if(!profile?.team_name){
-      // Logged in but hasn't claimed/been assigned a team yet — no access to the
-      // rest of the site until that's done from the login page.
-      showAdminLogin();
-      return false;
-    }
-    adminUser = data.session.user;
-    myTeamName = profile.team_name;
-    isCommissioner = profile.is_commissioner === true;
-    const sub = document.getElementById('draftSubText');
-    if(sub) sub.textContent = isCommissioner ? 'Make picks live. Every pick updates budgets and published rosters immediately.' : 'Live draft board. Search and filter Pokémon by type; drafting is commissioner-only.';
-    document.getElementById('app').style.display = '';
-    return true;
+    showAdminLogin();
+    return false;
   }
 
   (async function init(){
@@ -806,6 +477,47 @@ body::-webkit-scrollbar,
       showAdminError('Could not start the Draft Room: ' + e.message);
     }
   })();
+})();
+</script>
+<script>
+(function(){
+  const select = document.getElementById('pageNavSelect');
+  if(!select) return;
+  const lockHint = document.getElementById('pageNavLockHint');
+  const ADMIN = 'admin.html';
+  const current = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  if(current === 'draft.html') select.value = 'draft.html';
+  else if(Array.from(select.options).some(o => o.value === current)) select.value = current;
+
+  function lockNav(locked){
+    select.disabled = locked;
+    select.title = locked ? 'Log in to switch pages' : '';
+    if(lockHint) lockHint.hidden = !locked;
+  }
+
+  const client = window.supabase?.createClient(
+    'https://dfxdkkemltukxaklhcpo.supabase.co',
+    'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
+  );
+
+  async function setupCommissionerNav(){
+    try{
+      if(!client){ lockNav(true); return; }
+      const {data:{session}} = await client.auth.getSession();
+      lockNav(!session?.user);
+      if(!session?.user) return;
+      const {data:profile, error} = await client.from('profiles').select('is_commissioner').eq('id', session.user.id).maybeSingle();
+      if(error) throw error;
+      if(profile?.is_commissioner){
+        select.querySelectorAll('option[data-admin-only]').forEach(opt => { opt.hidden = false; });
+      }
+      if(current === ADMIN) select.value = ADMIN;
+    }catch(err){ console.warn('Commissioner navigation check failed:', err); lockNav(true); }
+  }
+
+  select.addEventListener('change', e => { if(e.target.value) location.href = e.target.value; });
+  setupCommissionerNav();
+  client?.auth.onAuthStateChange((_event, session) => { lockNav(!session?.user); });
 })();
 </script>
 </body>

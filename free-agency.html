@@ -10,7 +10,7 @@
   --text:#202433;--dim:#697083;--accent:#5367d8;--taken:#8a8f9d;--available:#3d8c62;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}.modal-open{overflow:hidden}
 
 /* page nav */
 .page-nav{position:fixed;top:14px;right:18px;z-index:20;display:flex;gap:7px;align-items:center}
@@ -25,15 +25,12 @@ h1{margin:0 0 6px;font-size:28px}
 .sub,.note{color:var(--dim);line-height:1.5}
 
 /* toolbar */
-.toolbar{
-  display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
-  margin:18px 0 14px;padding:16px 18px;
-  background:var(--panel);border:1px solid var(--border);border-radius:12px;
-}
-.toolbar>div{min-width:180px;flex:1}
-.toolbar>div.toolbar-wide{min-width:260px;flex:2}
+.toolbar{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;margin:18px 0 14px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.toolbar>div{grid-column:span 2;min-width:0}
+.toolbar>div.toolbar-wide{grid-column:span 3;min-width:0}
+.toolbar>.clear-filters{grid-column:span 2}
 label{display:block;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
-input[type=text],select.filter-select{
+input[type=text],input[type=number],select.filter-select{
   width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;
   background:var(--bg);color:var(--text);font:inherit;font-size:13px;
 }
@@ -84,11 +81,11 @@ input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 .mon{
   position:relative;min-height:190px;padding:12px 10px;
-  border:1px solid var(--border);border-radius:12px;background:var(--panel);
+  border:1px solid var(--border);border-radius:12px;background:var(--panel2);
   cursor:pointer;transition:.12s;display:flex;flex-direction:column;align-items:center;
 }
-.mon:hover{transform:translateY(-2px);box-shadow:0 6px 18px #0001}
-.mon.taken{opacity:.48;cursor:default;background:var(--panel2)}
+.mon:hover{transform:translateY(-2px);box-shadow:0 5px 14px rgba(0,0,0,.10)}
+.mon.taken{opacity:1;cursor:pointer;background:var(--panel);border-color:var(--border)}
 .mon img{display:block;width:86px;height:86px;object-fit:contain;image-rendering:pixelated;margin-bottom:4px}
 .mon-name{font-weight:800;font-size:13px;text-align:center;margin-top:2px}
 .mon-points{text-align:center;margin-top:4px;color:var(--accent);font-weight:800;font-size:13px}
@@ -105,13 +102,18 @@ input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent
 .empty{padding:34px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--dim);background:var(--panel)}
 
 /* modal */
-.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
-.modalbox{width:min(480px,100%);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:24px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.48);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100;animation:modalFade .18s ease both}.modalbox{width:min(480px,calc(100vw - 32px));max-height:min(680px,calc(100vh - 40px));overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:16px;padding:24px;animation:modalPop .24s cubic-bezier(.16,1,.3,1) both;box-shadow:0 28px 90px rgba(0,0,0,.38)}
+.modalbox h2{font-size:22px;line-height:1.15}.modalbox strong{color:var(--accent)}
+@keyframes modalFade{from{opacity:0}to{opacity:1}}@keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.965)}to{opacity:1;transform:translateY(0) scale(1)}}
+
 .modalbox h2{margin:0 0 6px}
 .modal-types{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
 .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-.btn{padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);cursor:pointer;font:inherit}
-.btn:hover{border-color:var(--accent)}
+.btn{padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer;font:inherit;box-shadow:none}
+.btn:hover{border-color:var(--accent);background:var(--panel-alt);color:var(--text)}
+.modalbox .btn{color:var(--dim)!important;background:transparent!important;border-color:color-mix(in srgb,var(--border) 70%,transparent)!important;box-shadow:none!important;font-weight:600;transition:background .14s ease,border-color .14s ease,color .14s ease}
+.modalbox .btn:hover{color:var(--text)!important;background:color-mix(in srgb,var(--panel2) 55%,transparent)!important;border-color:var(--border)!important}
+.modalbox .btn:active{background:color-mix(in srgb,var(--panel2) 75%,transparent)!important}
 
 /* availability toggle */
 .avail-toggle{display:flex;gap:6px}
@@ -129,6 +131,9 @@ input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent
 }
 .clear-filters:hover{color:var(--text);border-color:var(--text)}
 
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@media(max-width:900px){.toolbar{grid-template-columns:repeat(6,minmax(0,1fr))}.toolbar>div,.toolbar>div.toolbar-wide{grid-column:span 3}}
 @media(max-width:700px){
   #app{padding:60px 12px 30px}
   .page-nav{top:8px;right:8px}
@@ -138,64 +143,9 @@ input[type=text]:focus,select.filter-select:focus{outline:2px solid var(--accent
   .toolbar{padding:12px}
   .toolbar>div,.toolbar>div.toolbar-wide{min-width:0;flex:1 1 140px}
 }
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
-<script>
-// Site-wide theme: picked on the My Team page's Account tab, saved to
-// localStorage, and applied here so every page matches once a choice is made.
-// If nothing has been explicitly chosen yet, this page keeps its own default colors.
-// This page's design uses different variable names (--panel2, --dim, --accent
-// instead of --panel-alt, --text-dim, --amber) so they're mapped below.
-(function(){
-  var THEMES={
-    amber: {bg:'#0e1218',panel:'#161c26',panelAlt:'#1c2432',border:'#2a3444',text:'#e8edf5',textDim:'#8996a8',accent:'#ffb454',accentText:'#1a1206'},
-    teal: {bg:'#071614',panel:'#0d2220',panelAlt:'#122d2a',border:'#1f4a44',text:'#eafffa',textDim:'#8fc7bb',accent:'#5eead4',accentText:'#062521'},
-    sky: {bg:'#071426',panel:'#0d2038',panelAlt:'#142b47',border:'#2b4c70',text:'#eef6ff',textDim:'#9db4cc',accent:'#60a5fa',accentText:'#0b1a33'},
-    violet: {bg:'#171224',panel:'#241b38',panelAlt:'#302448',border:'#51406f',text:'#f7f2ff',textDim:'#b9aecf',accent:'#a78bfa',accentText:'#1e1033'},
-    rose: {bg:'#1c0510',panel:'#2c0a1c',panelAlt:'#3a0f26',border:'#5a1c3c',text:'#fdeef4',textDim:'#c99cb2',accent:'#f472b6',accentText:'#3b0a24'},
-    emerald: {bg:'#071410',panel:'#0d2119',panelAlt:'#122c22',border:'#1f4a37',text:'#eafff3',textDim:'#8fc7a8',accent:'#4ade80',accentText:'#052e12'},
-    orange: {bg:'#1a0f05',panel:'#2a1a0a',panelAlt:'#38220e',border:'#5a3a1a',text:'#fdf3e8',textDim:'#cbab84',accent:'#fb923c',accentText:'#341102'},
-    yellow: {bg:'#17150a',panel:'#26220f',panelAlt:'#332d14',border:'#544b1f',text:'#fdfaea',textDim:'#c9c08a',accent:'#facc15',accentText:'#332600'},
-    cyan: {bg:'#051519',panel:'#0a2129',panelAlt:'#0f2c35',border:'#1c4a57',text:'#eafcff',textDim:'#8bc2cf',accent:'#22d3ee',accentText:'#032a30'},
-    indigo: {bg:'#0e0f1f',panel:'#171a30',panelAlt:'#1f2340',border:'#38406a',text:'#eef0ff',textDim:'#a3a8cf',accent:'#818cf8',accentText:'#141033'},
-    crimson: {bg:'#16070c',panel:'#250b13',panelAlt:'#32101b',border:'#5a1d2b',text:'#fff0f4',textDim:'#d39aaa',accent:'#f43f5e',accentText:'#3a0714'},
-    plum: {bg:'#120817',panel:'#200d29',panelAlt:'#2c1238',border:'#4c245d',text:'#faefff',textDim:'#c6a6d4',accent:'#c084fc',accentText:'#260a33'},
-    lavender: {bg:'#110f1c',panel:'#1d1930',panelAlt:'#292342',border:'#453b67',text:'#f6f1ff',textDim:'#b9add3',accent:'#c4b5fd',accentText:'#21153d'},
-    magenta: {bg:'#170712',panel:'#280b20',panelAlt:'#38102c',border:'#5c1e4a',text:'#fff0fa',textDim:'#d39abb',accent:'#f0a',accentText:'#3d062c'},
-    coral: {bg:'#1b0b08',panel:'#2b1410',panelAlt:'#3a1c16',border:'#63352a',text:'#fff2ed',textDim:'#d2a69a',accent:'#fb7185',accentText:'#3b0d0a'},
-    mint: {bg:'#071511',panel:'#0d241d',panelAlt:'#143129',border:'#245346',text:'#edfff8',textDim:'#94c9b4',accent:'#6ee7b7',accentText:'#06271d'},
-    lime: {bg:'#101507',panel:'#1b240b',panelAlt:'#26330f',border:'#43541c',text:'#f5ffe8',textDim:'#b4c58c',accent:'#a3e635',accentText:'#1e2d05'},
-    forest: {bg:'#06120c',panel:'#0c1d14',panelAlt:'#12291c',border:'#1d4630',text:'#e9fff1',textDim:'#87b69a',accent:'#34d399',accentText:'#052416'},
-    olive: {bg:'#121307',panel:'#22230d',panelAlt:'#303113',border:'#4b4c1b',text:'#f7f8e8',textDim:'#c0c18f',accent:'#bef264',accentText:'#283006'},
-    navy: {bg:'#060d19',panel:'#0c1727',panelAlt:'#132237',border:'#243c5e',text:'#edf5ff',textDim:'#8fa7c5',accent:'#38bdf8',accentText:'#062039'},
-    royal: {bg:'#080b1a',panel:'#111832',panelAlt:'#19234a',border:'#304275',text:'#eef2ff',textDim:'#9daee0',accent:'#6366f1',accentText:'#10133a'},
-    aqua: {bg:'#041315',panel:'#082127',panelAlt:'#0d3038',border:'#1b5661',text:'#e9feff',textDim:'#8dc8ce',accent:'#2dd4bf',accentText:'#032522'},
-    tropical: {bg:'#061610',panel:'#0d281d',panelAlt:'#143a28',border:'#266044',text:'#effff6',textDim:'#8fcbb0',accent:'#34d399',accentText:'#052b1c'},
-    sunset: {bg:'#180a08',panel:'#29130e',panelAlt:'#3a1b12',border:'#623622',text:'#fff3e8',textDim:'#d3aa8d',accent:'#fb923c',accentText:'#3a1605'},
-    coffee: {bg:'#110c09',panel:'#211610',panelAlt:'#2e1e15',border:'#50382a',text:'#f9f1e8',textDim:'#c4a995',accent:'#d6a77a',accentText:'#2e1708'},
-    slate: {bg:'#0b0f14',panel:'#151b23',panelAlt:'#1e2630',border:'#303b49',text:'#edf2f7',textDim:'#9ba9b8',accent:'#94a3b8',accentText:'#10151d'},
-    arctic: {bg:'#081319',panel:'#0e2029',panelAlt:'#15303c',border:'#27505f',text:'#eefcff',textDim:'#91bac5',accent:'#67e8f9',accentText:'#06252e'},
-    cyberpunk: {bg:'#10051a',panel:'#1d0a2d',panelAlt:'#2a1040',border:'#4e1d69',text:'#fff1ff',textDim:'#c59bd5',accent:'#e879f9',accentText:'#30073a'},
-    neon: {bg:'#07110b',panel:'#0d2114',panelAlt:'#12341c',border:'#1d572c',text:'#edfff2',textDim:'#8fc79d',accent:'#a3ff12',accentText:'#142b04'},
-    monochrome: {bg:'#0b0b0d',panel:'#17171a',panelAlt:'#222226',border:'#38383d',text:'#f1f1f3',textDim:'#a7a7ad',accent:'#d4d4d8',accentText:'#18181b'}
-  };
-  var id; try{ id = localStorage.getItem('sbl_dashboard_theme'); }catch(e){}
-  var t = THEMES[id];
-  if(!t) return;
-  window.addEventListener('storage', function(e){ if(e.key==='sbl_dashboard_theme' && e.newValue){ var nt=THEMES[e.newValue]; if(nt){ var r=document.documentElement.style; r.setProperty('--bg',nt.bg); r.setProperty('--panel',nt.panel); r.setProperty('--panel2',nt.panelAlt); r.setProperty('--panel-alt',nt.panelAlt); r.setProperty('--border',nt.border); r.setProperty('--text',nt.text); r.setProperty('--dim',nt.textDim); r.setProperty('--text-dim',nt.textDim); r.setProperty('--accent',nt.accent); r.setProperty('--amber',nt.accent); r.setProperty('--amber-text',nt.accentText); } } });
-  var root = document.documentElement.style;
-  root.setProperty('--bg', t.bg);
-  root.setProperty('--panel', t.panel);
-  root.setProperty('--panel2', t.panelAlt);
-  root.setProperty('--panel-alt', t.panelAlt);
-  root.setProperty('--border', t.border);
-  root.setProperty('--text', t.text);
-  root.setProperty('--dim', t.textDim);
-  root.setProperty('--text-dim', t.textDim);
-  root.setProperty('--accent', t.accent);
-  root.setProperty('--amber', t.accent);
-  root.setProperty('--amber-text', t.accentText);
-})();
-</script>
+
 <style>
 .page-nav{width:100%;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;padding:10px 16px;margin:0 0 20px;border-bottom:1px solid var(--border,#ddd);background:var(--panel,#fff);box-sizing:border-box;position:relative;z-index:50}
 .page-nav a{display:inline-flex;align-items:center;justify-content:center;padding:8px 13px;border-radius:8px;color:var(--text,#222);text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap;transition:background .15s,border-color .15s,color .15s; border:1px solid transparent}
@@ -326,67 +276,8 @@ th{border-color:var(--border)}
 td{border-color:var(--border)}
 a{color:var(--amber)}
 </style>
-<script id="sbl-global-theme-loader">
-(function(){
-  const THEMES=[
-{id:'amber', name:'Amber', bg:'#0e1218', panel:'#161c26', panelAlt:'#1c2432', border:'#2a3444', text:'#e8edf5', textDim:'#8996a8', accent:'#ffb454', accentText:'#1a1206'},
-    {id:'teal', name:'Teal', bg:'#071614', panel:'#0d2220', panelAlt:'#122d2a', border:'#1f4a44', text:'#eafffa', textDim:'#8fc7bb', accent:'#5eead4', accentText:'#062521'},
-    {id:'sky', name:'Sky Blue', bg:'#071426', panel:'#0d2038', panelAlt:'#142b47', border:'#2b4c70', text:'#eef6ff', textDim:'#9db4cc', accent:'#60a5fa', accentText:'#0b1a33'},
-    {id:'violet', name:'Violet', bg:'#171224', panel:'#241b38', panelAlt:'#302448', border:'#51406f', text:'#f7f2ff', textDim:'#b9aecf', accent:'#a78bfa', accentText:'#1e1033'},
-    {id:'rose', name:'Rose', bg:'#1c0510', panel:'#2c0a1c', panelAlt:'#3a0f26', border:'#5a1c3c', text:'#fdeef4', textDim:'#c99cb2', accent:'#f472b6', accentText:'#3b0a24'},
-    {id:'emerald', name:'Emerald', bg:'#071410', panel:'#0d2119', panelAlt:'#122c22', border:'#1f4a37', text:'#eafff3', textDim:'#8fc7a8', accent:'#4ade80', accentText:'#052e12'},
-    {id:'orange', name:'Orange', bg:'#1a0f05', panel:'#2a1a0a', panelAlt:'#38220e', border:'#5a3a1a', text:'#fdf3e8', textDim:'#cbab84', accent:'#fb923c', accentText:'#341102'},
-    {id:'yellow', name:'Yellow', bg:'#17150a', panel:'#26220f', panelAlt:'#332d14', border:'#544b1f', text:'#fdfaea', textDim:'#c9c08a', accent:'#facc15', accentText:'#332600'},
-    {id:'cyan', name:'Cyan', bg:'#051519', panel:'#0a2129', panelAlt:'#0f2c35', border:'#1c4a57', text:'#eafcff', textDim:'#8bc2cf', accent:'#22d3ee', accentText:'#032a30'},
-    {id:'indigo', name:'Indigo', bg:'#0e0f1f', panel:'#171a30', panelAlt:'#1f2340', border:'#38406a', text:'#eef0ff', textDim:'#a3a8cf', accent:'#818cf8', accentText:'#141033'},
-    {id:'crimson', name:'Crimson', bg:'#16070c', panel:'#250b13', panelAlt:'#32101b', border:'#5a1d2b', text:'#fff0f4', textDim:'#d39aaa', accent:'#f43f5e', accentText:'#3a0714'},
-    {id:'plum', name:'Plum', bg:'#120817', panel:'#200d29', panelAlt:'#2c1238', border:'#4c245d', text:'#faefff', textDim:'#c6a6d4', accent:'#c084fc', accentText:'#260a33'},
-    {id:'lavender', name:'Lavender', bg:'#110f1c', panel:'#1d1930', panelAlt:'#292342', border:'#453b67', text:'#f6f1ff', textDim:'#b9add3', accent:'#c4b5fd', accentText:'#21153d'},
-    {id:'magenta', name:'Magenta', bg:'#170712', panel:'#280b20', panelAlt:'#38102c', border:'#5c1e4a', text:'#fff0fa', textDim:'#d39abb', accent:'#f0a', accentText:'#3d062c'},
-    {id:'coral', name:'Coral', bg:'#1b0b08', panel:'#2b1410', panelAlt:'#3a1c16', border:'#63352a', text:'#fff2ed', textDim:'#d2a69a', accent:'#fb7185', accentText:'#3b0d0a'},
-    {id:'mint', name:'Mint', bg:'#071511', panel:'#0d241d', panelAlt:'#143129', border:'#245346', text:'#edfff8', textDim:'#94c9b4', accent:'#6ee7b7', accentText:'#06271d'},
-    {id:'lime', name:'Lime', bg:'#101507', panel:'#1b240b', panelAlt:'#26330f', border:'#43541c', text:'#f5ffe8', textDim:'#b4c58c', accent:'#a3e635', accentText:'#1e2d05'},
-    {id:'forest', name:'Forest', bg:'#06120c', panel:'#0c1d14', panelAlt:'#12291c', border:'#1d4630', text:'#e9fff1', textDim:'#87b69a', accent:'#34d399', accentText:'#052416'},
-    {id:'olive', name:'Olive', bg:'#121307', panel:'#22230d', panelAlt:'#303113', border:'#4b4c1b', text:'#f7f8e8', textDim:'#c0c18f', accent:'#bef264', accentText:'#283006'},
-    {id:'navy', name:'Navy', bg:'#060d19', panel:'#0c1727', panelAlt:'#132237', border:'#243c5e', text:'#edf5ff', textDim:'#8fa7c5', accent:'#38bdf8', accentText:'#062039'},
-    {id:'royal', name:'Royal Blue', bg:'#080b1a', panel:'#111832', panelAlt:'#19234a', border:'#304275', text:'#eef2ff', textDim:'#9daee0', accent:'#6366f1', accentText:'#10133a'},
-    {id:'aqua', name:'Aqua', bg:'#041315', panel:'#082127', panelAlt:'#0d3038', border:'#1b5661', text:'#e9feff', textDim:'#8dc8ce', accent:'#2dd4bf', accentText:'#032522'},
-    {id:'tropical', name:'Tropical', bg:'#061610', panel:'#0d281d', panelAlt:'#143a28', border:'#266044', text:'#effff6', textDim:'#8fcbb0', accent:'#34d399', accentText:'#052b1c'},
-    {id:'sunset', name:'Sunset', bg:'#180a08', panel:'#29130e', panelAlt:'#3a1b12', border:'#623622', text:'#fff3e8', textDim:'#d3aa8d', accent:'#fb923c', accentText:'#3a1605'},
-    {id:'coffee', name:'Coffee', bg:'#110c09', panel:'#211610', panelAlt:'#2e1e15', border:'#50382a', text:'#f9f1e8', textDim:'#c4a995', accent:'#d6a77a', accentText:'#2e1708'},
-    {id:'slate', name:'Slate', bg:'#0b0f14', panel:'#151b23', panelAlt:'#1e2630', border:'#303b49', text:'#edf2f7', textDim:'#9ba9b8', accent:'#94a3b8', accentText:'#10151d'},
-    {id:'arctic', name:'Arctic', bg:'#081319', panel:'#0e2029', panelAlt:'#15303c', border:'#27505f', text:'#eefcff', textDim:'#91bac5', accent:'#67e8f9', accentText:'#06252e'},
-    {id:'cyberpunk', name:'Cyberpunk', bg:'#10051a', panel:'#1d0a2d', panelAlt:'#2a1040', border:'#4e1d69', text:'#fff1ff', textDim:'#c59bd5', accent:'#e879f9', accentText:'#30073a'},
-    {id:'neon', name:'Neon', bg:'#07110b', panel:'#0d2114', panelAlt:'#12341c', border:'#1d572c', text:'#edfff2', textDim:'#8fc79d', accent:'#a3ff12', accentText:'#142b04'},
-    {id:'monochrome', name:'Monochrome', bg:'#0b0b0d', panel:'#17171a', panelAlt:'#222226', border:'#38383d', text:'#f1f1f3', textDim:'#a7a7ad', accent:'#d4d4d8', accentText:'#18181b'}
-  ];
-  const THEME_KEY='sbl_dashboard_theme';
-  const CUSTOM_KEY='sbl_dashboard_custom_theme';
-  const TEAL='#5eead4', RED='#ff7a7a';
-  function read(key, fallback){try{const v=localStorage.getItem(key);return v||fallback}catch(e){return fallback}}
-  function custom(){try{return JSON.parse(localStorage.getItem(CUSTOM_KEY)||'null')}catch(e){return null}}
-  function themeFor(id){
-    if(id==='custom'){
-      const c=custom()||{};
-      const base=THEMES.find(t=>t.id===(c.base||'amber'))||THEMES[0];
-      const out=Object.assign({},base,c,{id:'custom',name:'Custom'});
-      if(c.enabled) Object.keys(base).forEach(k=>{if(!['id','name'].includes(k)&&c.enabled[k]===false) out[k]=base[k]});
-      return out;
-    }
-    return THEMES.find(t=>t.id===id)||THEMES[0];
-  }
-  function apply(){
-    const id=read(THEME_KEY,'amber'); const t=themeFor(id); const r=document.documentElement.style;
-    const map={bg:'bg',panel:'panel',panelAlt:'panel-alt',border:'border',text:'text',textDim:'text-dim',accent:'amber',accentText:'amber-text'};
-    Object.keys(map).forEach(k=>{if(t[k]) r.setProperty('--'+map[k],t[k])});
-    r.setProperty('--teal',TEAL); r.setProperty('--red',RED); r.setProperty('--sbl-theme-accent',t.accent||TEAL);
-    document.documentElement.dataset.sblTheme=id;
-  }
-  apply();
-  window.addEventListener('storage',e=>{if(e.key===THEME_KEY||e.key===CUSTOM_KEY) apply()});
-  window.SBLApplyGlobalTheme=apply;
-})();
-</script>
+
+<script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
 </head>
 <body>
 <nav class="page-nav" id="pageNav" aria-label="Site navigation">
@@ -452,9 +343,15 @@ const key=s=>String(s||''). trim().toLowerCase()
 
 // --- filter state ---
 let filterName='';
-let filterTypes=new Set();   // empty = all types
-let filterPoints='';         // '' = any, or exact number string
-let filterAvail='all';       // 'all' | 'available' | 'taken'
+let filterTypes=new Set();
+let filterPoints='';
+let filterAvail='all';
+let filterMove='';
+let filterAbility='';
+let filterStat='';
+let filterStatMin='';
+let dexData={pokedex:{},learnsets:{}};
+let filterRenderTimer=null;
 
 const ALL_TYPES=['normal','fire','water','electric','grass','ice','fighting','poison',
   'ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
@@ -591,14 +488,18 @@ function openSelection(mon){
   modal.className='modal';
   modal.innerHTML=`<div class="modalbox">
     <h2>${esc(mon.name)}</h2>
-    <div class="note">${mon.points} points · Undrafted</div>
+    <div class="note">${mon.points} points · ${owner(mon.name)?'Drafted':'Available'}</div>
     <div class="modal-types">${types.map(typeBadge).join('')||''}</div>
-    <p class="note">This Pokémon is available — it does not appear on any currently published roster.</p>
+    <p class="note">${owner(mon.name)?`Drafted by <strong>${esc(owner(mon.name))}</strong>.`:'This Pokémon is available — it does not appear on any currently published roster.'}</p>
     <div class="actions"><button class="btn" id="modalClose">Close</button></div>
   </div>`;
   document.body.appendChild(modal);
-  modal.querySelector('#modalClose').onclick=()=>modal.remove();
-  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  document.body.classList.add('modal-open');
+  const close=()=>{modal.remove();document.body.classList.remove('modal-open');document.removeEventListener('keydown',onKey);};
+  const onKey=e=>{if(e.key==='Escape') close();};
+  modal.querySelector('#modalClose').onclick=close;
+  modal.onclick=e=>{if(e.target===modal)close();};
+  document.addEventListener('keydown',onKey);
 }
 
 let lastDataSignature=null;
@@ -628,6 +529,62 @@ async function load(){
   if(changed) render();
 }
 
+function dexKey(name){
+  return toShowdownId(name).replace(/[^a-z0-9-]/g,'');
+}
+function getDexEntry(name){
+  const k=dexKey(name);
+  if(dexData.pokedex[k]) return dexData.pokedex[k];
+  const compact=k.replace(/-/g,'');
+  if(dexData.pokedex[compact]) return dexData.pokedex[compact];
+  const base=k.split('-')[0];
+  return dexData.pokedex[base]||null;
+}
+function getLearnset(name){
+  const k=dexKey(name);
+  return dexData.learnsets[k]?.learnset || dexData.learnsets[k] || {};
+}
+const filterMemo=new Map();
+function hasMove(name, needle){
+  if(!needle) return true;
+  const mk='m|'+key(name)+'|'+key(needle); if(filterMemo.has(mk)) return filterMemo.get(mk);
+  const q=key(needle).replace(/-/g,'');
+  if(!q) return true;
+  const ls=getLearnset(name);
+  const out=Object.keys(ls).some(m=>m.replace(/-/g,'').includes(q)); filterMemo.set(mk,out); return out;
+}
+function hasAbility(name, needle){
+  if(!needle) return true;
+  const mk='a|'+key(name)+'|'+key(needle); if(filterMemo.has(mk)) return filterMemo.get(mk);
+  const q=String(needle).trim().toLowerCase();
+  const e=getDexEntry(name);
+  const out=Object.values(e?.abilities||{}).some(a=>String(a).toLowerCase().includes(q)); filterMemo.set(mk,out); return out;
+}
+function meetsStat(name, stat, min){
+  if(!stat || min==='') return true;
+  const mk='s|'+key(name)+'|'+stat+'|'+min; if(filterMemo.has(mk)) return filterMemo.get(mk);
+  const e=getDexEntry(name), v=Number(e?.baseStats?.[stat]);
+  const out=Number.isFinite(v) && v>=Number(min); filterMemo.set(mk,out); return out;
+}
+async function loadDexData(){
+  if(dexData.loaded) return;
+  try{
+    const [p,l]=await Promise.all([
+      fetch('https://play.pokemonshowdown.com/data/pokedex.json').then(r=>r.json()),
+      fetch('https://play.pokemonshowdown.com/data/learnsets.json').then(r=>r.json())
+    ]);
+    dexData={pokedex:p,learnsets:l,loaded:true};
+    render();
+  }catch(err){
+    console.warn('Pokémon filter data failed to load:',err);
+    dexData.loaded=true;
+  }
+}
+function scheduleFilterRender(){
+  clearTimeout(filterRenderTimer);
+  filterRenderTimer=setTimeout(()=>{ if(!document.hidden) renderResults(); },120);
+}
+
 function applyFilters(mons){
   return mons.filter(m=>{
     // name
@@ -638,7 +595,9 @@ function applyFilters(mons){
     const taken=!!owner(m.name);
     if(filterAvail==='available' && taken) return false;
     if(filterAvail==='taken' && !taken) return false;
-    // type — synchronous lookup against the static table
+    if(filterMove && !hasMove(m.name,filterMove)) return false;
+    if(filterAbility && !hasAbility(m.name,filterAbility)) return false;
+    if(!meetsStat(m.name,filterStat,filterStatMin)) return false;
     if(filterTypes.size>0){
       const types=lookupTypes(m.name);
       if(!types.some(t=>filterTypes.has(t))) return false;
@@ -647,131 +606,118 @@ function applyFilters(mons){
   });
 }
 
-function render(){
-  // Preserve focus/cursor position across the DOM rebuild below, so a
-  // background refresh or filter click doesn't interrupt someone mid-type.
-  const active=document.activeElement;
-  const hadFocus=active && active.id==='searchName';
-  const selStart=hadFocus?active.selectionStart:null;
-  const selEnd=hadFocus?active.selectionEnd:null;
-
+function renderResults(){
   const allMons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
   const visible=applyFilters(allMons);
 
-  // point tier options for the select
-  const pointValues=[...new Set(allMons.map(m=>Number(m.points)||0))].sort((a,b)=>b-a);
-
-  // count stats from full list (respects name+type+avail filters but not points filter,
-  // so the summary always reflects the full filtered pool)
   let free=0,taken=0;
   visible.forEach(m=>owner(m.name)?taken++:free++);
 
-  // group by points tier
   const groups={};
   visible.forEach(m=>{const p=Number(m.points)||0;(groups[p]??=[]).push(m);});
   const tiers=Object.keys(groups).sort((a,b)=>Number(b)-Number(a));
 
-  // active filter count (for clear button label)
-  const activeFilters=(filterName?1:0)+(filterTypes.size>0?1:0)+(filterPoints!==''?1:0)+(filterAvail!=='all'?1:0);
+  const results=$('results');
+  if(!results) return;
 
-  $("main").innerHTML=
-    // ---- toolbar ----
-    `<div class="toolbar">
-      <div class="toolbar-wide">
-        <label>Search by name</label>
-        <input type="text" id="searchName" value="${esc(filterName)}" placeholder="e.g. Landorus, Cinderace…" autocomplete="off">
-      </div>
-      <div>
-        <label>Points</label>
-        <select class="filter-select" id="filterPoints">
-          <option value="">Any points</option>
-          ${pointValues.map(p=>`<option value="${p}" ${filterPoints===String(p)?'selected':''} >${p} pts</option>`).join('')}
-        </select>
-      </div>
-      <div>
-        <label>Availability</label>
-        <div class="avail-toggle">
-          <button class="avail-btn ${filterAvail==='all'?'active':''}" data-avail="all">All</button>
-          <button class="avail-btn ${filterAvail==='available'?'active':''}" data-avail="available">Available</button>
-          <button class="avail-btn ${filterAvail==='taken'?'active':''}" data-avail="taken">Taken</button>
-        </div>
-      </div>
-      ${activeFilters>0?'<button class="clear-filters" id="clearFilters">Clear filters ('+ activeFilters +')</button>':''} 
-    </div>`+
-    // ---- type chips ----
-    `<div style="margin-bottom:16px">
-      <label style="margin-bottom:8px">Filter by type</label>
-      <div class="type-chips">
-        ${ALL_TYPES.map(t=>`<span class="type-chip type-${t}${filterTypes.has(t)?' active':''}" data-type="${t}">${t}</span>`).join('')}
-      </div>
-    </div>`+
-    // ---- summary ----
-    `<div class="summary">
+  const activeFilters=(filterName?1:0)+(filterTypes.size>0?1:0)+(filterPoints!==''?1:0)+(filterAvail!=='all'?1:0)+(filterMove?1:0)+(filterAbility?1:0)+(filterStat?1:0)+(filterStatMin!==''?1:0);
+
+  results.innerHTML=`
+    <div class="summary">
       <div class="stat"><div class="note">Showing</div><b>${visible.length}</b></div>
       <div class="stat"><div class="note">Available</div><b>${free}</b></div>
       <div class="stat"><div class="note">Taken</div><b>${taken}</b></div>
       <div class="stat"><div class="note">Total pool</div><b>${allMons.length}</b></div>
-    </div>`+
-    // ---- tiers ----
-    (tiers.length
-      ? tiers.map(p=>{
-          const label=Number(p)===1?'1 POINT':`${p} POINTS`;
-          return `<section class="tier">
-            <div class="tier-head"><h2>${label}</h2><span class="note">${groups[p].length} shown</span></div>
-            <div class="grid">${groups[p].map(m=>{
-              const o=owner(m.name);
-              const types=lookupTypes(m.name);
-              return `<article class="mon ${o?'taken':''}" data-name="${esc(m.name)}">
-                ${sprite(m.name)}
-                <div class="mon-name">${esc(m.name)}</div>
-                <div class="mon-points">${m.points} pts</div>
-                <div class="mon-types">${types.map(typeBadge).join('')}</div>
-                <div class="mon-status ${o?'taken-status':'available'}">${o?'Taken — '+esc(o):'Available'}</div>
-              </article>`;
-            }).join('')}</div>
-          </section>`;
-        }).join('')
-      : `<div class="empty">${allMons.length?'No Pokémon match your filters.':'No Free Agency pool has been published yet.'}</div>`
-    );
+      ${activeFilters?`<button class="clear-filters" id="clearFilters">Clear filters (${activeFilters})</button>`:''}
+    </div>
+    ${tiers.length ? tiers.map(p=>{
+      const label=Number(p)===1?'1 POINT':`${p} POINTS`;
+      return `<section class="tier">
+        <div class="tier-head"><h2>${label}</h2><span class="note">${groups[p].length} shown</span></div>
+        <div class="grid">${groups[p].map(m=>{
+          const o=owner(m.name), types=lookupTypes(m.name);
+          return `<article class="mon ${o?'taken':''}" data-name="${esc(m.name)}">
+            ${sprite(m.name)}
+            <div class="mon-name">${esc(m.name)}</div>
+            <div class="mon-points">${m.points} pts</div>
+            <div class="mon-types">${types.map(typeBadge).join('')}</div>
+            <div class="mon-status ${o?'taken-status':'available'}">${o?'Drafted by '+esc(o):'Available'}</div>
+          </article>`;
+        }).join('')}</div>
+      </section>`;
+    }).join('') : `<div class="empty">${allMons.length?'No Pokémon match your filters.':'No Free Agency pool has been published yet.'}</div>`}`;
 
-  // ---- bind events ----
-  const nameInput=$("searchName");
-  nameInput.oninput=e=>{filterName=e.target.value.trim().toLowerCase();render();};
-
-  if(hadFocus){
-    nameInput.focus();
-    nameInput.setSelectionRange(selStart,selEnd);
-  }
-
-  $("filterPoints").onchange=e=>{filterPoints=e.target.value;render();};
-
-  document.querySelectorAll('[data-avail]').forEach(btn=>{
-    btn.onclick=()=>{filterAvail=btn.dataset.avail;render();};
-  });
-
-  document.querySelectorAll('[data-type]').forEach(chip=>{
-    chip.onclick=()=>{
-      const t=chip.dataset.type;
-      filterTypes.has(t)?filterTypes.delete(t):filterTypes.add(t);
-      render();
-    };
-  });
-
-  const clearBtn=$("clearFilters");
+  const clearBtn=$('clearFilters');
   if(clearBtn) clearBtn.onclick=()=>{
-    filterName='';filterTypes.clear();filterPoints='';filterAvail='all';render();
+    filterName='';filterTypes.clear();filterPoints='';filterAvail='all';filterMove='';filterAbility='';filterStat='';filterStatMin='';
+    syncFilterControls();
+    renderResults();
   };
 
-  document.querySelectorAll('.mon:not(.taken)').forEach(el=>el.onclick=()=>{
-    const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
-    const m=mons.find(x=>key(x.name)===key(el.dataset.name));
+  results.querySelectorAll('.mon').forEach(el=>el.onclick=()=>{
+    const m=allMons.find(x=>key(x.name)===key(el.dataset.name));
     if(m) openSelection(m);
   });
+}
+
+function syncFilterControls(){
+  const vals={
+    searchName:filterName, filterMove, filterAbility, filterStatMin
+  };
+  Object.entries(vals).forEach(([id,val])=>{
+    const el=$(id); if(el && document.activeElement!==el && el.value!==val) el.value=val;
+  });
+  const points=$('filterPoints'); if(points && points.value!==filterPoints) points.value=filterPoints;
+  const stat=$('filterStat'); if(stat && stat.value!==filterStat) stat.value=filterStat;
+  document.querySelectorAll('[data-avail]').forEach(btn=>btn.classList.toggle('active',btn.dataset.avail===filterAvail));
+  document.querySelectorAll('[data-type]').forEach(chip=>chip.classList.toggle('active',filterTypes.has(chip.dataset.type)));
+}
+
+function render(){
+  const allMons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
+  if($('results') && $('searchName') && $('filterMove') && $('filterAbility')){
+    renderResults();
+    syncFilterControls();
+    return;
+  }
+
+  const pointValues=[...new Set(allMons.map(m=>Number(m.points)||0))].sort((a,b)=>b-a);
+
+  $('main').innerHTML=`
+    <div class="toolbar">
+      <div class="toolbar-wide"><label>Search by name</label><input type="text" id="searchName" value="${esc(filterName)}" placeholder="e.g. Landorus, Cinderace…" autocomplete="off"></div>
+      <div><label>Points</label><select class="filter-select" id="filterPoints"><option value="">Any points</option>${pointValues.map(p=>`<option value="${p}" ${filterPoints===String(p)?'selected':''}>${p} pts</option>`).join('')}</select></div>
+      <div><label>Availability</label><div class="avail-toggle"><button class="avail-btn ${filterAvail==='all'?'active':''}" data-avail="all">All</button><button class="avail-btn ${filterAvail==='available'?'active':''}" data-avail="available">Available</button><button class="avail-btn ${filterAvail==='taken'?'active':''}" data-avail="taken">Taken</button></div></div>
+      <div class="toolbar-wide"><label>Move</label><input type="text" id="filterMove" value="${esc(filterMove)}" placeholder="e.g. Earthquake, Knock Off…" autocomplete="off"></div>
+      <div class="toolbar-wide"><label>Ability</label><input type="text" id="filterAbility" value="${esc(filterAbility)}" placeholder="e.g. Intimidate, Levitate…" autocomplete="off"></div>
+      <div><label>Base stat</label><select class="filter-select" id="filterStat"><option value="">Any stat</option>${[['hp','HP'],['atk','Attack'],['def','Defense'],['spa','Sp. Atk'],['spd','Sp. Def'],['spe','Speed']].map(([v,n])=>`<option value="${v}" ${filterStat===v?'selected':''}>${n}</option>`).join('')}</select></div>
+      <div><label>Minimum</label><input type="number" id="filterStatMin" min="1" max="255" value="${esc(filterStatMin)}" placeholder="e.g. 120"></div>
+    </div>
+    <div class="type-filter-wrap"><label>Filter by type</label><div class="type-chips">${ALL_TYPES.map(t=>`<span class="type-chip type-${t}${filterTypes.has(t)?' active':''}" data-type="${t}">${t}</span>`).join('')}</div></div>
+    <div id="results"></div>`;
+
+  const schedule=()=>scheduleFilterRender();
+  $('searchName').oninput=e=>{filterName=e.target.value.toLowerCase();schedule();};
+  $('filterMove').oninput=e=>{filterMove=e.target.value;schedule();};
+  $('filterAbility').oninput=e=>{filterAbility=e.target.value;schedule();};
+  $('filterStatMin').oninput=e=>{filterStatMin=e.target.value;schedule();};
+  $('filterPoints').onchange=e=>{filterPoints=e.target.value;renderResults();syncFilterControls();};
+  $('filterStat').onchange=e=>{filterStat=e.target.value;renderResults();syncFilterControls();};
+
+  document.querySelectorAll('[data-avail]').forEach(btn=>btn.onclick=()=>{filterAvail=btn.dataset.avail;renderResults();syncFilterControls();});
+  document.querySelectorAll('[data-type]').forEach(chip=>chip.onclick=()=>{
+    const t=chip.dataset.type;
+    filterTypes.has(t)?filterTypes.delete(t):filterTypes.add(t);
+    renderResults();syncFilterControls();
+  });
+
+  renderResults();
 }
 
 (async()=>{
   const ok = await enforceAccessGate();
   if(!ok) return;
+  loadDexData();
   load().catch(e=>$("main").innerHTML=`<div class="empty">Could not load Free Agency: ${esc(String(e?.message||e))}</div>`);
   setInterval(()=>{if(!document.hidden)load().catch(()=>{});},5000);
 })();
