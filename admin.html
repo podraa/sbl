@@ -1041,6 +1041,17 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
     const v = parseFloat(token);
     return isNaN(v) ? 0 : v;
   }
+  // Showdown replay HP tokens are usually "current/max". parseHP() intentionally
+  // converts that to a percentage for battle-state math, so assists need a separate
+  // helper to retain the actual max-HP denominator.
+  function parseMaxHP(token){
+    if(!token) return null;
+    token = String(token).split(' ')[0];
+    if(!token.includes('/')) return null;
+    const parts = token.split('/');
+    const max = Number(parts[1]);
+    return Number.isFinite(max) && max > 0 ? max : null;
+  }
   function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
 
   // ---------- Showdown move data for luck calculations ----------
@@ -1182,6 +1193,9 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
     // kills to whoever happens to be standing there now instead of whoever
     // actually did it.
     let lastAttacker = {}; // targetSlot -> attacker's stats object (for kill credit)
+    // Cumulative damage contributions against each individual victim during this replay.
+    // Used to award assists when a non-killer dealt at least 50% of the victim's max HP.
+    let damageContributors = {}; // victim monKey -> {attacker monKey -> {stats, damage}}
     // Poison/burn (unlike confusion) persist through a switch — the same individual
     // keeps ticking for the same status after it returns to the field. So this is
     // keyed by the *individual mon* (monKey: side+species), not by slot, and is
@@ -1194,9 +1208,19 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
     let toxicSpikesSetter = {};
     let delayedSetter = {}; // side -> {moveName: setter's stats object}, for Future Sight / Doom Desire
     let pendingDelayedHit = {}; // targetSlot -> {stats, cause}; Showdown emits the delayed hit as -end, then an untagged -damage
+    let residualSourceByMon = {}; // monKey -> source stats for lingering move damage (Curse, Salt Cure, trapping, etc.)
+    let weatherSetter = {}; // weather name -> setter's stats object for weather chip kill credit
+
     const HAZARD_MOVES = ['Stealth Rock','Spikes'];
     const DELAYED_MOVES = ['Future Sight','Doom Desire'];
     const STATUS_TAGS = ['psn','tox','brn'];
+    const RESIDUAL_MOVES = [
+      'Curse','Salt Cure','Bind','Clamp','Fire Spin','Magma Storm','Sand Tomb',
+      'Whirlpool','Wrap','Infestation','Snap Trap','Thunder Cage','Jaw Lock',
+      'Whirlpool','Nightmare'
+    ];
+    const WEATHER_NAMES = ['Sandstorm','Hail','Snow'];
+
 
     function ofSlotFromTag(tag){
       // tag like "[of] p2a: Ferrothorn" -> "p2a"
@@ -1215,12 +1239,12 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
       const k = monKey(slot);
       if(!mons[k]) mons[k] = {
         side:s.side, species:s.species, damageDealt:0, damageTaken:0,
-        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[],
+        kills:0, deaths:0, assists:0, appearances:0, killLog:[], deathLog:[], assistLog:[],
         moves: {},
         maxHpObserved: null
       };
-      if(s.hp && Number.isFinite(s.hp.max)){
-        mons[k].maxHpObserved = Math.max(mons[k].maxHpObserved || 0, s.hp.max);
+      if(Number.isFinite(s.hpMax) && s.hpMax > 0){
+        mons[k].maxHpObserved = Math.max(mons[k].maxHpObserved || 0, s.hpMax);
       }
       if(!appearedThisReplay.has(k)){
         appearedThisReplay.add(k);
@@ -1342,7 +1366,10 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
         const side = sideOf(slot);
         const species = parts[3].split(',')[0].trim();
         const hp = parseHP(parts[4] || '100/100');
-        slots[slot] = {species, hp, side};
+        // Capture the individual that is leaving BEFORE replacing the slot.
+        // The slot is reused after switches, so this must be resolved first.
+        const oldMonKey = slots[slot] ? monKey(slot) : null;
+        slots[slot] = {species, hp, hpMax: parseMaxHP(parts[4] || '100/100'), side};
         // A new mon now occupies this slot — any prior *direct-hit* attacker
         // credit for this slot belonged to the mon that just left, so that must
         // not carry over. Status-source credit (poison/burn) is intentionally
@@ -1352,6 +1379,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
         // when the same mon returns and the status keeps ticking.
         delete lastAttacker[slot];
         delete pendingDelayedHit[slot];
+        if(oldMonKey) delete residualSourceByMon[oldMonKey];
         ensureMon(slot);
       } else if(cmd === 'move'){
         finalizePendingStatusChecks();
@@ -1415,6 +1443,18 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
         // at the -end event and carry it into the following damage event.
         const slotFull = parts[2];
         const effect = parts.slice(3).join('|');
+        
+        if(slotFull){
+          const slot = slotFull.split(':')[0].trim();
+          const mk = monKey(slot);
+          if(mk){
+            const endedResidual = RESIDUAL_MOVES.find(m => effect.includes(m));
+            if(endedResidual && residualSourceByMon[mk]?.cause === endedResidual){
+              delete residualSourceByMon[mk];
+            }
+          }
+        }
+
         if(slotFull && (effect.includes('move: Future Sight') || effect.includes('move: Doom Desire'))){
           const slot = slotFull.split(':')[0].trim();
           const delayedHit = DELAYED_MOVES.find(m => effect.includes('move: ' + m));
@@ -1483,7 +1523,32 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
             if(monLuck){ monLuck.crits += 1; monLuck.critLuck += rarityLuck(critChanceValue); addLuckEvent(monLuck, 'crit', rarityLuck(critChanceValue), `${lastMove.move} crit (${critChanceValue.toFixed(1)}% chance)`); }
           }
         }
-      } else if(cmd === '-status'){
+      
+      } else if(cmd === '-weather'){
+        const weather = (parts[2] || '').trim();
+        const tags = parts.slice(3).join('|');
+        if(weather && WEATHER_NAMES.includes(weather)){
+          let setter = null;
+          if(tags.includes('[of]')){
+            const ofSlot = ofSlotFromTag(tags);
+            if(ofSlot && slots[ofSlot]) setter = ensureMon(ofSlot);
+          }
+          if(setter) weatherSetter[weather] = setter;
+          else if(weather === 'none') delete weatherSetter[weather];
+        }
+      } else if(cmd === '-start'){
+        const slotFull = parts[2];
+        const effect = parts.slice(3).join('|');
+        if(slotFull){
+          const slot = slotFull.split(':')[0].trim();
+          const mk = monKey(slot);
+          const residual = RESIDUAL_MOVES.find(m => effect.includes(m));
+          if(mk && residual && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
+            const sourceStats = ensureMon(lastMove.source);
+            if(sourceStats) residualSourceByMon[mk] = {stats:sourceStats, cause:residual};
+          }
+        }
+} else if(cmd === '-status'){
         const slotFull = parts[2];
         if(!slotFull) continue;
         const slot = slotFull.split(':')[0].trim();
@@ -1650,6 +1715,27 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
           cause = pendingDelayedHit[slot].cause;
           delete pendingDelayedHit[slot];
         }
+
+        // 3c) lingering move effects (Curse, Salt Cure, trapping damage, Nightmare, etc.)
+        // Showdown identifies these on the damage line but does not always include [of].
+        if(!attackerStats){
+          const mk = monKey(slot);
+          const residualHit = RESIDUAL_MOVES.find(m => tags.includes('[from] ' + m));
+          if(residualHit && mk && residualSourceByMon[mk]?.cause === residualHit){
+            attackerStats = residualSourceByMon[mk].stats;
+            cause = residualHit;
+          }
+        }
+        // 3d) weather chip. If Showdown supplied the weather's originating setter,
+        // credit the setter instead of leaving the KO unattributed.
+        if(!attackerStats){
+          const weatherHit = WEATHER_NAMES.find(w => tags.includes('[from] ' + w));
+          if(weatherHit && weatherSetter[weatherHit]){
+            attackerStats = weatherSetter[weatherHit];
+            cause = weatherHit;
+          }
+        }
+
         // 4) fallback: direct hit from the most recent move, if it targeted this slot.
         //    Showdown only omits [from]/[of] entirely on a -damage line for a genuine
         //    direct move hit — weather chip, confusion self-hits, recoil, etc. always
@@ -1663,6 +1749,14 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
 
         if(attackerStats && attackerStats.side !== slots[slot].side){
           attackerStats.damageDealt += dmg;
+          // Track this attacker's cumulative contribution to this specific victim.
+          const victimMk = monKey(slot);
+          const attackerMk = attackerStats.side + '|' + normName(attackerStats.species);
+          if(victimMk && attackerMk){
+            if(!damageContributors[victimMk]) damageContributors[victimMk] = {};
+            if(!damageContributors[victimMk][attackerMk]) damageContributors[victimMk][attackerMk] = {stats:attackerStats, damage:0};
+            damageContributors[victimMk][attackerMk].damage += dmg;
+          }
           lastAttacker[slot] = {stats: attackerStats, cause, turn: currentTurn};
         } else {
           // This damage instance landed but couldn't be attributed to an opposing
@@ -1678,6 +1772,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
         const slot = slotFull.split(':')[0].trim();
         if(!slots[slot]) continue;
         slots[slot].hp = parseHP(parts[3]);
+        const parsedMaxHp = parseMaxHP(parts[3]);
+        if(parsedMaxHp) slots[slot].hpMax = Math.max(slots[slot].hpMax || 0, parsedMaxHp);
       } else if(cmd === 'faint'){
         const slotFull = parts[2];
         if(!slotFull) continue;
@@ -1712,6 +1808,35 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
             cause: killerInfo.cause
           });
         }
+
+        // Assist credit: any opposing Pokémon other than the killer that dealt
+        // at least 50% of the victim's observed maximum HP gets one assist.
+        // Multiple Pokémon can receive an assist on the same KO.
+        const victimMk = monKey(slot);
+        const victimMaxHp = deadStats && Number.isFinite(deadStats.maxHpObserved)
+          ? deadStats.maxHpObserved
+          : (Number.isFinite(slots[slot].hpMax) ? slots[slot].hpMax : null);
+        const contributions = victimMk ? damageContributors[victimMk] : null;
+        if(contributions && victimMaxHp > 0){
+          const assistThreshold = victimMaxHp * 0.5;
+          for(const attackerMk of Object.keys(contributions)){
+            const contribution = contributions[attackerMk];
+            const assistStats = contribution && contribution.stats;
+            if(!assistStats || assistStats.side === slots[slot].side) continue;
+            if(killerStats && assistStats === killerStats) continue;
+            if(contribution.damage + 1e-9 < assistThreshold) continue;
+            assistStats.assists = (assistStats.assists || 0) + 1;
+            if(!Array.isArray(assistStats.assistLog)) assistStats.assistLog = [];
+            assistStats.assistLog.push({
+              replayId, turn: currentTurn,
+              victim: deadStats ? deadStats.species : slots[slot].species,
+              damage: contribution.damage,
+              percent: (contribution.damage / victimMaxHp) * 100,
+              killer: killerStats ? killerStats.species : null
+            });
+          }
+        }
+        if(victimMk) delete damageContributors[victimMk];
         delete lastAttacker[slot];
         delete pendingDelayedHit[slot];
       }
@@ -1903,14 +2028,16 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
       for(const k in r.mons){
         const m = r.mons[k];
         const nk = normName(m.species);
-        if(!out[nk]) out[nk] = {species:m.species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[], coaches:new Set()};
+        if(!out[nk]) out[nk] = {species:m.species, dealt:0, taken:0, kills:0, deaths:0, assists:0, games:0, killLog:[], deathLog:[], assistLog:[], coaches:new Set()};
         out[nk].dealt += m.damageDealt;
         out[nk].taken += m.damageTaken;
         out[nk].kills += m.kills;
         out[nk].deaths += m.deaths;
         out[nk].games += m.appearances;
+        out[nk].assists += (m.assists || 0);
         if(m.killLog) out[nk].killLog.push(...m.killLog);
         if(m.deathLog) out[nk].deathLog.push(...m.deathLog);
+        if(m.assistLog) out[nk].assistLog.push(...m.assistLog);
         out[nk].coaches.add(teamFor(r.players[m.side]));
       }
     }
@@ -1929,14 +2056,16 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
           const m = r.mons[k];
           if(m.side !== side) continue;
           const nk = normName(m.species);
-          if(!bucket[nk]) bucket[nk] = {species:m.species, dealt:0, taken:0, kills:0, deaths:0, games:0, killLog:[], deathLog:[]};
+          if(!bucket[nk]) bucket[nk] = {species:m.species, dealt:0, taken:0, kills:0, deaths:0, assists:0, games:0, killLog:[], deathLog:[], assistLog:[]};
           bucket[nk].dealt += m.damageDealt;
           bucket[nk].taken += m.damageTaken;
           bucket[nk].kills += m.kills;
           bucket[nk].deaths += m.deaths;
           bucket[nk].games += m.appearances;
+          bucket[nk].assists += (m.assists || 0);
           if(m.killLog) bucket[nk].killLog.push(...m.killLog);
           if(m.deathLog) bucket[nk].deathLog.push(...m.deathLog);
+          if(m.assistLog) bucket[nk].assistLog.push(...m.assistLog);
         }
       }
     }
@@ -2061,16 +2190,16 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
   }
   function exportGlobalCSV(weekFilter, label){
     const stats = globalPokemonStats(weekFilter);
-    const rows = [['Pokemon','Total Damage Dealt','Avg Damage Dealt per Game','Games Played']];
-    stats.forEach(s => rows.push([s.species, s.dealt.toFixed(2), (s.games? (s.dealt/s.games):0).toFixed(2), s.games]));
+    const rows = [['Pokemon','Total Damage Dealt','Avg Damage Dealt per Game','Kills','Assists','Deaths','Games Played']];
+    stats.forEach(s => rows.push([s.species, s.dealt.toFixed(2), (s.games? (s.dealt/s.games):0).toFixed(2), s.kills, s.assists, s.deaths, s.games]));
     download(`Damage Leaderboard - ${label}.csv`, toCSV(rows));
   }
   function exportTeamCSVs(weekFilter, label){
     const teams = teamPokemonStats(weekFilter);
     for(const team in teams){
-      const rows = [['Pokemon','Total Damage Dealt','Total Damage Taken','Total Kills','Total Deaths','Appearances']];
+      const rows = [['Pokemon','Total Damage Dealt','Total Damage Taken','Total Kills','Total Assists','Total Deaths','Appearances']];
       const list = Object.values(teams[team]).sort((a,b)=>b.dealt-a.dealt);
-      list.forEach(s => rows.push([s.species, s.dealt.toFixed(2), s.taken.toFixed(2), s.kills, s.deaths, s.games]));
+      list.forEach(s => rows.push([s.species, s.dealt.toFixed(2), s.taken.toFixed(2), s.kills, s.assists, s.deaths, s.games]));
       download(`${team} - ${label}.csv`, toCSV(rows));
     }
   }
@@ -2366,13 +2495,14 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
     function drawGlobal(){
       const stats = globalPokemonStats(sel.value);
       document.getElementById('globalTable').innerHTML = stats.length===0 ? `<div class="empty-state">No data for this scope yet.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
+        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
         ${stats.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
           <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
+          <td ${auditAttr(s.species,'assists',s.assistLog)}>${s.assists}</td>
           <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
           <td class="num">${s.games}</td>
           <td class="num">${(s.games? s.dealt/s.games:0).toFixed(1)}</td>
@@ -2410,7 +2540,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
           <div class="gf-info">
             <div class="gf-name">${escapeHtml(s.species)}</div>
             <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
-            <div class="gf-sub">${s.kills} kills · ${s.deaths} deaths · ${s.games} games</div>
+            <div class="gf-sub">${s.kills} kills · ${s.assists} assists · ${s.deaths} deaths · ${s.games} games</div>
           </div>
           <div class="gf-diff ${s.diff<0?'neg':''}">${s.diff>0?'+':''}${s.diff}</div>
         </div>`).join('')}</div>`;
@@ -2447,13 +2577,14 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
       const data = teamPokemonStats(weekSel.value);
       const list = Object.values(data[teamSel.value]||{}).sort((a,b)=>b.dealt-a.dealt);
       document.getElementById('teamTable').innerHTML = list.length===0 ? `<div class="empty-state">No data for this team/scope.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
+        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
         ${list.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
           <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
+          <td ${auditAttr(s.species,'assists',s.assistLog)}>${s.assists}</td>
           <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
           <td class="num">${s.games}</td>
         </tr>`).join('')}</tbody></table>`;

@@ -2283,7 +2283,7 @@ body::-webkit-scrollbar,
     const confName = conferenceDisplayName(conf);
     const confList = data.filter(x=>conferenceOf(x.team)===conf).sort((a,b)=>
       b.wins-a.wins ||
-      (b.kills-b.deaths)-(a.kills-a.deaths) ||
+      b.differential-a.differential ||
       b.dealt-a.dealt ||
       a.team.localeCompare(b.team,undefined,{sensitivity:'base'})
     );
@@ -2306,7 +2306,7 @@ body::-webkit-scrollbar,
         break;
       }
     }
-    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">${escapeHtml(confName)} Position</div><h3>${ordinal(confIndex)} — ${escapeHtml(team)}</h3><div class="summary-result" style="color:var(--text-dim);font-weight:600;">${ordinal(i)} overall in the league</div></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${t.kills-t.deaths>0?'+':''}${t.kills-t.deaths}</strong></div></div><div class="next-opponent-wide"><span>Next opponent</span><strong>${nextOpponent ? escapeHtml(nextOpponent) : '—'}</strong>${nextWeek ? `<div class="note" style="margin-top:4px;">${escapeHtml(nextWeek)}</div>` : ''}</div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.appearances} games · ${m.kills} K · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
+    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">${escapeHtml(confName)} Position</div><h3>${ordinal(confIndex)} — ${escapeHtml(team)}</h3><div class="summary-result" style="color:var(--text-dim);font-weight:600;">${ordinal(i)} overall in the league</div></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${Number(t.differential||0)>0?'+':''}${Number(t.differential||0)}</strong></div></div><div class="next-opponent-wide"><span>Next opponent</span><strong>${nextOpponent ? escapeHtml(nextOpponent) : '—'}</strong>${nextWeek ? `<div class="note" style="margin-top:4px;">${escapeHtml(nextWeek)}</div>` : ''}</div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.appearances} games · ${m.kills} K · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
     document.getElementById('teamOverviewClose').addEventListener('click',closeAudit); document.getElementById('teamOverviewOverlay').addEventListener('click',e=>{if(e.target.id==='teamOverviewOverlay')closeAudit();});
   }
   function renderProcess(){
@@ -2710,27 +2710,61 @@ body::-webkit-scrollbar,
     draw();
   }
 
+  // Replay result for ladder purposes.  Differential is based ONLY on the
+  // number of Pokémon each side had left when the replay ended.  It never uses
+  // credited kills/deaths, so indirect/residual KO attribution cannot affect
+  // the ladder.
+  function replayResultScore(r){
+    if(!r || !r.players) return null;
+    const score={p1:0,p2:0};
+    for(const side of ['p1','p2']){
+      // Prefer the six-mon team preview recorded by the parser.  Older saved
+      // replays may not have teamRoster, so fall back to the distinct Pokémon
+      // that were actually seen in the replay rather than returning 0.
+      let roster = Array.isArray(r.teamRoster?.[side]) ? r.teamRoster[side] : [];
+      let names = new Set(roster.map(normName).filter(Boolean));
+      if(!names.size){
+        for(const m of Object.values(r.mons||{})){
+          if(m && m.side===side && m.species) names.add(normName(m.species));
+        }
+      }
+      const fainted=new Set();
+      for(const m of Object.values(r.mons||{})){
+        if(m && m.side===side && Number(m.deaths||0)>0 && m.species){
+          fainted.add(normName(m.species));
+        }
+      }
+      score[side]=Math.max(0, names.size-fainted.size);
+    }
+    return score;
+  }
+
   function teamComparisonData(weekFilter){
     const out={};
     // Current roster teams must remain visible even before they have replay data.
     for(const rosterTeam of Object.keys(STATE.settings?.rosters||{})){
       const key=groupKey(rosterTeam);
-      if(!out[key]) out[key]={team:rosterTeam,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0};
+      if(!out[key]) out[key]={team:rosterTeam,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0,differential:0};
     }
     for(const r of allReplays(weekFilter)){
       if(!r || !r.players) continue;
+      const resultScore=replayResultScore(r);
       const sides=['p1','p2'];
       for(const side of sides){
         const team=teamFor(r.players[side]); const key=groupKey(team);
-        if(!out[key]) out[key]={team,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0};
+        if(!out[key]) out[key]={team,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0,differential:0};
         const t=out[key]; t.games++; t.players.add(r.players[side]||'?');
         const result = r.results && r.results[side] ? r.results[side] : (r.winner && r.winner.toLowerCase()===(r.players[side]||'').toLowerCase() ? 'W' : (r.winner ? 'L' : null));
         if(result==='W') t.wins++;
         else if(result==='L') t.losses++;
+        if(resultScore){
+          const opponent=side==='p1'?'p2':'p1';
+          t.differential += Number(resultScore[side]||0)-Number(resultScore[opponent]||0);
+        }
         for(const k in r.mons){ const m=r.mons[k]; if(m.side===side){t.kills+=m.kills||0;t.deaths+=m.deaths||0;t.dealt+=m.damageDealt||0;t.taken+=m.damageTaken||0;} }
       }
     }
-    return Object.values(out).sort((a,b)=>b.wins-a.wins || (b.kills-b.deaths)-(a.kills-a.deaths) || b.dealt-a.dealt);
+    return Object.values(out).sort((a,b)=>b.wins-a.wins || b.differential-a.differential || b.dealt-a.dealt);
   }
 
   // ---------- fixture (schedule) ----------
@@ -2752,16 +2786,13 @@ body::-webkit-scrollbar,
         if(wLower === String(r.players.p1 || '').trim().toLowerCase()) winnerTeam = t1;
         else if(wLower === String(r.players.p2 || '').trim().toLowerCase()) winnerTeam = t2;
       }
-      // Scoreline: how many of the opponent's Pokémon each side knocked out.
-      let p1Score = 0, p2Score = 0;
-      for(const k in (r.mons || {})){
-        const m = r.mons[k];
-        if(m.side === 'p1') p1Score += m.kills || 0;
-        else if(m.side === 'p2') p2Score += m.kills || 0;
-      }
+      // Scoreline comes from the replay result: Pokémon remaining at the end
+      // of the battle. Do not use credited KOs, because residual/indirect KOs
+      // can make individual kill attribution differ from the fixture result.
+      const resultScore = replayResultScore(r) || {p1:0,p2:0};
       const homeIsT1 = groupKey(t1) === groupKey(home);
-      const homeScore = homeIsT1 ? p1Score : p2Score;
-      const awayScore = homeIsT1 ? p2Score : p1Score;
+      const homeScore = homeIsT1 ? resultScore.p1 : resultScore.p2;
+      const awayScore = homeIsT1 ? resultScore.p2 : resultScore.p1;
       // Winner's score always presented first (6-x), regardless of which side
       // is "home" in the fixture — so the scoreline never reads like the loser
       // won just because they happened to be listed first.
@@ -2883,7 +2914,7 @@ body::-webkit-scrollbar,
     // Keep the same ranking logic inside each conference.
     Object.values(groups).forEach(list => list.sort((a,b)=>
       b.wins-a.wins ||
-      (b.kills-b.deaths)-(a.kills-a.deaths) ||
+      b.differential-a.differential ||
       b.dealt-a.dealt ||
       a.team.localeCompare(b.team,undefined,{sensitivity:'base'})
     ));
@@ -2896,7 +2927,7 @@ body::-webkit-scrollbar,
         </div>
         ${list.length ? `<div class="standings-ladder">${list.map((x,i)=>{
           const pct=x.games ? (100*x.wins/x.games).toFixed(1)+'%' : '—';
-          const diff=x.kills-x.deaths;
+          const diff=Number(x.differential||0);
           return `<div class="standings-row standings-clickable ${i===0?'top1':i===1?'top2':''}" data-standings-team="${escapeHtml(x.team)}" role="button" tabindex="0" title="View ${escapeHtml(x.team)} summary">
             <div class="standings-rank">${i+1}</div>
             <div class="standings-team">
@@ -2905,7 +2936,7 @@ body::-webkit-scrollbar,
             </div>
             <div class="standings-stat"><span class="standings-stat-label">W-L</span>${x.wins}-${x.losses}</div>
             <div class="standings-stat standings-pct"><span class="standings-stat-label">Win %</span>${pct}</div>
-            <div class="standings-stat"><span class="standings-stat-label">K-D</span><span class="${diff>=0?'kills':'taken'}">${diff>0?'+':''}${diff}</span></div>
+            <div class="standings-stat"><span class="standings-stat-label">Diff</span><span class="${diff>=0?'kills':'taken'}">${diff>0?'+':''}${diff}</span></div>
             <div class="standings-stat"><span class="standings-stat-label">Damage</span>${x.dealt.toFixed(1)}</div>
           </div>`;
         }).join('')}</div>` : `<div class="conference-empty">No franchises assigned to this conference.</div>`}

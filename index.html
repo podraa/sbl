@@ -171,6 +171,7 @@
   .meta-box .value{font-family:var(--mono);font-size:16px;font-weight:700;margin-top:4px;}
   .meta-box .value.dealt{color:var(--amber);}
   .meta-box .value.taken{color:var(--red);}
+  .meta-box .value.assists{color:var(--teal);}
   .meta-box .value.kills{color:var(--teal);}
   .pokemon-sub{color:var(--text-dim);font-size:11px;margin-top:2px;}
 
@@ -552,7 +553,7 @@ body::-webkit-scrollbar,
   function myPokemonStats(species){
     if(!profile || !profile.team_name) return null;
     const target = normName(species);
-    let dealt=0, taken=0, kills=0, deaths=0, games=0, winGames=0, wins=0;
+    let dealt=0, taken=0, kills=0, deaths=0, assists=0, games=0, winGames=0, wins=0;
     for(const r of Object.values(DASH.replays||{})){
       for(const k in (r.mons||{})){
         const m = r.mons[k];
@@ -562,6 +563,7 @@ body::-webkit-scrollbar,
         taken += m.damageTaken||0;
         kills += m.kills||0;
         deaths += m.deaths||0;
+        assists += m.assists||0;
         const appearances = m.appearances||0;
         games += appearances;
         if(appearances > 0){
@@ -574,7 +576,7 @@ body::-webkit-scrollbar,
         }
       }
     }
-    return { dealt, taken, kills, deaths, games, winPct: winGames ? Math.round(100*wins/winGames) : null };
+    return { dealt, taken, kills, deaths, assists, games, winPct: winGames ? Math.round(100*wins/winGames) : null };
   }
 
   // ---------- data loading ----------
@@ -886,6 +888,7 @@ body::-webkit-scrollbar,
                 <div class="pokemon-meta">
                   <div class="meta-box"><div class="label">Damage dealt</div><div class="value dealt">${has ? s.dealt.toFixed(1) : '—'}</div></div>
                   <div class="meta-box"><div class="label">KOs</div><div class="value kills">${has ? s.kills : '—'}</div></div>
+                  <div class="meta-box"><div class="label">Assists</div><div class="value assists">${has ? s.assists : '—'}</div></div>
                   <div class="meta-box"><div class="label">Damage taken</div><div class="value taken">${has ? s.taken.toFixed(1) : '—'}</div></div>
                   <div class="meta-box"><div class="label">Win rate</div><div class="value">${has && s.winPct!=null ? s.winPct+'%' : '—'}</div></div>
                 </div>

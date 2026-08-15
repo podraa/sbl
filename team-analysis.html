@@ -18,6 +18,137 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 
 .selected-mon-heading{font-size:18px;font-weight:800;margin:8px 0 6px}
 .replay-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.speed-mod-panel{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:14px}
+.speed-mod-group{display:flex;flex-direction:column;gap:6px}
+.speed-mod-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);font-weight:800}
+.speed-mod-row{display:flex;flex-wrap:wrap;gap:6px}
+.speed-mod-btn{border:1px solid var(--border);background:none;color:var(--text);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:650;cursor:pointer}
+.speed-mod-btn.active{background:var(--amber);border-color:var(--amber);color:var(--bg)}
+.speed-pinned-row{margin-bottom:14px}
+.speed-chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.speed-pin-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--panel-alt);border-radius:999px;padding:5px 6px 5px 10px;font-size:12px}
+.speed-unpin{border:none;background:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px}
+ .speed-matrix-wrap{
+  overflow:auto;
+  margin:4px 0 16px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--panel-alt);
+  box-shadow:0 8px 24px rgba(0,0,0,.12)
+}
+.speed-matrix{
+  width:100%;
+  min-width:760px;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:12px
+}
+.speed-matrix th,.speed-matrix td{
+  padding:10px 9px;
+  border-bottom:1px solid var(--border);
+  border-right:1px solid var(--border);
+  text-align:center;
+  vertical-align:middle
+}
+.speed-matrix tr:last-child th,.speed-matrix tr:last-child td{border-bottom:0}
+.speed-matrix th:last-child,.speed-matrix td:last-child{border-right:0}
+.speed-matrix thead th{
+  background:var(--panel);
+  color:var(--text);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.03em
+}
+.speed-matrix thead th:first-child{
+  position:sticky;
+  left:0;
+  z-index:4;
+  min-width:170px;
+  text-align:left
+}
+.speed-matrix tbody th{
+  position:sticky;
+  left:0;
+  z-index:3;
+  background:var(--panel);
+  text-align:left;
+  min-width:170px
+}
+.speed-matrix-mon{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-width:0
+}
+.speed-matrix-mon span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
+.speed-matrix thead .speed-matrix-mon{justify-content:flex-start}
+.speed-matrix-your{justify-content:flex-start}
+.speed-matrix-sprite{
+  width:40px;
+  height:40px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  flex:0 0 40px
+}
+.speed-matrix-your small{
+  display:block;
+  margin-left:auto;
+  padding:3px 6px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  color:var(--text-dim);
+  font-family:var(--mono);
+  font-size:9px;
+  white-space:nowrap
+}
+.speed-cell{
+  min-width:96px;
+  min-height:42px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  padding:6px 7px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:var(--panel)
+}
+.speed-cell strong{font-size:11px;font-weight:850}
+.speed-cell span{font-family:var(--mono);font-size:9px;color:var(--text-dim)}
+.speed-cell.speed-faster{
+  background:rgba(94,234,212,.10);
+  border-color:rgba(94,234,212,.35);
+  color:var(--teal)
+}
+.speed-cell.speed-slower{
+  background:rgba(255,122,122,.10);
+  border-color:rgba(255,122,122,.35);
+  color:var(--red)
+}
+.speed-cell.speed-tie{
+  background:rgba(185,154,255,.10);
+  border-color:rgba(185,154,255,.35);
+  color:var(--amber)
+}
+.speed-cell.speed-faster span,.speed-cell.speed-slower span,.speed-cell.speed-tie span{color:inherit;opacity:.72}
+.speed-no-selection-row td{
+  padding:28px 16px;
+  color:var(--text-dim)
+}
+.speed-no-selection-row strong{display:block;color:var(--text);margin-bottom:4px}
+
+.speed-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.speed-detail-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:14px}
+.speed-detail-card label{display:block;font-size:12px;margin-bottom:10px}
+.speed-detail-card select,.speed-detail-card input{margin-top:5px}
+.speed-solver-text{font-size:13px;line-height:1.55;margin:6px 0 12px}
+@media(max-width:700px){.speed-detail-grid{grid-template-columns:1fr}}
 .replay-row{display:grid;grid-template-columns:72px 1fr auto;align-items:center;gap:12px;padding:12px 14px;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px}
 .replay-result{font-weight:800;text-align:center;padding:5px 8px;border-radius:7px;background:var(--panel);border:1px solid var(--border)}
 .replay-result.win{color:var(--teal);border-color:var(--teal)}.replay-result.loss{color:var(--red);border-color:var(--red)}.replay-result.neutral{color:var(--text-dim)}
@@ -653,6 +784,393 @@ button{touch-action:manipulation;}
   .dc-pokemon-row-main,.dc-pokemon-row-secondary{grid-template-columns:1fr}
 }
 </style>
+
+<style id="speed-workbench-redesign">
+/* Speed Workbench: single-match workflow */
+.speed-workbench-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}
+.speed-workbench-head h2{margin-bottom:5px}
+.speed-picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.speed-picker-card{padding:12px 14px;border:1px solid var(--border);background:var(--panel-alt);border-radius:11px}
+.speed-picker-card label{margin-bottom:7px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:800}
+.speed-picker-card select{min-height:42px}
+.speed-versus-card{display:grid;grid-template-columns:minmax(0,1fr) 170px minmax(0,1fr);align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--border);background:var(--panel-alt);border-radius:12px;margin-bottom:12px}
+.speed-selected-side{display:flex;align-items:center;gap:11px;min-width:0}
+.speed-selected-sprite{width:58px;height:58px;object-fit:contain;image-rendering:pixelated;flex:0 0 58px}
+.speed-selected-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.speed-selected-copy strong{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.speed-selected-copy span{font-size:11px;color:var(--text-dim);font-family:var(--mono)}
+.speed-side-label{font-size:9px;color:var(--text-dim);font-weight:800;letter-spacing:.08em}
+.speed-versus-center{display:flex;align-items:center;justify-content:center;gap:7px}
+.speed-versus-line{height:1px;background:var(--border);flex:1}
+.speed-versus-center .speed-result-pill{white-space:nowrap}
+.speed-condition-bar{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;padding:11px 12px;border:1px solid var(--border);background:var(--panel);border-radius:11px;margin-bottom:12px}
+.speed-condition-group{min-width:0}
+.speed-condition-title{display:block;margin-bottom:6px;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);font-weight:800}
+.speed-condition-group .speed-mod-row{gap:5px}
+.speed-condition-group .speed-mod-btn{padding:6px 9px;font-size:11px}
+.speed-field-group{padding-left:10px;border-left:1px solid var(--border)}
+.speed-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.speed-settings-card{padding:13px 14px;border:1px solid var(--border);background:var(--panel-alt);border-radius:11px}
+.speed-settings-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:11px}
+.speed-settings-head strong{display:block;font-size:13px}
+.speed-settings-head span{display:block;margin-top:2px;color:var(--text-dim);font-size:10px;line-height:1.4}
+.speed-settings-card label{margin-bottom:10px}
+.speed-range-label{display:grid;grid-template-columns:auto auto;gap:4px 8px;align-items:center}
+.speed-range-label strong{font-family:var(--mono);font-size:12px;text-align:right}
+.speed-range-label input{grid-column:1/-1;padding:0;background:transparent;border:0;min-height:20px}
+.speed-solver-text{margin:0;min-height:40px;font-size:12px;line-height:1.5}
+.speed-benchmark-actions{display:flex;align-items:center;gap:8px;margin-top:10px}
+.speed-pinned-mini{font-size:10px;color:var(--text-dim)}
+@media(max-width:800px){
+  .speed-versus-card{grid-template-columns:1fr;gap:10px}
+  .speed-versus-center{width:100%}
+  .speed-condition-bar{grid-template-columns:1fr}
+  .speed-field-group{padding-left:0;padding-top:8px;border-left:0;border-top:1px solid var(--border)}
+  .speed-settings-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .speed-picker-grid{grid-template-columns:1fr}
+  .speed-selected-sprite{width:50px;height:50px;flex-basis:50px}
+  .speed-selected-copy strong{font-size:14px}
+}
+</style>
+
+
+
+
+<style id="speed-workbench-clean-picker">
+.speed-select-launcher{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--panel);border:1px solid var(--border);border-radius:10px;color:var(--text);font-weight:800;cursor:pointer;text-align:left}
+.speed-select-launcher:hover{border-color:var(--amber)}
+.speed-select-launcher span{font-size:11px;color:var(--text-dim);font-weight:600}
+.speed-picker-clean-backdrop{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72)}
+.speed-picker-clean-dialog{width:min(820px,96vw);max-height:min(760px,92vh);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden}
+.speed-picker-clean-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;border-bottom:1px solid var(--border)}
+.speed-picker-clean-head h3{margin:0}.speed-picker-clean-head p{margin:4px 0 0;color:var(--text-dim);font-size:12px}
+.speed-picker-clean-close{width:34px;height:34px;padding:0;border:1px solid var(--border);background:var(--panel-alt);border-radius:9px;color:var(--text);font-size:20px}
+.speed-picker-clean-grid{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px;overflow:auto}
+.speed-picker-clean-option{display:flex;align-items:center;gap:9px;min-width:0;padding:9px;border:1px solid var(--border);background:var(--panel-alt);border-radius:11px;color:var(--text);text-align:left;cursor:pointer}
+.speed-picker-clean-option:hover{border-color:var(--amber)}.speed-picker-clean-option.selected{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset;background:rgba(185,154,255,.10)}
+.speed-picker-clean-option img{width:52px;height:52px;object-fit:contain;image-rendering:pixelated;flex:0 0 52px}.speed-picker-clean-option span{min-width:0;display:flex;flex-direction:column;gap:3px}.speed-picker-clean-option strong{font-size:12px;overflow-wrap:anywhere}.speed-picker-clean-option small{font-size:10px;color:var(--text-dim)}.speed-picker-clean-option i{margin-left:auto;width:20px;height:20px;display:grid;place-items:center;border:1px solid var(--border);border-radius:6px;font-style:normal;color:transparent;flex:0 0 20px}.speed-picker-clean-option.selected i{background:var(--amber);border-color:var(--amber);color:var(--bg)}
+.speed-picker-clean-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid var(--border);background:var(--panel-alt)}.speed-picker-clean-count{font-size:12px;color:var(--text-dim);font-weight:700}.speed-picker-clean-foot div{display:flex;gap:8px}.speed-picker-clean-complete{background:var(--amber);color:var(--bg);border-color:var(--amber)}
+@media(max-width:600px){.speed-picker-clean-grid{grid-template-columns:1fr 1fr;padding:10px}.speed-picker-clean-option{padding:8px}.speed-picker-clean-option img{width:44px;height:44px;flex-basis:44px}}
+@media(max-width:430px){.speed-picker-clean-grid{grid-template-columns:1fr}}
+</style>
+
+<style id="matchprep-clean-ui">
+.panel{border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.10)}
+.panel h2{letter-spacing:-.01em}
+.prep-section-picker{
+  display:flex;align-items:center;gap:12px;padding:12px 14px!important
+}
+.prep-section-picker label{
+  margin:0;flex:0 0 auto;font-weight:800;text-transform:uppercase;
+  letter-spacing:.07em;font-size:10px
+}
+.prep-section-picker select{max-width:360px;min-height:38px}
+.speed-multiselect-card.speed-matrix-toolbar{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,360px);
+  align-items:center;gap:14px;margin-bottom:12px;padding:12px 14px;
+  border:1px solid var(--border);background:var(--panel-alt);border-radius:12px
+}
+.speed-multiselect-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px
+}
+.speed-multiselect-head label{
+  margin:0 0 3px;font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em
+}
+.speed-multiselect-head span{color:var(--text-dim);font-size:11px}
+.speed-multiselect-head strong{
+  font-family:var(--mono);font-size:11px;color:var(--amber);white-space:nowrap
+}
+.speed-select-launcher{min-height:40px}
+.speed-condition-bar{box-shadow:none}
+@media(max-width:700px){
+  .prep-section-picker{align-items:stretch;flex-direction:column}
+  .prep-section-picker select{max-width:none}
+  .speed-multiselect-card.speed-matrix-toolbar{grid-template-columns:1fr}
+}
+</style>
+
+
+<style id="speed-workbench-final">
+/* Speed Workbench — clean, width-efficient matrix */
+#prepSpeedWorkbench{
+  padding:22px;
+}
+#prepSpeedWorkbench .speed-matrix-wrap{
+  overflow:visible;
+  margin:0 0 24px;
+}
+#prepSpeedWorkbench .speed-matrix{
+  width:100%;
+  table-layout:fixed;
+  border-collapse:separate;
+  border-spacing:0;
+}
+#prepSpeedWorkbench .speed-matrix th,
+#prepSpeedWorkbench .speed-matrix td{
+  padding:14px 8px;
+  vertical-align:middle;
+}
+#prepSpeedWorkbench .speed-matrix thead th:first-child,
+#prepSpeedWorkbench .speed-matrix tbody th{
+  width:105px;
+  min-width:105px;
+}
+#prepSpeedWorkbench .speed-matrix thead th{
+  padding-top:15px;
+  padding-bottom:15px;
+}
+#prepSpeedWorkbench .speed-matrix-mon{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  min-width:0;
+  min-height:72px;
+  text-align:center;
+}
+#prepSpeedWorkbench .speed-matrix-mon span{
+  display:block;
+  max-width:100%;
+  min-width:0;
+  font-size:11px;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+#prepSpeedWorkbench .speed-matrix-mon small{
+  display:block;
+  margin-top:2px;
+  font-size:9px;
+  line-height:1.25;
+  color:var(--text-dim);
+}
+#prepSpeedWorkbench .speed-matrix-sprite{
+  width:50px;
+  height:50px;
+  flex:0 0 50px;
+  object-fit:contain;
+}
+#prepSpeedWorkbench .speed-cell{
+  width:100%;
+  min-height:72px;
+  box-sizing:border-box;
+  padding:12px 7px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:5px;
+  border-radius:11px;
+}
+#prepSpeedWorkbench .speed-cell strong{
+  font-size:12px;
+}
+#prepSpeedWorkbench .speed-cell span{
+  max-width:100%;
+  font-size:10px;
+  line-height:1.35;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  text-align:center;
+}
+#prepSpeedWorkbench .speed-condition-bar{
+  gap:14px;
+  padding:15px;
+  border-radius:14px;
+}
+#prepSpeedWorkbench .speed-multiselect-card.speed-matrix-toolbar{
+  gap:18px;
+  margin-bottom:20px;
+  padding:15px 17px;
+  border-radius:14px;
+}
+
+@media (max-width:800px){
+  #prepSpeedWorkbench{
+    padding:16px;
+  }
+  #prepSpeedWorkbench .speed-matrix thead th:first-child,
+  #prepSpeedWorkbench .speed-matrix tbody th{
+    width:90px;
+    min-width:90px;
+  }
+  #prepSpeedWorkbench .speed-matrix th,
+  #prepSpeedWorkbench .speed-matrix td{
+    padding:10px 4px;
+  }
+  #prepSpeedWorkbench .speed-matrix-mon{
+    min-height:64px;
+  }
+  #prepSpeedWorkbench .speed-matrix-sprite{
+    width:42px;
+    height:42px;
+    flex-basis:42px;
+  }
+  #prepSpeedWorkbench .speed-matrix-mon span{
+    font-size:10px;
+  }
+  #prepSpeedWorkbench .speed-cell{
+    min-height:62px;
+    padding:9px 4px;
+  }
+}
+
+@media (max-width:600px){
+  #prepSpeedWorkbench{
+    padding:12px;
+  }
+  #prepSpeedWorkbench .speed-matrix thead th:first-child,
+  #prepSpeedWorkbench .speed-matrix tbody th{
+    width:72px;
+    min-width:72px;
+  }
+  #prepSpeedWorkbench .speed-matrix th,
+  #prepSpeedWorkbench .speed-matrix td{
+    padding:7px 2px;
+  }
+  #prepSpeedWorkbench .speed-matrix-mon{
+    min-height:58px;
+    gap:2px;
+  }
+  #prepSpeedWorkbench .speed-matrix-sprite{
+    width:34px;
+    height:34px;
+    flex-basis:34px;
+  }
+  #prepSpeedWorkbench .speed-matrix-mon span{
+    font-size:9px;
+  }
+  #prepSpeedWorkbench .speed-matrix-mon small{
+    display:none;
+  }
+  #prepSpeedWorkbench .speed-cell{
+    min-height:56px;
+    padding:7px 2px;
+  }
+  #prepSpeedWorkbench .speed-cell strong{
+    font-size:10px;
+  }
+  #prepSpeedWorkbench .speed-cell span{
+    font-size:8px;
+  }
+}
+</style>
+
+
+<style id="speed-workbench-hide-your-speed">
+#prepSpeedWorkbench .speed-matrix tbody th .speed-matrix-mon small{
+  display:none;
+}
+</style>
+
+
+<style id="speed-workbench-select-label">
+/* Match the "Your Pokémon" section label to the visual weight of the selector button. */
+#prepSpeedWorkbench .speed-multiselect-head > label,
+#prepSpeedWorkbench .speed-multiselect-head > strong,
+#prepSpeedWorkbench .speed-multiselect-head > div > label{
+  font-size:13px;
+  line-height:1.3;
+  font-weight:800;
+  letter-spacing:.01em;
+}
+#prepSpeedWorkbench .speed-multiselect-head span{
+  font-size:11px;
+  line-height:1.45;
+}
+</style>
+
+
+<style id="speed-workbench-axis-distinction">
+/* Make matrix ownership/axes visually explicit. */
+#prepSpeedWorkbench .speed-matrix{
+  position:relative;
+}
+#prepSpeedWorkbench .speed-matrix caption.speed-axis-opponents{
+  caption-side:top;
+  text-align:left;
+  padding:0 0 10px 4px;
+  color:var(--text);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.07em;
+}
+#prepSpeedWorkbench .speed-matrix caption.speed-axis-opponents span{
+  display:inline-block;
+}
+#prepSpeedWorkbench .speed-matrix caption.speed-axis-opponents small{
+  display:inline-block;
+  margin-left:8px;
+  color:var(--text-dim);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.03em;
+}
+#prepSpeedWorkbench .speed-matrix .speed-axis-corner{
+  background:var(--panel-alt);
+  text-align:left;
+  padding-left:10px;
+  border-top-left-radius:10px;
+}
+#prepSpeedWorkbench .speed-axis-you{
+  display:block;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.06em;
+  color:var(--amber);
+}
+#prepSpeedWorkbench .speed-axis-sub{
+  display:block;
+  margin-top:3px;
+  font-size:9px;
+  font-weight:700;
+  color:var(--text-dim);
+  letter-spacing:.04em;
+}
+#prepSpeedWorkbench .speed-matrix thead th:not(:first-child){
+  background:var(--panel);
+}
+#prepSpeedWorkbench .speed-matrix tbody th{
+  background:var(--panel-alt);
+}
+#prepSpeedWorkbench .speed-matrix tbody th .speed-matrix-mon span{
+  font-weight:800;
+}
+</style>
+
+
+<style id="speed-workbench-axis-final">
+#prepSpeedWorkbench .speed-matrix caption.speed-axis-opponents{
+  text-align:center;
+  padding:0 0 10px;
+  color:var(--text);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+#prepSpeedWorkbench .speed-matrix caption.speed-axis-opponents span{
+  display:block;
+  text-align:center;
+}
+#prepSpeedWorkbench .speed-matrix .speed-axis-corner{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:10px;
+  text-align:center;
+  padding:12px 8px;
+}
+#prepSpeedWorkbench .speed-axis-you{
+  display:block;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.06em;
+  color:var(--amber);
+}
+</style>
+
 </head>
 
 <style>
@@ -759,39 +1277,43 @@ function spriteId(s){
 function spriteCandidates(s){
   const raw=spriteId(s), out=[], add=x=>{if(x&&!out.includes(x))out.push(x)};
   const aliases={
-    'tauros-paldea-combat':'tauros-paldea-combat',
-    'tauros-paldea-blaze':'tauros-paldea-blaze',
-    'tauros-paldea-aqua':'tauros-paldea-aqua',
-    'squawkabilly-green-plumage':'squawkabilly-green-plumage',
-    'squawkabilly-blue-plumage':'squawkabilly-blue-plumage',
-    'squawkabilly-yellow-plumage':'squawkabilly-yellow-plumage',
-    'squawkabilly-white-plumage':'squawkabilly-white-plumage'
+    'mr-mime':'mrmime','mr-mime-galar':'mrmime-galar',
+    'mime-jr':'mimejr','mime-jr-galar':'mimejr-galar',
+    'farfetchd':'farfetchd','farfetchd-galar':'farfetchd-galar',
+    'sirfetchd':'sirfetchd','sirfetchd-galar':'sirfetchd-galar',
+    'galarian-weezing':'weezing-galar','weezing-galar':'weezing-galar',
+    'galarian-zapdos':'zapdos-galar','galarian-moltres':'moltres-galar','galarian-articuno':'articuno-galar',
+    'landorus-incarnate':'landorus','landorus-i':'landorus','landorus-therian':'landorus-therian','landorus-t':'landorus-therian',
+    'tornadus-incarnate':'tornadus','tornadus-i':'tornadus','tornadus-therian':'tornadus-therian','tornadus-t':'tornadus-therian',
+    'thundurus-incarnate':'thundurus','thundurus-i':'thundurus','thundurus-therian':'thundurus-therian','thundurus-t':'thundurus-therian',
+    'keldeo-ordinary':'keldeo','keldeo-resolute':'keldeo-resolute',
+    'urshifu-single-strike':'urshifu-single','urshifu-rapid-strike':'urshifu-rapid',
+    'calyrex-ice-rider':'calyrex-ice','calyrex-shadow-rider':'calyrex-shadow',
+    'necrozma-dusk-mane':'necrozma-dusk','necrozma-dawn-wings':'necrozma-dawn',
+    'ogerpon-teal-mask':'ogerpon','ogerpon-wellspring-mask':'ogerpon-wellspring','ogerpon-hearthflame-mask':'ogerpon-hearthflame','ogerpon-cornerstone-mask':'ogerpon-cornerstone',
+    'squawkabilly-green-plumage':'squawkabilly-green','squawkabilly-blue-plumage':'squawkabilly-blue','squawkabilly-yellow-plumage':'squawkabilly-yellow','squawkabilly-white-plumage':'squawkabilly-white',
+    'dudunsparce-two-segment':'dudunsparce-2','dudunsparce-three-segment':'dudunsparce-3',
+    'maushold-family-of-four':'maushold','maushold-family-of-three':'maushold-family3',
+    'zygarde-10-percent':'zygarde-10','zygarde-50-percent':'zygarde','zygarde-complete':'zygarde-complete',
+    'lycanroc-midday':'lycanroc','lycanroc-midnight':'lycanroc-midnight','lycanroc-dusk':'lycanroc-dusk',
+    'eiscue-ice':'eiscue','eiscue-noice':'eiscue-noice','morpeko-full-belly':'morpeko','morpeko-hangry':'morpeko-hangry',
+    'palafin-zero':'palafin','palafin-hero':'palafin-hero',
+    'minior-red-meteor':'minior-red','minior-orange-meteor':'minior-orange','minior-yellow-meteor':'minior-yellow','minior-green-meteor':'minior-green','minior-blue-meteor':'minior-blue','minior-indigo-meteor':'minior-indigo','minior-violet-meteor':'minior-violet',
+    'gouging-fire':'gougingfire','scream-tail':'screamtail','roaring-moon':'roaringmoon','walking-wake':'walkingwake','iron-valiant':'ironvaliant','iron-boulder':'ironboulder','iron-crown':'ironcrown','iron-leaves':'ironleaves'
   };
   add(aliases[raw]||raw);
-  // Showdown's current sprite names omit some PokeAPI form suffixes.
-  add(raw.replace(/-plumage$/,''));
-  add(raw.replace(/-mask$/,''));
+  add(raw.replace(/-plumage$/,'')); add(raw.replace(/-mask$/,'')); add(raw.replace(/-forme$/,'')); add(raw.replace(/-form$/,''));
+  add(raw.replace(/-standard$/,'')); add(raw.replace(/-normal$/,''));
+  const compact=raw.replace(/-/g,''); add(compact);
   const parts=raw.split('-');
   for(let i=parts.length-1;i>=1;i--) add(parts.slice(0,i).join('-'));
   return out;
 }
 function sprite(s,cls='sprite'){
-  const candidates=spriteCandidates(s);
-  const src=`https://play.pokemonshowdown.com/sprites/gen5/${candidates[0]||spriteId(s)}.png`;
-  const encoded=encodeURIComponent(JSON.stringify(candidates));
-  return `<img class="${cls}" src="${src}" alt="${esc(s)}" loading="lazy" data-sprite-candidates="${encoded}" data-sprite-index="0" onerror="spriteFallback(this)">`;
-}
-function spriteFallback(img){
-  try{
-    const candidates=JSON.parse(decodeURIComponent(img.dataset.spriteCandidates||'[]'));
-    const next=Number(img.dataset.spriteIndex||0)+1;
-    if(candidates[next]){
-      img.dataset.spriteIndex=String(next);
-      img.src=`https://play.pokemonshowdown.com/sprites/gen5/${candidates[next]}.png`;
-      return;
-    }
-    img.onerror=null;img.style.opacity='.2';
-  }catch(e){img.onerror=null;img.style.opacity='.2';}
+  const species=String(s??'').trim();
+  const candidates=spriteCandidates(species);
+  const id=candidates[0]||spriteId(species);
+  return `<img class="${cls}" src="https://play.pokemonshowdown.com/sprites/gen5/${id}.png" alt="${esc(species)}" data-sprite-species="${esc(species)}" loading="eager">`;
 }
 function allRows(){return Object.values(STATE.replays)}
 function rowsForTeam(team){return allRows().filter(r=>sameTeam(teamFor(r.players?.p1),team)||sameTeam(teamFor(r.players?.p2),team))}
@@ -1124,7 +1646,7 @@ async function fetchBaseSpeed(species){
   }
 
   // Final fallback for anything not present in the Showdown data.
-  for(const slug of speciesCandidates(species)){
+  for(const slug of pokemonDexCandidates(species)){
     try{
       const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+encodeURIComponent(slug));
       if(!r.ok)continue;
@@ -1309,7 +1831,7 @@ async function fetchTypes(species){
     }
   }
 
-  for(const slug of typeSlugCandidates(species)){
+  for(const slug of pokemonDexCandidates(species)){
     try{
       const r=await fetch('https://pokeapi.co/api/v2/pokemon/'+encodeURIComponent(slug));
       if(!r.ok)continue;
@@ -1533,6 +2055,107 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
     return `<article class="prep-opponent-card prep-opponent-popout" data-prep-popout="${esc(m.species)}"><button type="button" class="prep-popout-trigger legacy-mon-card"><span class="mon-head">${sprite(m.species,'prep-sprite')}<span><span class="mon-name prep-legacy-name"><strong>${esc(displaySpecies(m))}</strong><span class="prep-inline-types">${effTypes.map(t=>typePill(t)).join('')}</span></span><span class="muted">${usage.replays?.size||0} replay${(usage.replays?.size||0)===1?'':'s'} · ${usage.appearances||0} appearances</span></span></span><span class="chips prep-legacy-chips"><span class="chip"><b>${usage.kills||0}</b> K</span><span class="chip"><b>${usage.deaths||0}</b> D</span><span class="chip"><b>${Number(usage.dealt||0).toFixed(0)}</b> dmg</span><span class="chip"><b>${(usage.gameSets||[]).filter(g=>g.moves?.length).length}</b> sets recorded</span></span><span class="small prep-legacy-threat">${esc(threat)}</span></button><div class="prep-popout-data" hidden data-usage="${esc(usageHtml)}" data-scouting="${esc(scoutingHtml)}" data-analysis="${esc(analysisHtml)}" data-appearances="${usage.appearances||0}" data-kills="${usage.kills||0}" data-deaths="${usage.deaths||0}" data-dealt="${Number(usage.dealt||0).toFixed(0)}" data-taken="${Number(usage.taken||0).toFixed(0)}"></div></article>`;
   }))).join('');
 
+  // -------- Speed Workbench --------
+  const speedNature=(n)=>n==='positive'?1.1:n==='negative'?0.9:1;
+  const speedStatFor=(base,evs,natureKey)=>Math.floor(Math.floor((2*base+31+Math.floor((evs||0)/4))*100/100+5)*speedNature(natureKey));
+  const speedCfgFor=(species)=>({nature:'positive',evs:252,...(STATE.prepSpeedConfig?.[species]||{})});
+  const speedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,stage:0},trickRoom:false};
+  const stageMult=n=>n===2?2:n===1?1.5:1;
+  const effectiveSpeed=(base,species,side)=>{
+    const cfg=speedCfgFor(species);
+    let v=speedStatFor(base,cfg.evs,cfg.nature);
+    const m=speedMods[side]||{};
+    if(m.stage)v=Math.floor(v*stageMult(m.stage));
+    if(m.scarf)v=Math.floor(v*1.5);
+    if(m.tailwind)v=Math.floor(v*2);
+    if(m.paralysis)v=Math.floor(v*0.5);
+    return v;
+  };
+  const pinned=STATE.prepSpeedPinned||[];
+  const modBtn=(side,key,label)=>`<button type="button" class="speed-mod-btn ${speedMods[side]?.[key]?'active':''}" data-speed-side="${side}" data-speed-mod="${key}">${label}</button>`;
+  const stageBtn=(side,val,label)=>`<button type="button" class="speed-mod-btn ${(speedMods[side]?.stage||0)===val?'active':''}" data-speed-side="${side}" data-speed-stage="${val}">${label}</button>`;
+
+  // Speed Workbench: select multiple Pokémon from YOUR team; always show every
+  // Pokémon on the opponent team as columns in the comparison matrix.
+  const validYourSpecies=your.map(m=>m.species);
+  let selectedSpeedMons=Array.isArray(STATE.prepSpeedSelected)
+    ?STATE.prepSpeedSelected.filter(x=>validYourSpecies.includes(x))
+    :(STATE.prepSpeedSelected&&validYourSpecies.includes(STATE.prepSpeedSelected)?[STATE.prepSpeedSelected]:[]);
+  STATE.prepSpeedSelected=selectedSpeedMons;
+  window.__speedWorkbenchData={your,opp};
+  const selectedFirst=selectedSpeedMons[0]||your[0]?.species||'';
+  const selMonObj=your.find(m=>m.species===selectedFirst);
+  const selCfg=selMonObj?speedCfgFor(selMonObj.species):{nature:'positive',evs:252};
+
+  const speedValueFor=(mon,side)=>effectiveSpeed(mon.baseSpeed||0,mon.species,side);
+  const speedOutcome=(yourSpeed,oppSpeed)=>{
+    if(yourSpeed===oppSpeed)return ['Tie','speed-tie'];
+    const youFirst=speedMods.trickRoom?yourSpeed<oppSpeed:yourSpeed>oppSpeed;
+    return [youFirst?'You':'Opp.',''+(youFirst?'speed-faster':'speed-slower')];
+  };
+
+  const speedMatrix=`
+    <div class="speed-matrix-wrap">
+      <table class="speed-matrix"><caption class="speed-axis-opponents"><span>OPPONENT POKÉMON</span></caption>
+        <thead><tr>
+          <th class="speed-axis-corner"><span class="speed-axis-you">YOUR POKÉMON</span></th>
+          ${opp.map(m=>`<th><div class="speed-matrix-mon">${sprite(m.species,'speed-matrix-sprite')}<span>${esc(displaySpecies(m))}</span></div></th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${selectedSpeedMons.length ? selectedSpeedMons.map(species=>{
+            const ym=your.find(m=>m.species===species); if(!ym)return '';
+            const yv=speedValueFor(ym,'your');
+            return `<tr data-speed-row="${esc(species)}"><th><div class="speed-matrix-mon speed-matrix-your">${sprite(ym.species,'speed-matrix-sprite')}<span>${esc(displaySpecies(ym))}</span><small>${yv} Spe</small></div></th>
+              ${opp.map(om=>{
+                const ov=speedValueFor(om,'opp');
+                const [label,cls]=speedOutcome(yv,ov);
+                return `<td><div class="speed-cell ${cls}"><strong>${label}</strong><span>${yv} vs ${ov}</span></div></td>`;
+              }).join('')}
+            </tr>`;
+          }).join('') : `<tr class="speed-no-selection-row"><td colspan="${Math.max(1,opp.length+1)}"><strong>Select your Pokémon above</strong><span>All ${opp.length} opponent Pokémon are already shown across the matrix.</span></td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+
+  let solverText='Select one of your Pokémon to see the EV threshold against the first opponent.';
+  const solverOpp=opp[0];
+  if(selMonObj&&solverOpp){
+    const selectedOppSpeed=effectiveSpeed(solverOpp.baseSpeed||0,solverOpp.species,'opp');
+    let neededEvs=null;
+    for(let e=0;e<=252;e+=4){
+      let testV=speedStatFor(selMonObj.baseSpeed||0,e,selCfg.nature);
+      const m=speedMods.your||{};
+      if(m.stage)testV=Math.floor(testV*stageMult(m.stage));
+      if(m.scarf)testV=Math.floor(testV*1.5);
+      if(m.tailwind)testV=Math.floor(testV*2);
+      if(m.paralysis)testV=Math.floor(testV*.5);
+      const beats=speedMods.trickRoom?testV<selectedOppSpeed:testV>selectedOppSpeed;
+      if(beats){neededEvs=e;break;}
+    }
+    solverText=neededEvs===null
+      ?`Even at 252 EVs with a beneficial nature, ${esc(displaySpecies(selMonObj))} cannot ${speedMods.trickRoom?'go slower than':'outspeed'} ${esc(displaySpecies(solverOpp))} under the current modifiers.`
+      :`${esc(displaySpecies(selMonObj))} needs <strong>${neededEvs} EVs</strong> (beneficial nature) to ${speedMods.trickRoom?'go slower than':'outspeed'} ${esc(displaySpecies(solverOpp))}.`;
+  }
+
+  const speedSection=`<section id="prepSpeedWorkbench" class="panel prep-selectable-section" data-prep-section="speed">
+    <div class="speed-workbench-head">
+      <div><h2>Speed Workbench</h2><p class="panel-desc">Select one or more of your Pokémon. Every Pokémon on the opponent team is always shown in the matrix.</p></div>
+    </div>
+
+    <div class="speed-multiselect-card speed-matrix-toolbar">
+      <div class="speed-multiselect-head"><div><label>Your Pokémon</label><span>Choose the rows shown in the matrix.</span></div><strong>${selectedSpeedMons.length}/${your.length}</strong></div>
+      <button type="button" id="speedSelectPokemon" class="speed-select-launcher">Select Pokémon <span>${selectedSpeedMons.length ? `${selectedSpeedMons.length} selected` : 'Choose Pokémon to compare'}</span></button>
+    </div>
+
+    ${speedMatrix}
+
+    <div class="speed-condition-bar">
+      <div class="speed-condition-group"><span class="speed-condition-title">Your side</span><div class="speed-mod-row">${modBtn('your','tailwind','Tailwind')}${modBtn('your','paralysis','Paralysis')}${modBtn('your','scarf','Choice Scarf')}${stageBtn('your',1,'+1')}${stageBtn('your',2,'+2')}</div></div>
+      <div class="speed-condition-group"><span class="speed-condition-title">Opponent side</span><div class="speed-mod-row">${modBtn('opp','tailwind','Tailwind')}${modBtn('opp','paralysis','Paralysis')}${modBtn('opp','scarf','Choice Scarf')}${stageBtn('opp',1,'+1')}${stageBtn('opp',2,'+2')}</div></div>
+      <div class="speed-condition-group speed-field-group"><span class="speed-condition-title">Field</span><div class="speed-mod-row"><button type="button" class="speed-mod-btn ${speedMods.trickRoom?'active':''}" data-speed-trickroom="1">Trick Room</button></div></div>
+    </div>
+  </section>`;
+
   // -------- Switch-in Analyser --------
   const switchItemOptions=[
     ['', 'No item'],
@@ -1554,10 +2177,11 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
 
   const latestMatchesSection=matchHistoryForTeam(opponent,false).replace('<section class="panel">','<section id="prepLatestMatches" class="panel prep-selectable-section" data-prep-section="matches">');
   return `<section class="panel"><div class="prep-hero"><div><h2>Match Prep</h2><p class="panel-desc" style="margin:0">Prepare <strong>${esc(yourTeam)}</strong> for a match against <strong>${esc(opponent)}</strong>. Match usage, scouting, recent replays and battle tools are combined here.</p></div><div class="prep-hero-controls"><div><label>Your Team</label><select id="prepYourTeam">${names.map(n=>`<option value="${esc(n)}" ${sameTeam(n,yourTeam)?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div><label>Opponent</label><select id="prepOpponent">${names.filter(n=>!sameTeam(n,yourTeam)).map(n=>`<option value="${esc(n)}" ${sameTeam(n,opponent)?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div></div></section>
-  <section class="panel prep-section-picker"><label for="prepSectionSelect">View Section</label><select id="prepSectionSelect"><option value="overview">Opponent Team Overview</option><option value="switch">Switch-In Analyser</option><option value="matches">Replays</option></select></section>
+  <section class="panel prep-section-picker"><label for="prepSectionSelect">View Section</label><select id="prepSectionSelect"><option value="overview">Opponent Team Overview</option><option value="switch">Switch-In Analyser</option><option value="speed">Speed Workbench</option><option value="matches">Replays</option></select></section>
   <section class="panel prep-selectable-section" data-prep-section="damage"><div class="prep-calc-head"><div><h2>Damage Calculator</h2><p class="panel-desc" style="margin:0">Run a full calculation with your actual roster Pokémon, items, abilities, natures, EVs, status and weather.</p></div><div class="prep-calc-actions" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" id="prepImportShowdown" class="prep-import-set-btn">Import Showdown Set</button><button id="openDamageCalc" class="damage-calc-primary">Open Damage Calculator</button></div></div></section>
   <section id="prepTeamOverview" class="panel prep-selectable-section" data-prep-section="overview"><h2>Opponent Team Overview</h2><p class="panel-desc">Click a Pokémon to switch between <strong>Usage Stats</strong> and <strong>Scouting</strong>. Scouting includes typing, abilities, observed moves, roles, point value, base stats and type effectiveness.</p><div class="prep-opponent-grid">${opponentCards}</div></section>
   ${latestMatchesSection}
+  ${speedSection}
   ${switchSection}`;
 }
 
@@ -1730,6 +2354,126 @@ $('prepYourTeam')?.addEventListener('change',async e=>{
     });
     $('prepSwitchAtkEVs')?.addEventListener('click',e=>{e.preventDefault();openSwitchAtkEvModal();});
     $('prepSwitchAllDefEVs')?.addEventListener('click',e=>{e.preventDefault();openSwitchAllDefEvModal();});
+
+    // -------- Speed Workbench wiring --------
+    document.querySelectorAll('.speed-mod-btn[data-speed-mod]').forEach(b=>{
+      b.addEventListener('click',async()=>{
+        const side=b.dataset.speedSide, key=b.dataset.speedMod;
+        STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,stage:0},trickRoom:false};
+        STATE.prepSpeedMods[side][key]=!STATE.prepSpeedMods[side][key];
+        await render();
+      });
+    });
+    document.querySelectorAll('.speed-mod-btn[data-speed-stage]').forEach(b=>{
+      b.addEventListener('click',async()=>{
+        const side=b.dataset.speedSide, val=Number(b.dataset.speedStage);
+        STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,stage:0},trickRoom:false};
+        STATE.prepSpeedMods[side].stage=(STATE.prepSpeedMods[side].stage||0)===val?0:val;
+        await render();
+      });
+    });
+    $('main').querySelector('[data-speed-trickroom]')?.addEventListener('click',async()=>{
+      STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,stage:0},trickRoom:false};
+      STATE.prepSpeedMods.trickRoom=!STATE.prepSpeedMods.trickRoom;
+      await render();
+    });
+    document.querySelectorAll('.speed-row-select').forEach(b=>{
+      b.addEventListener('click',async()=>{
+        STATE.prepSpeedSelected=b.dataset.speedMon;
+        await render();
+      });
+    });
+    // -------- Speed Workbench selection --------
+    // The picker is intentionally isolated from the matrix. Nothing is committed
+    // until the user presses Complete.
+    $('speedSelectPokemon')?.addEventListener('click',e=>{
+      e.preventDefault();
+      const data=window.__speedWorkbenchData||{your:[],opp:[]};
+      const yourMons=Array.isArray(data.your)?data.your:[];
+      let temp=new Set(Array.isArray(STATE.prepSpeedSelected)?STATE.prepSpeedSelected:[]);
+      const existing=document.getElementById('speedPokemonPickerModal');
+      if(existing) existing.remove();
+
+      const host=document.createElement('div');
+      host.id='speedPokemonPickerModal';
+      host.className='speed-picker-clean-backdrop';
+      host.innerHTML=`<div class="speed-picker-clean-dialog" role="dialog" aria-modal="true" aria-labelledby="speedPickerTitle">
+        <div class="speed-picker-clean-head">
+          <div><h3 id="speedPickerTitle">Select Pokémon</h3><p>Choose the Pokémon you want in the Speed matrix.</p></div>
+          <button type="button" class="speed-picker-clean-close" aria-label="Close">×</button>
+        </div>
+        <div class="speed-picker-clean-grid"></div>
+        <div class="speed-picker-clean-foot"><span class="speed-picker-clean-count"></span><div><button type="button" class="speed-picker-clean-cancel">Cancel</button><button type="button" class="speed-picker-clean-complete">Complete</button></div></div>
+      </div>`;
+      document.body.appendChild(host);
+
+      const grid=host.querySelector('.speed-picker-clean-grid');
+      const count=host.querySelector('.speed-picker-clean-count');
+      const draw=()=>{
+        count.textContent=`${temp.size} selected`;
+        grid.innerHTML=yourMons.map(mon=>{
+          const selected=temp.has(mon.species);
+          return `<button type="button" class="speed-picker-clean-option ${selected?'selected':''}" data-species="${esc(mon.species)}">${sprite(mon.species,'speed-picker-clean-sprite')}<span><strong>${esc(displaySpecies(mon))}</strong><small>${selected?'Selected':'Click to select'}</small></span><i>${selected?'✓':''}</i></button>`;
+        }).join('');
+      };
+      const close=()=>{
+        document.removeEventListener('keydown',onKey);
+        host.remove();
+      };
+      const onKey=e=>{if(e.key==='Escape')close();};
+      document.addEventListener('keydown',onKey);
+      host.querySelector('.speed-picker-clean-close').addEventListener('click',close);
+      host.querySelector('.speed-picker-clean-cancel').addEventListener('click',close);
+      host.addEventListener('click',e=>{
+        if(e.target===host) close();
+        const card=e.target.closest('.speed-picker-clean-option');
+        if(!card || !host.contains(card)) return;
+        const species=card.dataset.species;
+        if(temp.has(species)) temp.delete(species); else temp.add(species);
+        draw();
+      });
+      host.querySelector('.speed-picker-clean-complete').addEventListener('click',async()=>{
+        const committed=[...temp].filter(species=>yourMons.some(m=>m.species===species));
+        STATE.prepSpeedSelected=committed;
+        close();
+        await render();
+      });
+      draw();
+    });
+    $('speedConfigNature')?.addEventListener('change',async e=>{
+      const species=Array.isArray(STATE.prepSpeedSelected)?STATE.prepSpeedSelected[0]:STATE.prepSpeedSelected;
+      if(!species)return;
+      STATE.prepSpeedConfig=STATE.prepSpeedConfig||{};
+      STATE.prepSpeedConfig[species]={...(STATE.prepSpeedConfig[species]||{evs:252}),nature:e.target.value};
+      await render();
+    });
+    $('speedConfigEvs')?.addEventListener('input',e=>{
+      const out=$('speedConfigEvsOut'); if(out)out.textContent=e.target.value;
+    });
+    $('speedConfigEvs')?.addEventListener('change',async e=>{
+      const species=Array.isArray(STATE.prepSpeedSelected)?STATE.prepSpeedSelected[0]:STATE.prepSpeedSelected;
+      if(!species)return;
+      STATE.prepSpeedConfig=STATE.prepSpeedConfig||{};
+      STATE.prepSpeedConfig[species]={...(STATE.prepSpeedConfig[species]||{nature:'positive'}),evs:Number(e.target.value)};
+      await render();
+    });
+    $('speedPinBenchmark')?.addEventListener('click',async e=>{
+      e.preventDefault();
+      const target=$('speedBenchmarkMon')?.value||STATE.prepSpeedBenchmark;
+      if(!target)return;
+      STATE.prepSpeedPinned=STATE.prepSpeedPinned||[];
+      if(!STATE.prepSpeedPinned.includes(target))STATE.prepSpeedPinned.push(target);
+      await render();
+    });
+    document.querySelectorAll('.speed-unpin').forEach(b=>{
+      b.addEventListener('click',async e=>{
+        e.preventDefault();
+        const target=b.dataset.unpin;
+        STATE.prepSpeedPinned=(STATE.prepSpeedPinned||[]).filter(p=>p!==target);
+        await render();
+      });
+    });
+
     function zeroEVs(){return {hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
     function openSwitchEvModal(mode,species){
       const isAtk=mode==='attacker';
@@ -3073,5 +3817,96 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.addEventListener('pageshow', clearCalculatorBrowserState);
 })();
 </script>
+
+
+<script id="sitewide-sprite-fix">
+(function(){
+  const BASE='https://play.pokemonshowdown.com/sprites/';
+  const aliases={
+    'ogerpon-teal-mask':['ogerpon'],
+    'ogerpon-wellspring-mask':['ogerpon-wellspring'],
+    'ogerpon-hearthflame-mask':['ogerpon-hearthflame'],
+    'ogerpon-cornerstone-mask':['ogerpon-cornerstone'],
+    'squawkabilly-green-plumage':['squawkabilly-green'],
+    'squawkabilly-blue-plumage':['squawkabilly-blue'],
+    'squawkabilly-yellow-plumage':['squawkabilly-yellow'],
+    'squawkabilly-white-plumage':['squawkabilly-white'],
+    'dudunsparce-three-segment':['dudunsparce-3'],
+    'dudunsparce-two-segment':['dudunsparce-2'],
+    'maushold-family-of-three':['maushold-family3'],
+    'maushold-family-of-four':['maushold'],
+    'zygarde-10-percent':['zygarde-10'],
+    'zygarde-50-percent':['zygarde'],
+    'zygarde-complete':['zygarde-complete'],
+    'necrozma-dusk-mane':['necrozma-dusk'],
+    'necrozma-dawn-wings':['necrozma-dawn'],
+    'lycanroc-midday':['lycanroc'],
+    'lycanroc-midnight':['lycanroc-midnight'],
+    'lycanroc-dusk':['lycanroc-dusk'],
+    'wishiwashi-school':['wishiwashi-school'],
+    'eiscue-ice':['eiscue'],
+    'eiscue-noice':['eiscue-noice'],
+    'morpeko-hangry':['morpeko-hangry'],
+    'palafin-zero':['palafin'],
+    'palafin-hero':['palafin-hero'],
+    'minior-red-meteor':['minior-red'],
+    'minior-orange-meteor':['minior-orange'],
+    'minior-yellow-meteor':['minior-yellow'],
+    'minior-green-meteor':['minior-green'],
+    'minior-blue-meteor':['minior-blue'],
+    'minior-indigo-meteor':['minior-indigo'],
+    'minior-violet-meteor':['minior-violet']
+  };
+  function slug(s){
+    return String(s||'').trim().toLowerCase()
+      .replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
+      .replace(/[.:]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  }
+  function urlsFor(img){
+    let id=slug(img.getAttribute('data-sprite-species')||img.alt||'');
+    if(!id){
+      const m=(img.src||'').match(/sprites\/[^/]+\/([^/?#]+)\.png/i);
+      id=m?m[1].toLowerCase():'';
+    }
+    if(!id)return [];
+    const ids=[]; const add=x=>{if(x&&!ids.includes(x))ids.push(x)};
+    add(id); (aliases[id]||[]).forEach(add);
+    add(id.replace(/-plumage$/,'')); add(id.replace(/-mask$/,''));
+    add(id.replace(/-forme$/,'')); add(id.replace(/-form$/,''));
+    add(id.replace(/-standard$/,'')); add(id.replace(/-normal$/,''));
+    const parts=id.split('-');
+    for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
+    const out=[];
+    for(const x of ids){
+      out.push(BASE+'gen9/'+x+'.png');
+      out.push(BASE+'gen5/'+x+'.png');
+      out.push(BASE+'dex/'+x+'.png');
+    }
+    return out;
+  }
+  function install(img){
+    if(!(img instanceof HTMLImageElement)||img.dataset.sitewideSpriteFix)return;
+    const src=img.src||'';
+    if(!src.includes('/sprites/'))return;
+    img.dataset.sitewideSpriteFix='1';
+    img.dataset.sitewideSpriteUrls=JSON.stringify(urlsFor(img));
+    img.dataset.sitewideSpriteIndex='-1';
+    img.onerror=function(){
+      const urls=JSON.parse(img.dataset.sitewideSpriteUrls||'[]');
+      let i=Number(img.dataset.sitewideSpriteIndex||-1)+1;
+      while(i<urls.length && urls[i]===img.src)i++;
+      if(i<urls.length){img.dataset.sitewideSpriteIndex=String(i);img.style.opacity='';img.src=urls[i];}
+      else{img.onerror=null;img.removeAttribute('src');img.style.opacity='.25';}
+    };
+  }
+  function scan(root){
+    if(root instanceof HTMLImageElement)install(root);
+    else if(root&&root.querySelectorAll)root.querySelectorAll('img[src*="/sprites/"]').forEach(install);
+  }
+  function start(){scan(document); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(scan))).observe(document.documentElement,{subtree:true,childList:true});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
+})();
+</script>
+
 </body>
 </html>
