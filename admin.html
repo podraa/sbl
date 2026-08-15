@@ -301,6 +301,15 @@
   .admin-nav-item:hover{background:var(--panel-alt);}
   .admin-nav-item.active{background:var(--teal);color:inherit;}
   @media(max-width:700px){.admin-nav{display:block}.admin-nav-group{width:100%;margin-bottom:7px}.admin-nav-submenu{position:static}.admin-nav-group.open .admin-nav-submenu{max-height:55vh;overflow:auto;}}
+
+.manual-diff-panel{background:var(--panel-2,rgba(255,255,255,.025));border:1px solid var(--border,rgba(255,255,255,.08));}
+.manual-diff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 10px;margin-top:12px;}
+.manual-diff-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 9px;border:1px solid var(--border,rgba(255,255,255,.07));border-radius:8px;background:rgba(255,255,255,.018);min-height:36px;}
+.manual-diff-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.manual-diff-input{width:72px!important;min-width:72px!important;padding:5px 7px!important;text-align:center;font-size:13px!important;border-radius:6px!important;background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.10)!important;color:var(--text)!important;box-shadow:none!important;} .manual-diff-input:focus{background:rgba(255,255,255,.065)!important;border-color:var(--teal)!important;outline:none!important;box-shadow:0 0 0 2px rgba(45,212,191,.10)!important;}
+.manual-diff-help{font-size:12px;line-height:1.45;opacity:.72;margin-top:4px;}
+.manual-diff-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+@media(max-width:620px){.manual-diff-grid{grid-template-columns:1fr;}}
 </style>
 <script>
 // Site-wide theme: picked on the My Team page's Account tab, saved to
@@ -3764,13 +3773,35 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
               .eq('id', id);
             if(error) throw error;
           } else if(action === 'revoke'){
+            const trade = COMM_TRADES.find(t => Number(t.id) === id);
+            if(!trade) throw new Error('Trade not found.');
             const {error} = await supabase.from('trade_requests')
               .update({ status:'pending', responded_at:null, responded_by:null })
               .eq('id', id);
             if(error) throw error;
+
+            // Revoke means the previously accepted trade is being reopened.
+            // Restore the pre-trade roster ownership immediately so that if the
+            // proposer subsequently withdraws the pending trade, the published
+            // roster is already back in its original state.
+            if(trade.status === 'accepted' || trade.status === 'reverted'){
+              reconcileRevertedTradeRoster(trade);
+              await saveSharedState();
+              await savePublishedRosters(STATE.settings.rosters || {});
+            }
           } else if(action === 'revert'){
+            const trade = COMM_TRADES.find(t => Number(t.id) === id);
+            if(!trade) throw new Error('Trade not found.');
             const {error} = await supabase.rpc('commissioner_revert_trade', { trade_id:id });
             if(error) throw error;
+
+            // Older deployments of the RPC can end the trade without restoring
+            // the roster snapshot. Reconcile the roster locally and persist both
+            // dashboard state and the public roster row. The reconciliation is
+            // idempotent, so it is safe if the RPC already restored the rosters.
+            reconcileRevertedTradeRoster(trade);
+            await saveSharedState();
+            await savePublishedRosters(STATE.settings.rosters || {});
           }
           const trade = COMM_TRADES.find(t => Number(t.id) === id);
           await logAdminAction('commissioner_trade_action', `Commissioner ${action} action on trade #${id}.`, {
@@ -3785,6 +3816,66 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
         }
       });
     });
+  }
+
+  // Reconcile the published roster after a commissioner reverts a trade.
+  // The database RPC is responsible for ending the trade; this client-side
+  // reconciliation keeps the roster snapshot in STATE.settings.rosters in sync
+  // even when an older/alternate RPC only updates the trade status.
+  function reconcileRevertedTradeRoster(trade){
+    if(!trade) throw new Error('Trade not found while reverting roster.');
+    STATE.settings = STATE.settings || {};
+    STATE.settings.rosters = normalizeStoredRosters(STATE.settings.rosters || {});
+    const rosters = STATE.settings.rosters;
+    const proposer = String(trade.proposer_team || '').trim();
+    const target = trade.target_team == null ? null : String(trade.target_team || '').trim();
+    if(!proposer) throw new Error('Trade has no proposer team.');
+
+    const offered = (Array.isArray(trade.mons_offered) ? trade.mons_offered : []).map(normalizeRosterName).filter(Boolean);
+    const requested = (Array.isArray(trade.mons_requested) ? trade.mons_requested : []).map(normalizeRosterName).filter(Boolean);
+    const key = n => rosterKey(n);
+
+    // Capture point metadata before removing anything. This matters because the
+    // accepted trade may have moved the only copy of a Pokémon to the other side.
+    const pointLookup = {};
+    for(const list of Object.values(rosters)){
+      for(const mon of (Array.isArray(list) ? list : [])){
+        if(mon?.name) pointLookup[key(mon.name)] = mon;
+      }
+    }
+    for(const mon of (STATE.settings?.draft?.pool || [])){
+      if(mon?.name && !pointLookup[key(mon.name)]) pointLookup[key(mon.name)] = {name:mon.name, points:mon.points ?? null};
+    }
+    const entry = name => {
+      const found = pointLookup[key(name)];
+      return {name, points: found?.points ?? null};
+    };
+    const remove = (team, names) => {
+      if(!team) return;
+      const list = Array.isArray(rosters[team]) ? rosters[team] : [];
+      const removeKeys = new Set(names.map(key));
+      rosters[team] = list.filter(mon => !removeKeys.has(key(mon.name)));
+    };
+    const addMissing = (team, names) => {
+      if(!team) return;
+      const list = Array.isArray(rosters[team]) ? rosters[team] : [];
+      const have = new Set(list.map(mon => key(mon.name)));
+      for(const name of names){
+        if(!have.has(key(name))){ list.push(entry(name)); have.add(key(name)); }
+      }
+      rosters[team] = list;
+    };
+
+    // Restore the exact pre-trade ownership:
+    // proposer gets offered back; target gets requested back. For Free Agency,
+    // the offered Pokémon return to the proposer and requested Pokémon leave.
+    remove(proposer, requested);
+    addMissing(proposer, offered);
+    if(target){
+      remove(target, offered);
+      addMissing(target, requested);
+    }
+    STATE.settings.rosters = normalizeStoredRosters(rosters);
   }
 
   async function logAdminAction(actionType, message, metadata={}){
@@ -4294,6 +4385,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
     const conferenceMap = STATE.settings.conferenceNames || {};
     const conferenceA = conferenceMap.a || 'Conference A';
     const conferenceB = conferenceMap.b || 'Conference B';
+    const manualDiffs = (STATE.settings.ladderDifferentials && typeof STATE.settings.ladderDifferentials === 'object') ? STATE.settings.ladderDifferentials : {};
     contentEl.invisible;
     const seasonArchives = STATE.settings.seasonArchives || {};
     const archiveEntries = Object.entries(seasonArchives).sort((a,b)=> (b[1].archivedAt||'').localeCompare(a[1].archivedAt||''));
@@ -4337,6 +4429,17 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
         <div id="rosterUploadStatus"></div>
         <div id="rosterPreview" style="margin-top:14px;"></div>
       </div>
+      <div class="panel manual-diff-panel">
+        <h2>Manual Ladder Differentials</h2>
+        <div class="manual-diff-help">Set a franchise's differential at the current played week when the automatic result is wrong. Future fixture results continue from this baseline. Leave blank to use the automatic calculation.</div>
+        <div id="manualDifferentialRows" class="manual-diff-grid"></div>
+        <div class="manual-diff-actions" style="margin-top:10px;">
+          <button class="primary small" id="saveManualDifferentials">Save</button>
+          <button class="ghost small" id="clearManualDifferentials">Clear overrides</button>
+          <span id="manualDifferentialStatus"></span>
+        </div>
+      </div>
+
       <div class="panel">
         <h2>Franchise Conferences</h2>
         <div class="note">Every franchise from the published roster is listed below. Click its conference dropdown to assign it. This setting is stored in Admin only and does not change the roster data.</div>
@@ -4538,6 +4641,51 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { width: 
         loadRosterFileBtn.disabled = false;
         publishRostersBtn.disabled = true;
       }
+    });
+
+    const manualDiffRows = document.getElementById('manualDifferentialRows');
+    if(manualDiffRows){
+      manualDiffRows.innerHTML = franchises.length ? franchises.map(f=>{
+        const key = f.name;
+        const stored = Object.prototype.hasOwnProperty.call(manualDiffs,key) ? manualDiffs[key] : '';
+        const val = (stored && typeof stored === 'object' && Object.prototype.hasOwnProperty.call(stored,'value')) ? stored.value : stored;
+        return `<div class="manual-diff-row">
+          <div class="manual-diff-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+          <input class="manual-diff-input" data-franchise="${escapeHtml(f.name)}" type="text" inputmode="numeric" autocomplete="off" value="${val === '' ? '' : escapeHtml(String(val))}" placeholder="Auto" aria-label="Manual differential for ${escapeHtml(f.name)}">
+        </div>`;
+      }).join('') : '<div class="empty-state">No franchises found yet.</div>';
+    }
+    document.getElementById('saveManualDifferentials')?.addEventListener('click', async ()=>{
+      const next = {};
+      const rounds = Array.isArray(STATE.settings?.fixture?.rounds) ? STATE.settings.fixture.rounds : [];
+      // Store the correction as a baseline at the latest played fixture round.
+      // Future played rounds are added on top of this baseline by the Season page.
+      let throughRoundIndex = -1;
+      rounds.forEach((round, idx)=>{
+        const played = (round.matches || []).some(match=>{
+          const res = typeof findFixtureResult === 'function' ? findFixtureResult(round.week, match.home, match.away) : null;
+          return !!(res && res.played && res.winner && res.winnerScore != null && res.loserScore != null);
+        });
+        if(played) throughRoundIndex = idx;
+      });
+      const throughWeek = throughRoundIndex >= 0 ? (rounds[throughRoundIndex]?.week || null) : null;
+      document.querySelectorAll('.manual-diff-input').forEach(input=>{
+        const name = input.dataset.franchise || '';
+        const raw = input.value.trim();
+        if(name && raw !== '' && Number.isFinite(Number(raw))) next[name] = {value:Number(raw), throughRoundIndex, throughWeek};
+      });
+      STATE.settings.ladderDifferentials = next;
+      await saveSettings();
+      await logAdminAction('set_ladder_differentials', 'Updated manual ladder differential overrides.', {overrides: next});
+      const status = document.getElementById('manualDifferentialStatus');
+      if(status) status.innerHTML = `<div class="note">Saved ${Object.keys(next).length} manual differential override${Object.keys(next).length===1?'':'s'}. ✓</div>`;
+    });
+    document.getElementById('clearManualDifferentials')?.addEventListener('click', async ()=>{
+      if(!confirm('Clear all manual ladder differential overrides?')) return;
+      STATE.settings.ladderDifferentials = {};
+      await saveSettings();
+      await logAdminAction('clear_ladder_differentials', 'Cleared manual ladder differential overrides.', {});
+      renderSettings();
     });
 
     const fixtureSummaryEl = document.getElementById('fixtureSummary');

@@ -185,6 +185,49 @@
   .theme-swatch .check{color:var(--theme-accent); font-weight:800; opacity:0;}
   .theme-swatch.active .check{opacity:1;}
 
+
+/* My Team redesign */
+.myteam-hero{background:linear-gradient(135deg,var(--panel-alt),var(--panel));border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:16px;position:relative;overflow:hidden}
+.myteam-hero:after{content:"";position:absolute;right:-70px;top:-90px;width:220px;height:220px;border-radius:50%;background:var(--amber);opacity:.06;pointer-events:none}
+.myteam-hero-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:stretch}
+.myteam-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--amber);font-weight:800}
+.myteam-title{font-size:30px;font-weight:800;margin:4px 0 4px;letter-spacing:-.02em}
+.myteam-sub{color:var(--text-dim);font-size:13px}
+.myteam-record{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.record-box{min-width:92px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+.record-box .label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim)}
+.record-box .value{font-family:var(--mono);font-size:20px;font-weight:800;margin-top:3px}
+.record-box.win .value{color:var(--teal)} .record-box.loss .value{color:var(--red)}
+.myteam-budget{background:rgba(0,0,0,.12);border:1px solid var(--border);border-radius:14px;padding:16px}
+.myteam-budget-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.myteam-budget-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);font-weight:800}
+.myteam-budget-value{font-family:var(--mono);font-size:22px;font-weight:800}
+.myteam-budget-bar{height:9px;background:var(--panel);border:1px solid var(--border);border-radius:99px;overflow:hidden;margin:12px 0 8px}
+.myteam-budget-fill{height:100%;background:var(--amber);border-radius:99px}
+.myteam-budget-remaining{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim)}
+.myteam-section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:12px}
+.myteam-section-head h2{margin:0}
+.myteam-section-head .note{margin:0}
+.myteam-roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.myteam-mon{background:var(--panel-alt);border:1px solid var(--border);border-radius:14px;padding:12px;transition:.15s ease;position:relative;overflow:hidden}
+.myteam-mon:hover{border-color:var(--amber);transform:translateY(-1px)}
+.myteam-mon-top{display:flex;align-items:center;gap:10px}
+.myteam-mon .sprite{width:52px;height:52px;margin:0;border-radius:10px}
+.myteam-mon-name{font-weight:750;font-size:13px;line-height:1.2}
+.myteam-mon-points{display:inline-flex;margin-top:4px;font-family:var(--mono);font-size:11px;font-weight:800;color:var(--amber);background:rgba(255,255,255,.035);border:1px solid var(--border);padding:3px 7px;border-radius:999px}
+.myteam-mon-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.myteam-mon-stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:7px 6px}
+.myteam-mon-stat .v{font-family:var(--mono);font-size:13px;font-weight:800}.myteam-mon-stat .l{font-size:9px;color:var(--text-dim);text-transform:uppercase;margin-top:2px}
+.myteam-dashboard-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.8fr);gap:14px;margin-top:14px}
+.myteam-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.myteam-stat-card{background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;padding:12px}
+.myteam-stat-card .eyebrow{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);font-weight:800}
+.myteam-stat-card .big{font-size:18px;font-weight:800;margin-top:4px}.myteam-stat-card .small{font-size:11px;color:var(--text-dim);margin-top:2px}
+.random-trade{background:linear-gradient(135deg,rgba(255,255,255,.025),rgba(255,255,255,.01));border:1px solid var(--border);border-radius:12px;padding:13px}
+.random-trade-result{margin-top:10px;padding:10px;border-radius:10px;background:var(--panel);border:1px solid var(--border)}
+.random-trade-flow{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.random-trade-side{min-width:0}.random-trade-side .label{font-size:9px;color:var(--text-dim);text-transform:uppercase}.random-trade-mon{font-weight:800;font-size:12px;margin-top:2px}.random-trade-arrow{font-size:18px;color:var(--amber)}
+@media(max-width:850px){.myteam-hero-grid,.myteam-dashboard-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.myteam-stat-grid{grid-template-columns:1fr}.myteam-title{font-size:25px}}
 </style>
 <style>
 .page-nav{width:100%;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;padding:10px 16px;margin:0 0 20px;border-bottom:1px solid var(--border,#ddd);background:var(--panel,#fff);box-sizing:border-box;position:relative;z-index:50}
@@ -319,6 +362,151 @@ body::-webkit-scrollbar,
   display: none !important;
   background: transparent !important;
 }
+</style>
+
+<style id="trade-ui-refresh">
+/* Trade UI visual refresh — presentation only. No trade logic is changed. */
+#proposePanel{
+  position:relative;
+  overflow:hidden;
+  padding:24px !important;
+  background:
+    radial-gradient(500px 220px at 0% 0%, rgba(255,180,84,.08), transparent 65%),
+    linear-gradient(145deg, #182130, #141b26 70%);
+  border-color:#344054;
+  box-shadow:0 14px 34px rgba(0,0,0,.22);
+}
+#proposePanel::before{
+  content:"";
+  position:absolute;left:0;right:0;top:0;height:3px;
+  background:linear-gradient(90deg,var(--amber),var(--teal));
+  opacity:.9;
+}
+#proposePanel h2{font-size:20px;text-transform:none;letter-spacing:0;color:var(--text);margin:0 0 5px;}
+#proposePanel > .note:first-of-type{max-width:760px;margin:0 0 20px;font-size:12.5px;}
+#proposePanel .row{margin:0 0 18px;}
+#proposePanel .row > div{max-width:430px;}
+#proposePanel label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:7px;}
+#proposePanel select{
+  height:42px;padding:9px 12px;border-radius:10px;
+  background:#111824;border-color:#344054;
+  transition:border-color .15s,box-shadow .15s;
+}
+#proposePanel select:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,180,84,.10);}
+#proposePanel .trade-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:0;}
+#proposePanel .trade-col{
+  min-width:0;padding:15px;border:1px solid #303b4d;border-radius:14px;
+  background:rgba(10,15,23,.32);
+}
+#proposePanel .trade-col h4{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:11px;color:var(--text);letter-spacing:.08em;margin:0 0 8px;
+}
+#proposePanel .trade-col h4::after{content:"";width:34px;height:2px;background:var(--border);border-radius:99px;}
+#proposePanel .selected-row{min-height:32px;margin:0 0 8px;}
+#proposePanel .pick-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px;max-height:410px;overflow:auto;padding:2px 2px 4px;}
+#proposePanel .pick-card{
+  min-height:108px;justify-content:center;
+  background:rgba(25,33,47,.82);border-color:#303b4d;border-radius:12px;padding:9px 6px;
+}
+#proposePanel .pick-card:hover{background:#202a3a;border-color:#69758a;transform:translateY(-1px);}
+#proposePanel .pick-card.checked{background:linear-gradient(160deg,#302612,#211b12);border-color:var(--amber);box-shadow:0 0 0 1px rgba(255,180,84,.12) inset;}
+#proposePanel .pick-card .sprite{width:48px;height:48px;background:#111824;border:1px solid rgba(255,255,255,.04);}
+#proposePanel .pick-card-name{font-size:11px;}
+#proposePanel .pick-card-pts{font-size:10px;}
+#proposePanel .selected-chip{background:#202a3a;border-color:#536176;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+#proposePanel .selected-chip .sprite{background:#111824;}
+#proposePanel .fa-search-wrap input{height:40px;background:#111824;border-color:#344054;border-radius:10px;}
+#proposePanel .fa-search-wrap input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(94,234,212,.08);}
+#proposePanel #tradeSummary{
+  margin:16px 0 0;padding:11px 13px;border-radius:10px;
+  background:#111824;border:1px solid #2d3748;color:#aab5c5;
+}
+#proposePanel .foot-actions{margin-top:12px;justify-content:flex-end;}
+#proposePanel #clearTradeSelectionBtn{border-color:#3a4658;}
+#proposePanel #submitTradeBtn{min-width:170px;}
+
+/* Allowance strip */
+#proposePanel + .panel{
+  background:linear-gradient(145deg,#171f2c,#141b25);
+  border-color:#303b4d;
+  padding:16px 18px;
+}
+#proposePanel + .panel .trade-cols{gap:10px;margin-top:10px !important;}
+#proposePanel + .panel .trade-col{
+  min-height:82px;padding:12px 14px;border-radius:11px;
+  background:rgba(10,15,23,.28);border:1px solid #2d3748;
+}
+#proposePanel + .panel .trade-col h4{color:#9aa7b9;margin-bottom:7px;}
+#proposePanel + .panel .budget-value{font-size:15px;line-height:1.2;}
+
+/* Trade filter / history header */
+.trade-filter-panel{
+  background:linear-gradient(145deg,#182130,#141b26);
+  border-color:#303b4d;
+}
+.trade-filter-panel h2{font-size:18px;text-transform:none;letter-spacing:0;color:var(--text);}
+.trade-filter-panel select{
+  min-width:180px !important;height:40px;border-radius:10px;
+  background:#111824;border-color:#344054;
+}
+
+/* Offer/history cards */
+#tradeViewBody .panel{
+  background:transparent;border:0;box-shadow:none;padding:0;
+}
+#tradeViewBody .panel + .panel{margin-top:20px;}
+#tradeViewBody .panel > h2{
+  display:flex;align-items:center;gap:5px;
+  padding:0 2px;margin:0 0 10px;font-size:11px;letter-spacing:.10em;color:#9aa7b9;
+}
+#tradeViewBody .panel > .note:first-of-type{margin:0 2px 12px;}
+#tradeViewBody .trade-card{
+  position:relative;margin-bottom:10px;padding:16px 17px;
+  background:linear-gradient(145deg,#1a2331,#161e2a);
+  border:1px solid #303b4d;border-radius:13px;
+  box-shadow:0 5px 16px rgba(0,0,0,.13);
+  transition:border-color .15s,transform .15s,box-shadow .15s;
+}
+#tradeViewBody .trade-card:hover{border-color:#47556a;transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.18);}
+#tradeViewBody .trade-head{margin-bottom:12px;}
+#tradeViewBody .trade-teams{font-size:14px;letter-spacing:.01em;}
+#tradeViewBody .trade-teams .arrow{color:var(--amber);font-size:15px;}
+#tradeViewBody .trade-sub{font-size:10.5px;color:#748196;margin-top:4px;}
+#tradeViewBody .status-pill{padding:4px 9px;font-size:9px;letter-spacing:.08em;}
+#tradeViewBody .trade-cols{gap:10px;margin-top:0;}
+#tradeViewBody .trade-col{padding:10px 11px;border-radius:10px;background:rgba(10,15,23,.28);border:1px solid #2b3545;}
+#tradeViewBody .trade-col h4{margin-bottom:6px;color:#7f8ca0;font-size:9px;letter-spacing:.10em;}
+#tradeViewBody .mon-list{gap:5px;}
+#tradeViewBody .mon-pill{margin:0;background:#202a39;border-color:#364255;padding:3px 8px 3px 3px;font-size:11px;}
+#tradeViewBody .mon-pill .sprite{width:26px;height:26px;margin-right:0;background:#111824;}
+#tradeViewBody .foot-actions{margin-top:12px;padding-top:10px;border-top:1px solid #293343;}
+#tradeViewBody .foot-actions button{min-height:30px;}
+#tradeViewBody .empty-state{padding:28px 14px;border:1px dashed #303b4d;border-radius:12px;background:rgba(10,15,23,.18);}
+
+@media(max-width:800px){
+  #proposePanel .trade-cols{grid-template-columns:1fr;}
+  #proposePanel .pick-grid{max-height:none;}
+}
+@media(max-width:560px){
+  #proposePanel{padding:18px !important;}
+  #proposePanel .pick-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #proposePanel .foot-actions{justify-content:stretch;}
+  #proposePanel .foot-actions button{flex:1 1 100%;}
+}
+</style>
+
+<style id="trades-view-spacing-fix">
+.trade-column-side,.trade-history-mini{padding-bottom:14px;}
+.trade-column-side .panel + .panel,.trade-history-mini .panel + .panel{margin-top:18px;}
+.trade-column-side,.trade-history-mini{min-height:0;overflow:visible;}
+</style>
+
+<style id="myteam-stat-sprite-fix">
+.stat-mon{display:flex;align-items:center;gap:8px;}
+.stat-mon .sprite{width:34px;height:34px;object-fit:contain;flex:0 0 auto;}
+.myteam-stat-card .stat-mon .sprite{width:38px;height:38px;}
+.random-trade-mon .sprite{width:42px;height:42px;}
 </style>
 </head>
 <body>
@@ -844,58 +1032,150 @@ body::-webkit-scrollbar,
     document.getElementById('changeTeamBtn').onclick = ()=>{ renderTeamClaim(); };
   }
 
+  function myTeamRecord(){
+    const team=profile?.team_name;
+    let wins=0, losses=0, games=0;
+    for(const r of Object.values(DASH.replays||{})){
+      if(!r?.winner || !Array.isArray(r.players)) continue;
+      let mySide=null;
+      for(let side=0;side<2;side++){
+        if(teamFor(r.players[side])===team){ mySide=side; break; }
+      }
+      if(mySide===null) continue;
+      games++;
+      if(String(r.winner).toLowerCase()===String(r.players[mySide]||'').toLowerCase()) wins++;
+      else losses++;
+    }
+    return {wins,losses,games};
+  }
+
+  let lastRandomTradeKey = '';
+
+  function randomTradeSuggestion(){
+    const mine=myRoster();
+    const myPts=rosterPoints(mine);
+    const candidates=[];
+    for(const team of teamsList().filter(t=>t!==profile.team_name)){
+      const theirs=DASH.settings.rosters[team]||[];
+      for(const give of mine){
+        for(const get of theirs){
+          const myAfter=myPts-(Number(give.points)||0)+(Number(get.points)||0);
+          const theirAfter=rosterPoints(theirs)-(Number(get.points)||0)+(Number(give.points)||0);
+          if(mine.length < 10 || theirs.length < 10) continue;
+          if(myAfter>ROSTER_BUDGET || theirAfter>ROSTER_BUDGET) continue;
+          candidates.push({team,give,get});
+        }
+      }
+    }
+    if(!candidates.length) return null;
+
+    // Prefer a different suggestion when the user presses Reroll. If there is
+    // only one legal trade, keep returning it rather than showing no result.
+    const fresh = candidates.filter(s => `${s.team}|${s.give.name}|${s.get.name}` !== lastRandomTradeKey);
+    const pool = fresh.length ? fresh : candidates;
+    const picked = pool[Math.floor(Math.random()*pool.length)];
+    lastRandomTradeKey = `${picked.team}|${picked.give.name}|${picked.get.name}`;
+    return picked;
+  }
+
+  function useRandomTradeSuggestion(s){
+    if(!s) return;
+    // Pre-fill the existing trade composer; nothing is submitted automatically.
+    draft.target=s.team;
+    draft.offered=new Set([s.give.name]);
+    draft.requested=new Set([s.get.name]);
+    draft.faQuery='';
+    activeTab='trades';
+    window.tradeViewFilter='pending';
+    renderTabs();
+    render();
+    requestAnimationFrame(()=>{
+      document.getElementById('proposePanel')?.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  }
+
   // ---------- My Team tab ----------
   function renderMyTeam(){
     if(profile.status !== 'approved'){
       contentEl.innerHTML = `<div class="panel"><div class="empty-state">Your team claim needs to be approved by a commissioner before you can manage your roster.</div></div>`;
       return;
     }
-    const roster = myRoster();
-    const pts = rosterPoints(roster);
-    const pct = Math.min(100, Math.round((pts / ROSTER_BUDGET) * 100));
-    contentEl.innerHTML = `
-      <div class="hero">
-        <div class="hero-head">
-          <div class="hero-title">
-            <h2>${escapeHtml(profile.team_name)}</h2>
-            <p>Franchise dashboard · ${roster.length} Pokémon on your active roster</p>
+    const roster=myRoster();
+    const pts=rosterPoints(roster);
+    const remaining=Math.max(0,ROSTER_BUDGET-pts);
+    const pct=Math.min(100,Math.round((pts/ROSTER_BUDGET)*100));
+    const rec=myTeamRecord();
+    const stats=roster.map(m=>({m,s:myPokemonStats(m.name)}));
+    const played=stats.filter(x=>x.s?.games>0);
+    const topKills=[...played].sort((a,b)=>(b.s.kills||0)-(a.s.kills||0))[0];
+    const topDeaths=[...played].sort((a,b)=>(b.s.deaths||0)-(a.s.deaths||0))[0];
+    const mostBrought=[...played].sort((a,b)=>(b.s.games||0)-(a.s.games||0))[0];
+    const topAssists=[...played].sort((a,b)=>(b.s.assists||0)-(a.s.assists||0))[0];
+    const totalKills=played.reduce((n,x)=>n+(x.s.kills||0),0);
+    const totalDeaths=played.reduce((n,x)=>n+(x.s.deaths||0),0);
+    const totalAssists=played.reduce((n,x)=>n+(x.s.assists||0),0);
+    const suggestion=randomTradeSuggestion();
+
+    contentEl.innerHTML=`
+      <section class="myteam-hero">
+        <div class="myteam-hero-grid">
+          <div>
+            <div class="myteam-kicker">My Team</div>
+            <div class="myteam-title">${escapeHtml(profile.team_name)}</div>
+            <div class="myteam-sub">${roster.length} Pokémon on your active roster · ${rec.games} games played</div>
+            <div class="myteam-record">
+              <div class="record-box win"><div class="label">Wins</div><div class="value">${rec.wins}</div></div>
+              <div class="record-box loss"><div class="label">Losses</div><div class="value">${rec.losses}</div></div>
+              <div class="record-box"><div class="label">Record</div><div class="value">${rec.wins}-${rec.losses}</div></div>
+            </div>
           </div>
-          <div class="budget-card">
-            <div class="budget-row"><span>Budget used</span><span class="budget-value">${pts} / ${ROSTER_BUDGET}</span></div>
-            <div class="budget-bar"><div class="budget-fill${pts>ROSTER_BUDGET?' over':''}" style="width:${pct}%"></div></div>
-            <div class="budget-row"><span>Remaining</span><span class="budget-value">${Math.max(0, ROSTER_BUDGET-pts)} pts</span></div>
+          <div class="myteam-budget">
+            <div class="myteam-budget-head"><span class="myteam-budget-label">Draft Budget</span><span class="myteam-budget-value">${pts}<span style="color:var(--text-dim);font-size:13px"> / ${ROSTER_BUDGET}</span></span></div>
+            <div class="myteam-budget-bar"><div class="myteam-budget-fill" style="width:${pct}%"></div></div>
+            <div class="myteam-budget-remaining"><span>Spent</span><span>${remaining} pts remaining</span></div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="panel">
-        <h2>Roster</h2>
-        ${roster.length ? `
-          <div class="roster-cards">
-            ${roster.map(m=>{
-              const s = myPokemonStats(m.name);
-              const has = s && s.games > 0;
-              return `
-              <div class="pokemon-card">
-                <div class="pokemon-head">
-                  ${spriteImg(m.name,'sprite')}
-                  <div>
-                    <div class="pokemon-name">${escapeHtml(m.name)}</div>
-                    <div class="note">${has ? `${s.games} game${s.games===1?'':'s'} played` : 'No games recorded yet'}</div>
-                  </div>
-                </div>
-                <div class="pokemon-points">${m.points!=null?escapeHtml(m.points)+' pts':'Unranked'}</div>
-                <div class="pokemon-meta">
-                  <div class="meta-box"><div class="label">Damage dealt</div><div class="value dealt">${has ? s.dealt.toFixed(1) : '—'}</div></div>
-                  <div class="meta-box"><div class="label">KOs</div><div class="value kills">${has ? s.kills : '—'}</div></div>
-                  <div class="meta-box"><div class="label">Assists</div><div class="value assists">${has ? s.assists : '—'}</div></div>
-                  <div class="meta-box"><div class="label">Damage taken</div><div class="value taken">${has ? s.taken.toFixed(1) : '—'}</div></div>
-                  <div class="meta-box"><div class="label">Win rate</div><div class="value">${has && s.winPct!=null ? s.winPct+'%' : '—'}</div></div>
-                </div>
-              </div>`;
-            }).join('')}
-          </div>` : `<div class="empty-state">No roster published for your team yet.</div>`}
+      <section class="panel">
+        <div class="myteam-section-head"><div><h2>Team Display</h2><div class="note">Your active roster, with draft cost and season production.</div></div></div>
+        ${roster.length?`<div class="myteam-roster-grid">${roster.map(mon=>{
+          const st=myPokemonStats(mon.name); const has=st&&st.games>0;
+          return `<div class="myteam-mon">
+            <div class="myteam-mon-top">${spriteImg(mon.name,'sprite')}<div><div class="myteam-mon-name">${escapeHtml(mon.name)}</div><div class="myteam-mon-points">${mon.points!=null?escapeHtml(mon.points)+' pts':'Unranked'}</div></div></div>
+            <div class="myteam-mon-stats">
+              <div class="myteam-mon-stat"><div class="v">${has?st.games:'—'}</div><div class="l">Games</div></div>
+              <div class="myteam-mon-stat"><div class="v" style="color:var(--teal)">${has?st.kills:'—'}</div><div class="l">Kills</div></div>
+              <div class="myteam-mon-stat"><div class="v" style="color:var(--red)">${has?st.deaths:'—'}</div><div class="l">Deaths</div></div>
+            </div>
+          </div>`;
+        }).join('')}</div>`:'<div class="empty-state">No roster published for your team yet.</div>'}
+      </section>
+
+      <div class="myteam-dashboard-grid">
+        <section class="panel">
+          <div class="myteam-section-head"><div><h2>Basic Stats</h2><div class="note">Quick season leaders from your roster.</div></div></div>
+          <div class="myteam-stat-grid">
+            <div class="myteam-stat-card"><div class="eyebrow">Top Kills</div><div class="big stat-mon">${topKills?spriteImg(topKills.m.name,'sprite'):''}<span>${topKills?escapeHtml(topKills.m.name):'—'}</span></div><div class="small">${topKills?`${topKills.s.kills} KOs`: 'No games recorded'}</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Top Deaths</div><div class="big stat-mon">${topDeaths?spriteImg(topDeaths.m.name,'sprite'):''}<span>${topDeaths?escapeHtml(topDeaths.m.name):'—'}</span></div><div class="small">${topDeaths?`${topDeaths.s.deaths} deaths`: 'No games recorded'}</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Most Brought</div><div class="big stat-mon">${mostBrought?spriteImg(mostBrought.m.name,'sprite'):''}<span>${mostBrought?escapeHtml(mostBrought.m.name):'—'}</span></div><div class="small">${mostBrought?`${mostBrought.s.games} games`: 'No games recorded'}</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Top Assists</div><div class="big stat-mon">${topAssists?spriteImg(topAssists.m.name,'sprite'):''}<span>${topAssists?escapeHtml(topAssists.m.name):'—'}</span></div><div class="small">${topAssists?`${topAssists.s.assists} assists`: 'No games recorded'}</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Team Kills</div><div class="big">${totalKills}</div><div class="small">Across ${rec.games} team games</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Team Deaths</div><div class="big">${totalDeaths}</div><div class="small">${totalAssists} assists recorded</div></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="myteam-section-head"><div><h2>Random Trade Suggestions</h2><div class="note">Find a random legal 1-for-1 swap with another franchise.</div></div></div>
+          <div class="random-trade">
+            <div id="randomTradeResult">${suggestion?`<div class="random-trade-flow"><div class="random-trade-side"><div class="label">You give</div><div class="random-trade-mon stat-mon">${spriteImg(suggestion.give.name,'sprite')}<span>${escapeHtml(suggestion.give.name)}</span></div><div class="note" style="margin:2px 0 0">${suggestion.give.points} pts</div></div><div class="random-trade-arrow">→</div><div class="random-trade-side"><div class="label">You get · ${escapeHtml(suggestion.team)}</div><div class="random-trade-mon stat-mon">${spriteImg(suggestion.get.name,'sprite')}<span>${escapeHtml(suggestion.get.name)}</span></div><div class="note" style="margin:2px 0 0">${suggestion.get.points} pts</div></div></div>`:'<div class="empty-state" style="padding:8px 0">No legal random swap found right now.</div>'}</div>
+            <div class="foot-actions" style="margin-top:10px"><button class="ghost small" id="rerollTradeBtn">🎲 Reroll</button>${suggestion?'<button class="primary small" id="useTradeSuggestionBtn">Use suggestion</button>':''}</div>
+          </div>
+        </section>
       </div>`;
+
+    document.getElementById('rerollTradeBtn').onclick=()=>renderMyTeam();
+    if(suggestion){ document.getElementById('useTradeSuggestionBtn').onclick=()=>useRandomTradeSuggestion(suggestion); }
   }
 
   function renderProposeTrade(){

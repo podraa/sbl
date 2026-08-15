@@ -2283,7 +2283,7 @@ body::-webkit-scrollbar,
     const confName = conferenceDisplayName(conf);
     const confList = data.filter(x=>conferenceOf(x.team)===conf).sort((a,b)=>
       b.wins-a.wins ||
-      b.differential-a.differential ||
+      b.diff-a.diff ||
       b.dealt-a.dealt ||
       a.team.localeCompare(b.team,undefined,{sensitivity:'base'})
     );
@@ -2306,7 +2306,7 @@ body::-webkit-scrollbar,
         break;
       }
     }
-    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">${escapeHtml(confName)} Position</div><h3>${ordinal(confIndex)} — ${escapeHtml(team)}</h3><div class="summary-result" style="color:var(--text-dim);font-weight:600;">${ordinal(i)} overall in the league</div></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${Number(t.differential||0)>0?'+':''}${Number(t.differential||0)}</strong></div></div><div class="next-opponent-wide"><span>Next opponent</span><strong>${nextOpponent ? escapeHtml(nextOpponent) : '—'}</strong>${nextWeek ? `<div class="note" style="margin-top:4px;">${escapeHtml(nextWeek)}</div>` : ''}</div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.appearances} games · ${m.kills} K · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
+    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">${escapeHtml(confName)} Position</div><h3>${ordinal(confIndex)} — ${escapeHtml(team)}</h3><div class="summary-result" style="color:var(--text-dim);font-weight:600;">${ordinal(i)} overall in the league</div></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${Number(t.diff||0)>0?'+':''}${Number(t.diff||0)}</strong></div></div><div class="next-opponent-wide"><span>Next opponent</span><strong>${nextOpponent ? escapeHtml(nextOpponent) : '—'}</strong>${nextWeek ? `<div class="note" style="margin-top:4px;">${escapeHtml(nextWeek)}</div>` : ''}</div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.appearances} games · ${m.kills} K · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
     document.getElementById('teamOverviewClose').addEventListener('click',closeAudit); document.getElementById('teamOverviewOverlay').addEventListener('click',e=>{if(e.target.id==='teamOverviewOverlay')closeAudit();});
   }
   function renderProcess(){
@@ -2710,61 +2710,156 @@ body::-webkit-scrollbar,
     draw();
   }
 
-  // Replay result for ladder purposes.  Differential is based ONLY on the
-  // number of Pokémon each side had left when the replay ended.  It never uses
-  // credited kills/deaths, so indirect/residual KO attribution cannot affect
-  // the ladder.
+  // Replay-result score for ladder purposes. This is the number of Pokémon
+  // remaining on each side when the battle ends (the score shown for a played
+  // fixture), not credited KOs. That keeps indirect/residual kills from changing
+  // the ladder differential.
   function replayResultScore(r){
     if(!r || !r.players) return null;
     const score={p1:0,p2:0};
     for(const side of ['p1','p2']){
-      // Prefer the six-mon team preview recorded by the parser.  Older saved
-      // replays may not have teamRoster, so fall back to the distinct Pokémon
-      // that were actually seen in the replay rather than returning 0.
-      let roster = Array.isArray(r.teamRoster?.[side]) ? r.teamRoster[side] : [];
-      let names = new Set(roster.map(normName).filter(Boolean));
-      if(!names.size){
+      const roster=Array.isArray(r.teamRoster?.[side]) ? r.teamRoster[side] : [];
+      const unique=new Set(roster.map(normName).filter(Boolean));
+      let remaining=unique.size;
+      if(unique.size){
+        const fainted=new Set();
         for(const m of Object.values(r.mons||{})){
-          if(m && m.side===side && m.species) names.add(normName(m.species));
+          if(m.side===side && Number(m.deaths||0)>0) fainted.add(normName(m.species));
         }
+        remaining=Math.max(0, unique.size-fainted.size);
       }
-      const fainted=new Set();
-      for(const m of Object.values(r.mons||{})){
-        if(m && m.side===side && Number(m.deaths||0)>0 && m.species){
-          fainted.add(normName(m.species));
-        }
-      }
-      score[side]=Math.max(0, names.size-fainted.size);
+      score[side]=remaining;
     }
     return score;
   }
 
   function teamComparisonData(weekFilter){
     const out={};
-    // Current roster teams must remain visible even before they have replay data.
+    // Standings are fixture-driven: games, wins/losses, and differential come
+    // ONLY from the result shown by the Fixture panel. Replay K/D is never used
+    // for ladder differential or record.
     for(const rosterTeam of Object.keys(STATE.settings?.rosters||{})){
       const key=groupKey(rosterTeam);
-      if(!out[key]) out[key]={team:rosterTeam,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0,differential:0};
+      if(!out[key]) out[key]={team:rosterTeam,players:new Set(),games:0,wins:0,losses:0,diff:0,kills:0,deaths:0,dealt:0,taken:0};
     }
+
+    // Keep the ordinary replay-derived stat totals for team overview/details,
+    // but deliberately do NOT derive games/W-L/differential from replay stats.
     for(const r of allReplays(weekFilter)){
       if(!r || !r.players) continue;
-      const resultScore=replayResultScore(r);
-      const sides=['p1','p2'];
-      for(const side of sides){
-        const team=teamFor(r.players[side]); const key=groupKey(team);
-        if(!out[key]) out[key]={team,players:new Set(),games:0,wins:0,losses:0,kills:0,deaths:0,dealt:0,taken:0,differential:0};
-        const t=out[key]; t.games++; t.players.add(r.players[side]||'?');
-        const result = r.results && r.results[side] ? r.results[side] : (r.winner && r.winner.toLowerCase()===(r.players[side]||'').toLowerCase() ? 'W' : (r.winner ? 'L' : null));
-        if(result==='W') t.wins++;
-        else if(result==='L') t.losses++;
-        if(resultScore){
-          const opponent=side==='p1'?'p2':'p1';
-          t.differential += Number(resultScore[side]||0)-Number(resultScore[opponent]||0);
+      for(const side of ['p1','p2']){
+        const team=teamFor(r.players[side]);
+        const key=groupKey(team);
+        if(!out[key]) out[key]={team,players:new Set(),games:0,wins:0,losses:0,diff:0,kills:0,deaths:0,dealt:0,taken:0};
+        const t=out[key];
+        t.players.add(r.players[side]||'?');
+        for(const k in (r.mons||{})){
+          const m=r.mons[k];
+          if(m.side===side){
+            t.kills+=m.kills||0;
+            t.deaths+=m.deaths||0;
+            t.dealt+=m.damageDealt||0;
+            t.taken+=m.damageTaken||0;
+          }
         }
-        for(const k in r.mons){ const m=r.mons[k]; if(m.side===side){t.kills+=m.kills||0;t.deaths+=m.deaths||0;t.dealt+=m.damageDealt||0;t.taken+=m.damageTaken||0;} }
       }
     }
-    return Object.values(out).sort((a,b)=>b.wins-a.wins || b.differential-a.differential || b.dealt-a.dealt);
+
+    // The Fixture is the single source of truth for the ladder record.
+    const fixture = STATE.settings?.fixture;
+    const rounds = Array.isArray(fixture?.rounds) ? fixture.rounds : [];
+    const wantedWeek = weekFilter && weekFilter !== 'ALL' && weekFilter !== 'LAST4' ? weekFilter : null;
+    for(const round of rounds){
+      if(wantedWeek && round.week !== wantedWeek) continue;
+      for(const match of (round.matches || [])){
+        const home = match.home, away = match.away;
+        const homeKey = groupKey(home), awayKey = groupKey(away);
+        if(!out[homeKey]) out[homeKey]={team:home,players:new Set(),games:0,wins:0,losses:0,diff:0,kills:0,deaths:0,dealt:0,taken:0};
+        if(!out[awayKey]) out[awayKey]={team:away,players:new Set(),games:0,wins:0,losses:0,diff:0,kills:0,deaths:0,dealt:0,taken:0};
+        const res = findFixtureResult(round.week, home, away);
+        if(!res.played || !res.winner || res.winnerScore == null || res.loserScore == null) continue;
+        const margin = Number(res.winnerScore) - Number(res.loserScore);
+        const winnerKey = groupKey(res.winner);
+        const loserKey = winnerKey === homeKey ? awayKey : homeKey;
+        const winner = out[winnerKey], loser = out[loserKey];
+        if(!winner || !loser) continue;
+        winner.games += 1; winner.wins += 1; winner.diff += margin;
+        loser.games += 1; loser.losses += 1; loser.diff -= margin;
+      }
+    }
+
+    // Manual Admin corrections are baselines, not permanent replacements.
+    // The entered value is the franchise's differential through the latest
+    // played fixture at the time it was saved. Any fixture results from later
+    // rounds continue accumulating on top of that baseline.
+    const manualDiffs = (STATE.settings?.ladderDifferentials && typeof STATE.settings.ladderDifferentials === 'object') ? STATE.settings.ladderDifferentials : {};
+    const fixtureRoundIndexByWeek = {};
+    rounds.forEach((round, idx)=>{ fixtureRoundIndexByWeek[String(round.week)] = idx; });
+    Object.values(out).forEach(t=>{
+      const key = Object.keys(manualDiffs).find(k => groupKey(k) === groupKey(t.team));
+      if(key == null) return;
+      const raw = manualDiffs[key];
+      // Backward compatibility with the old format, which stored a plain number.
+      if(raw !== null && typeof raw === 'object' && Number.isFinite(Number(raw.value))){
+        const throughIdx = Number.isInteger(Number(raw.throughRoundIndex)) ? Number(raw.throughRoundIndex) : -1;
+        let futureDiff = 0;
+        if(throughIdx >= 0){
+          for(let idx=throughIdx+1; idx<rounds.length; idx++){
+            const round = rounds[idx];
+            if(weekFilter && weekFilter !== 'ALL' && weekFilter !== 'LAST4' && round.week !== weekFilter) continue;
+            for(const match of (round.matches || [])){
+              const res = findFixtureResult(round.week, match.home, match.away);
+              if(!res.played || !res.winner || res.winnerScore == null || res.loserScore == null) continue;
+              const margin = Number(res.winnerScore) - Number(res.loserScore);
+              const teamKey = groupKey(t.team);
+              if(groupKey(res.winner) === teamKey) futureDiff += margin;
+              else if(groupKey(res.winner) === groupKey(match.home) || groupKey(res.winner) === groupKey(match.away)) futureDiff -= margin;
+            }
+          }
+        }
+        t.diff = Number(raw.value) + futureDiff;
+      } else if(raw !== '' && Number.isFinite(Number(raw))){
+        // Legacy overrides remain supported as a permanent value until edited in Admin.
+        t.diff = Number(raw);
+      }
+    });
+
+    // Keep LAST4 meaningful for callers that use it: use the four most recent
+    // played fixture rounds rather than four arbitrary replay records.
+    if(weekFilter === 'LAST4'){
+      const allTeams={};
+      const played=[];
+      for(const round of rounds){
+        let any=false;
+        for(const match of (round.matches||[])){
+          const res=findFixtureResult(round.week,match.home,match.away);
+          if(res.played && res.winner && res.winnerScore != null && res.loserScore != null){
+            any=true; played.push({round,match,res});
+          }
+        }
+        if(any) continue;
+      }
+      // Rebuild record for the four most recently played fixture rounds.
+      const recentWeeks=[];
+      for(let i=rounds.length-1;i>=0 && recentWeeks.length<4;i--){
+        const round=rounds[i];
+        if((round.matches||[]).some(m=>{const r=findFixtureResult(round.week,m.home,m.away);return r.played&&r.winner&&r.winnerScore!=null&&r.loserScore!=null;})) recentWeeks.unshift(round.week);
+      }
+      for(const t of Object.values(out)){ t.games=0;t.wins=0;t.losses=0;t.diff=0; }
+      for(const round of rounds){
+        if(!recentWeeks.includes(round.week)) continue;
+        for(const match of (round.matches||[])){
+          const res=findFixtureResult(round.week,match.home,match.away);
+          if(!res.played || !res.winner || res.winnerScore==null || res.loserScore==null) continue;
+          const margin=Number(res.winnerScore)-Number(res.loserScore);
+          const wk=groupKey(res.winner), lk=wk===groupKey(match.home)?groupKey(match.away):groupKey(match.home);
+          if(out[wk]){out[wk].games++;out[wk].wins++;out[wk].diff+=margin;}
+          if(out[lk]){out[lk].games++;out[lk].losses++;out[lk].diff-=margin;}
+        }
+      }
+    }
+
+    return Object.values(out).sort((a,b)=>b.wins-a.wins || b.diff-a.diff || b.dealt-a.dealt || a.team.localeCompare(b.team,undefined,{sensitivity:'base'}));
   }
 
   // ---------- fixture (schedule) ----------
@@ -2914,7 +3009,7 @@ body::-webkit-scrollbar,
     // Keep the same ranking logic inside each conference.
     Object.values(groups).forEach(list => list.sort((a,b)=>
       b.wins-a.wins ||
-      b.differential-a.differential ||
+      b.diff-a.diff ||
       b.dealt-a.dealt ||
       a.team.localeCompare(b.team,undefined,{sensitivity:'base'})
     ));
@@ -2927,7 +3022,7 @@ body::-webkit-scrollbar,
         </div>
         ${list.length ? `<div class="standings-ladder">${list.map((x,i)=>{
           const pct=x.games ? (100*x.wins/x.games).toFixed(1)+'%' : '—';
-          const diff=Number(x.differential||0);
+          const diff=Number(x.diff||0);
           return `<div class="standings-row standings-clickable ${i===0?'top1':i===1?'top2':''}" data-standings-team="${escapeHtml(x.team)}" role="button" tabindex="0" title="View ${escapeHtml(x.team)} summary">
             <div class="standings-rank">${i+1}</div>
             <div class="standings-team">
