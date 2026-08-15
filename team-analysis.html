@@ -179,6 +179,15 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 @media(max-width:700px){.prep-switch-ev-grid{grid-template-columns:repeat(3,minmax(70px,1fr))}}
 .prep-opponent-card{padding:0 !important;background:transparent !important;border:0 !important}.prep-popout-trigger.legacy-mon-card{display:block;width:100%;text-align:left;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;color:var(--text)}.prep-popout-trigger.legacy-mon-card:hover{border-color:var(--amber)}.prep-popout-trigger .mon-head{display:flex;align-items:center;gap:12px}.prep-popout-trigger .prep-sprite{width:64px;height:64px}.prep-legacy-name{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:17px;font-weight:800}.prep-inline-types{display:inline-flex;gap:4px;align-items:center}.prep-inline-types .type-pill{font-size:9px;padding:2px 6px}.prep-legacy-chips{display:flex;margin-top:12px}.prep-legacy-threat{display:block;margin-top:8px;font-weight:700}.prep-popout-trigger.legacy-mon-card:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 
+/* Global team-side swap controls */
+.prep-side-swap{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-alt)}
+.prep-side-swap-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);font-weight:800}
+.prep-side-swap button{padding:7px 12px;border-radius:999px;font-size:11px;font-weight:850}
+.prep-side-swap button.active{background:var(--amber);color:var(--amber-text,#171224);border-color:var(--amber)}
+.dc-side-swap{padding:8px 11px;font-size:10px;font-weight:850;white-space:nowrap}
+.dc-side-swap.active{background:var(--amber);color:var(--amber-text,#171224);border-color:var(--amber)}
+.ev-cell input{cursor:text!important}
+.ev-step{user-select:none;-webkit-user-select:none;touch-action:none}
 /* Match Prep refinements */
 .matchprep-hidden{display:none!important}
 .prep-speed-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}
@@ -1244,6 +1253,7 @@ a{color:var(--amber)}
   window.SBLApplyGlobalTheme=apply;
 })();
 </script>
+<style id="switch-analyser-enhancements">.switch-analyser-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.switch-role-toggle{flex:0 0 auto;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--panel-alt);color:var(--text);font-weight:850;font-size:10px;cursor:pointer}.switch-role-toggle:hover{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 10%,var(--panel-alt))}.switch-card-detail{line-height:1.45}@media(max-width:700px){.switch-analyser-head{flex-direction:column}.switch-role-toggle{width:100%}}</style>
 </head>
 
 <style>
@@ -1286,7 +1296,7 @@ a{color:var(--amber)}
 .prep-detail-dialog .scout-base-stat:nth-child(4) .scout-stat-bar i{background:#9b59b6}
 .prep-detail-dialog .scout-base-stat:nth-child(5) .scout-stat-bar i{background:#2f80ed}
 .prep-detail-dialog .scout-base-stat:nth-child(6) .scout-stat-bar i{background:#56ccf2}
-.prep-detail-dialog .prep-analysis-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;width:100%;padding:2px}.prep-detail-dialog .matchprep-analysis-overview{display:contents}.prep-detail-dialog .prep-analysis-grid > .prep-card-section{min-width:0;min-height:220px;display:flex;flex-direction:column;padding:16px 17px;margin:0;border:1px solid var(--border);border-radius:12px;background:var(--panel-alt);box-shadow:0 8px 22px rgba(0,0,0,.12)}.prep-detail-dialog .prep-analysis-grid > .prep-card-section > span:first-child{display:block;margin-bottom:11px;font-size:11px;font-weight:850;letter-spacing:.04em;text-transform:uppercase;color:var(--text)}.prep-detail-dialog .prep-analysis-grid > .prep-card-section .prep-chip-row{flex:1;align-content:flex-start;gap:8px}.prep-detail-dialog .prep-analysis-grid > .prep-card-section .prep-chip{padding:7px 9px;border-radius:9px;line-height:1.25}.prep-detail-dialog .prep-analysis-grid > .scout-popup-section{margin:0;min-height:210px;display:flex;flex-direction:column;background:var(--panel-alt);border:1px solid var(--border);border-radius:12px}.prep-detail-dialog .prep-analysis-grid > .scout-popup-section > div:last-child{flex:1}.prep-detail-dialog .prep-analysis-grid .scout-type-list,.prep-detail-dialog .prep-analysis-grid .prep-analysis-list{align-content:flex-start;gap:8px}@media(max-width:900px){.prep-detail-dialog .prep-analysis-grid{grid-template-columns:1fr;gap:12px}.prep-detail-dialog .prep-analysis-grid > .prep-card-section,.prep-detail-dialog .prep-analysis-grid > .scout-popup-section{min-height:150px}}
+.prep-detail-dialog .prep-analysis-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch;width:100%;padding:0}.prep-detail-dialog .matchprep-analysis-overview{display:contents}.prep-detail-dialog .prep-analysis-grid > .prep-card-section{min-width:0;min-height:165px;display:flex;flex-direction:column;padding:15px 16px;margin:0;border:1px solid var(--border);border-radius:12px;background:var(--panel-alt);box-shadow:0 5px 16px rgba(0,0,0,.10)}.prep-detail-dialog .prep-analysis-grid > .prep-card-section > span:first-child{display:block;margin-bottom:9px;font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim)}.prep-detail-dialog .prep-analysis-grid > .prep-card-section .prep-chip-row{flex:1;align-content:flex-start;gap:7px}.prep-detail-dialog .prep-analysis-grid > .prep-card-section .prep-chip{padding:7px 9px;border-radius:9px;line-height:1.25;background:var(--panel);border-color:var(--border)}.prep-detail-dialog .prep-week-summary{display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start}.prep-detail-dialog .prep-week-pill{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--border);background:var(--panel);border-radius:9px;font-size:12px;font-weight:850;color:var(--text)}.prep-detail-dialog .prep-week-pill{cursor:pointer;transition:transform .12s ease,background .12s ease,border-color .12s ease}.prep-detail-dialog .prep-week-pill:hover{transform:translateY(-1px);background:var(--panel-alt);border-color:var(--accent,#8b5cf6)}.prep-detail-dialog .prep-week-pill.active{background:color-mix(in srgb,var(--accent,#8b5cf6) 16%,var(--panel));border-color:var(--accent,#8b5cf6)}.prep-detail-dialog .prep-week-chevron{font-size:16px;line-height:10px;color:var(--text-dim)}.prep-detail-dialog .prep-week-moves{margin-top:11px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}.prep-detail-dialog .prep-week-moves[hidden]{display:none}.prep-detail-dialog .prep-week-moves-title{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:7px}.prep-detail-dialog .prep-week-moves-list{display:flex;flex-wrap:wrap;gap:6px}.prep-detail-dialog .prep-analysis-grid > .prep-card-section{background:linear-gradient(145deg,var(--panel-alt),var(--panel));box-shadow:0 7px 20px rgba(0,0,0,.13)}.prep-detail-dialog .prep-week-dot{width:7px;height:7px;border-radius:50%;background:var(--amber,#f5b942)}.prep-detail-dialog .prep-analysis-note{display:block;margin-top:auto;padding-top:11px;color:var(--text-dim);font-size:10px;line-height:1.45}.prep-detail-dialog .prep-popup-nav{align-items:center}.prep-detail-dialog .prep-mode-tabs{padding:3px;background:var(--panel-alt);border:1px solid var(--border);border-radius:11px;gap:3px}.prep-detail-dialog .prep-mode-tab{min-height:34px;padding:7px 13px;border:0;border-radius:8px;background:transparent;color:var(--text-dim)}.prep-detail-dialog .prep-mode-tab.active{background:var(--accent,#8b5cf6);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.16)}@media(max-width:900px){.prep-detail-dialog .prep-analysis-grid{grid-template-columns:1fr;gap:10px}.prep-detail-dialog .prep-analysis-grid > .prep-card-section{min-height:130px}}@media(max-width:760px){.prep-detail-dialog .prep-popup-nav{align-items:stretch}.prep-detail-dialog .prep-mode-tabs{width:100%}.prep-detail-dialog .prep-mode-tab{flex:1}.prep-detail-dialog .prep-popup-calc{width:100%}}
 </style>
 
 <nav class="page-nav" id="pageNav" aria-label="Site navigation">
@@ -1411,7 +1421,7 @@ function aggregate(team){
   // the current roster even when a Pokémon has not appeared in a processed replay.
   for(const mon of currentRoster){
     const species=canonicalSpecies(rosterMonName(mon)); const k=norm(species);
-    if(species && !mons[k]) mons[k]={species,appearances:0,kills:0,deaths:0,dealt:0,taken:0,replays:new Set(),gameSets:[]};
+    if(species && !mons[k]) mons[k]={species,appearances:0,kills:0,deaths:0,dealt:0,taken:0,replays:new Set(),gameSets:[],weeks:new Set()};
   }
   for(const r of games){
     const side=sideForTeam(r,team);if(!side)continue;
@@ -1420,12 +1430,13 @@ function aggregate(team){
     const seen=[];
     for(const m of monsForSide(r,side)){
       const k=norm(m.species);
-      if(!mons[k])mons[k]={species:m.species,appearances:0,kills:0,deaths:0,dealt:0,taken:0,replays:new Set(),gameSets:[]};
+      if(!mons[k])mons[k]={species:m.species,appearances:0,kills:0,deaths:0,dealt:0,taken:0,replays:new Set(),gameSets:[],weeks:new Set()};
       const a=mons[k];
       a.appearances+=Number(m.appearances||0)||1;a.kills+=Number(m.kills||0);a.deaths+=Number(m.deaths||0);
-      a.dealt+=Number(m.damageDealt||0);a.taken+=Number(m.damageTaken||0);a.replays.add(r.id);
+      a.dealt+=Number(m.damageDealt||0);a.taken+=Number(m.damageTaken||0);a.replays.add(r.id);const replayWeek=String(r.week??r.round??r.roundNumber??'').trim();if(replayWeek && Number(m.appearances||0)>0)a.weeks.add(replayWeek);
       const moves=Object.keys(m.moves||{}).filter(Boolean);
       a.gameSets.push({
+        week: replayWeek,
         moves
       });
       seen.push(k)
@@ -2083,7 +2094,7 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
   const observedFor=m=>observedMoves(m);
   const rolesFor=m=>inferRoles(m);
   const opponentAggregate=aggregate(opponent);
-  const usageFor=m=>opponentAggregate.mons[norm(m.species)] || opponentAggregate.mons[m.species] || {appearances:0,kills:0,deaths:0,dealt:0,taken:0,replays:new Set(),gameSets:[]};
+  const usageFor=m=>opponentAggregate.mons[norm(m.species)] || opponentAggregate.mons[m.species] || {appearances:0,kills:0,deaths:0,dealt:0,taken:0,replays:new Set(),gameSets:[],weeks:new Set()};
 
   // -------- Opponent Team Overview --------
   // Show the concrete matchup instead of subjective labels: which of YOUR
@@ -2118,7 +2129,12 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
     <div class="prep-card-section"><span>Type effectiveness</span>${group('Weaknesses',weaknesses)}${group('Resistances',resistances)}${group('Immunities',immunities)}</div>
     <div class="prep-card-section"><span>Base stats</span><div class="prep-stat-grid">${[['hp','HP'],['attack','Atk'],['defense','Def'],['special-attack','SpA'],['special-defense','SpD'],['speed','Spe']].map(([k,l])=>`<span class="prep-chip">${l}: ${baseStats[k]??'—'}</span>`).join('')}</div></div>`;
     const usageHtml=`<div class="prep-usage-grid"><div><span>Appearances</span><strong>${usage.appearances||0}</strong></div><div><span>KOs</span><strong>${usage.kills||0}</strong></div><div><span>Deaths</span><strong>${usage.deaths||0}</strong></div><div><span>Damage dealt</span><strong>${Number(usage.dealt||0).toFixed(0)}</strong></div><div><span>Damage taken</span><strong>${Number(usage.taken||0).toFixed(0)}</strong></div><div><span>Sets recorded</span><strong>${(usage.gameSets||[]).filter(g=>g.moves?.length).length}</strong></div></div>`;
+    const broughtInWeeks=[...(usage.weeks||[])].sort((a,b)=>{const na=Number(a),nb=Number(b);if(Number.isFinite(na)&&Number.isFinite(nb))return na-nb;return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});});
+    const weekLabel=w=>/^\d+$/.test(String(w))?`Week ${w}`:String(w);
+    const weekMoves=new Map();
+    for(const set of (usage.gameSets||[])){const wk=String(set.week??'').trim();if(!wk)continue;const list=weekMoves.get(wk)||new Set();(set.moves||[]).filter(Boolean).forEach(move=>list.add(move));weekMoves.set(wk,list);}
     const analysisHtml=`<div class="matchprep-analysis-overview">
+      <div class="prep-card-section prep-analysis-week-card"><span>Brought in on</span><div class="prep-week-summary">${broughtInWeeks.length?broughtInWeeks.map(w=>{const moves=[...(weekMoves.get(String(w))||[])];return `<button type="button" class="prep-week-pill" data-prep-week="${esc(String(w))}" data-moves-json="${esc(JSON.stringify(moves))}"><span class="prep-week-dot"></span>${esc(weekLabel(w))}<span class="prep-week-chevron">›</span></button>`;}).join(''):'<span class="small">No recorded battle week for this Pokémon.</span>'}</div><div class="prep-week-moves" hidden></div><small class="prep-analysis-note">${broughtInWeeks.length?'Click a week to see the moves used that week.':'This Pokémon has not appeared in a recorded replay yet.'}</small></div>
       <div class="prep-card-section"><span>Strong into your Pokémon</span><div class="prep-chip-row">${goodInto.length?goodInto.map(x=>`<span class="prep-chip">${esc(displaySpecies(x))}</span>`).join(''):'<span class="small">No clear type advantage</span>'}</div></div>
       <div class="prep-card-section"><span>Observed moves</span><div class="prep-chip-row">${moves.length?moves.map(x=>`<span class="prep-chip">${esc(x)}</span>`).join(''):'<span class="small">No recorded moves</span>'}</div></div>
       <div class="prep-card-section"><span>Likely roles</span><div class="prep-chip-row">${roles.length?roles.map(x=>`<span class="prep-chip">${esc(x)}</span>`).join(''):'<span class="small">Unclear</span>'}</div></div>
@@ -2132,8 +2148,8 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
   const speedNature=(n)=>n==='positive'?1.1:n==='negative'?0.9:1;
   const speedStatFor=(base,evs,natureKey)=>Math.floor(Math.floor((2*base+31+Math.floor((evs||0)/4))*100/100+5)*speedNature(natureKey));
   const speedCfgFor=(species)=>({nature:'positive',evs:252,...(STATE.prepSpeedConfig?.[species]||{})});
-  const speedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,stage:0},trickRoom:false};
-  const stageMult=n=>n===2?2:n===1?1.5:1;
+  const speedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,webs:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,webs:false,stage:0},trickRoom:false};
+  const stageMult=n=>({'-6':2/8,'-5':2/7,'-4':2/6,'-3':2/5,'-2':2/4,'-1':2/3,'0':1,'1':3/2,'2':4/2,'3':5/2,'4':6/2,'5':7/2,'6':8/2}[n]??1);
   const effectiveSpeed=(base,species,side)=>{
     const cfg=speedCfgFor(species);
     let v=speedStatFor(base,cfg.evs,cfg.nature);
@@ -2142,6 +2158,7 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
     if(m.scarf)v=Math.floor(v*1.5);
     if(m.tailwind)v=Math.floor(v*2);
     if(m.paralysis)v=Math.floor(v*0.5);
+    if(m.webs)v=Math.floor(v*2/3);
     return v;
   };
   const pinned=STATE.prepSpeedPinned||[];
@@ -2223,22 +2240,57 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
     ${speedMatrix}
 
     <div class="speed-condition-bar">
-      <div class="speed-condition-group"><span class="speed-condition-title">Your side</span><div class="speed-mod-row">${modBtn('your','tailwind','Tailwind')}${modBtn('your','paralysis','Paralysis')}${modBtn('your','scarf','Choice Scarf')}${stageBtn('your',1,'+1')}${stageBtn('your',2,'+2')}</div></div>
-      <div class="speed-condition-group"><span class="speed-condition-title">Opponent side</span><div class="speed-mod-row">${modBtn('opp','tailwind','Tailwind')}${modBtn('opp','paralysis','Paralysis')}${modBtn('opp','scarf','Choice Scarf')}${stageBtn('opp',1,'+1')}${stageBtn('opp',2,'+2')}</div></div>
+      <div class="speed-condition-group"><span class="speed-condition-title">Your side</span><div class="speed-mod-row">${modBtn('your','tailwind','Tailwind')}${modBtn('your','paralysis','Paralysis')}${modBtn('your','webs','Webs')}${modBtn('your','scarf','Choice Scarf')}${stageBtn('your',-2,'-2')}${stageBtn('your',-1,'-1')}${stageBtn('your',1,'+1')}${stageBtn('your',2,'+2')}</div></div>
+      <div class="speed-condition-group"><span class="speed-condition-title">Opponent side</span><div class="speed-mod-row">${modBtn('opp','tailwind','Tailwind')}${modBtn('opp','paralysis','Paralysis')}${modBtn('opp','webs','Webs')}${modBtn('opp','scarf','Choice Scarf')}${stageBtn('opp',-2,'-2')}${stageBtn('opp',-1,'-1')}${stageBtn('opp',1,'+1')}${stageBtn('opp',2,'+2')}</div></div>
       <div class="speed-condition-group speed-field-group"><span class="speed-condition-title">Field</span><div class="speed-mod-row"><button type="button" class="speed-mod-btn ${speedMods.trickRoom?'active':''}" data-speed-trickroom="1">Trick Room</button></div></div>
     </div>
   </section>`;
 
   // -------- Switch-in Analyser --------
-  const switchItemOptions=[
+  // Keep the two item selectors intentionally role-specific.
+  const switchOpponentItemOptions=[
     ['', 'No item'],
     ['Choice Band','Choice Band'],['Choice Specs','Choice Specs'],['Choice Scarf','Choice Scarf'],
-    ['Life Orb','Life Orb'],['Expert Belt','Expert Belt'],['Assault Vest','Assault Vest'],
-    ['Leftovers','Leftovers'],['Heavy-Duty Boots','Heavy-Duty Boots'],['Focus Sash','Focus Sash'],
-    ['Eviolite','Eviolite'],['Rocky Helmet','Rocky Helmet'],['Black Sludge','Black Sludge'],
-    ['Sitrus Berry','Sitrus Berry'],['Air Balloon','Air Balloon'],['Safety Goggles','Safety Goggles']
+    ['Life Orb','Life Orb'],['Expert Belt','Expert Belt'],['Metronome','Metronome'],
+    ['Muscle Band','Muscle Band'],['Wise Glasses','Wise Glasses'],
+    ['Black Belt','Black Belt'],['Black Glasses','Black Glasses'],['Charcoal','Charcoal'],
+    ['Dragon Fang','Dragon Fang'],['Fairy Feather','Fairy Feather'],['Hard Stone','Hard Stone'],
+    ['Magnet','Magnet'],['Metal Coat','Metal Coat'],['Miracle Seed','Miracle Seed'],
+    ['Mystic Water','Mystic Water'],['Never-Melt Ice','Never-Melt Ice'],['Poison Barb','Poison Barb'],
+    ['Sharp Beak','Sharp Beak'],['Silk Scarf','Silk Scarf'],['Silver Powder','Silver Powder'],
+    ['Soft Sand','Soft Sand'],['Spell Tag','Spell Tag'],['Twisted Spoon','Twisted Spoon'],
+    ['Draco Plate','Draco Plate'],['Dread Plate','Dread Plate'],['Earth Plate','Earth Plate'],
+    ['Fist Plate','Fist Plate'],['Flame Plate','Flame Plate'],['Icicle Plate','Icicle Plate'],
+    ['Insect Plate','Insect Plate'],['Iron Plate','Iron Plate'],['Meadow Plate','Meadow Plate'],
+    ['Mind Plate','Mind Plate'],['Pixie Plate','Pixie Plate'],
+    ['Sky Plate','Sky Plate'],['Spooky Plate','Spooky Plate'],['Stone Plate','Stone Plate'],
+    ['Toxic Plate','Toxic Plate'],['Zap Plate','Zap Plate'],['Splash Plate','Splash Plate'],
+    ['Lustrous Orb','Lustrous Orb'],['Adamant Orb','Adamant Orb'],['Griseous Orb','Griseous Orb'],
+    ['Adamant Crystal','Adamant Crystal'],['Lustrous Globe','Lustrous Globe'],['Griseous Core','Griseous Core'],
+    ['Soul Dew','Soul Dew']
   ];
-  const switchItemSelect=(id,value)=>`<select id="${id}">${switchItemOptions.map(([v,label])=>`<option value="${esc(v)}" ${v===value?'selected':''}>${esc(label)}</option>`).join('')}</select>`;
+  const switchDefensiveItemOptions=[
+    ['', 'No item'],
+    ['Assault Vest','Assault Vest'],['Eviolite','Eviolite'],['Focus Sash','Focus Sash'],
+    ['Leftovers','Leftovers'],['Heavy-Duty Boots','Heavy-Duty Boots'],['Rocky Helmet','Rocky Helmet'],
+    ['Black Sludge','Black Sludge'],['Sitrus Berry','Sitrus Berry'],['Wiki Berry','Wiki Berry'],
+    ['Aguav Berry','Aguav Berry'],['Iapapa Berry','Iapapa Berry'],['Figy Berry','Figy Berry'],
+    ['Mago Berry','Mago Berry'],['Air Balloon','Air Balloon'],['Safety Goggles','Safety Goggles'],
+    ['Occa Berry','Occa Berry (Fire resistance)'],['Passho Berry','Passho Berry (Water resistance)'],
+    ['Wacan Berry','Wacan Berry (Electric resistance)'],['Rindo Berry','Rindo Berry (Grass resistance)'],
+    ['Yache Berry','Yache Berry (Ice resistance)'],['Chople Berry','Chople Berry (Fighting resistance)'],
+    ['Kebia Berry','Kebia Berry (Poison resistance)'],['Shuca Berry','Shuca Berry (Ground resistance)'],
+    ['Coba Berry','Coba Berry (Flying resistance)'],['Payapa Berry','Payapa Berry (Psychic resistance)'],
+    ['Tanga Berry','Tanga Berry (Bug resistance)'],['Charti Berry','Charti Berry (Rock resistance)'],
+    ['Kasib Berry','Kasib Berry (Ghost resistance)'],['Haban Berry','Haban Berry (Dragon resistance)'],
+    ['Colbur Berry','Colbur Berry (Dark resistance)'],['Babiri Berry','Babiri Berry (Steel resistance)'],
+    ['Chilan Berry','Chilan Berry (Normal resistance)'],['Roseli Berry','Roseli Berry (Fairy resistance)']
+  ];
+  const switchItemSelect=(id,value,kind='defensive')=>{
+    const options=kind==='offensive'?switchOpponentItemOptions:switchDefensiveItemOptions;
+    const selected=options.some(([v])=>v===value)?value:'';
+    return `<select id="${id}">${options.map(([v,label])=>`<option value="${esc(v)}" ${v===selected?'selected':''}>${esc(label)}</option>`).join('')}</select>`;
+  };
   const defaultOppMon=STATE.prepSwitchMon&&opp.some(m=>m.species===STATE.prepSwitchMon)?STATE.prepSwitchMon:(opp[0]?.species||'');
   const switchMon=opp.find(m=>m.species===defaultOppMon)||opp[0];
   const observedMoveOptions=switchMon?observedFor(switchMon):[];
@@ -2246,10 +2298,10 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
   const switchRows=defaultMove ? `<div id="switchResults"><div class="empty">Calculating switch-in ranges…</div></div>` : '<div id="switchResults" class="empty">No observed move is available for this Pokémon yet.</div>';
   const switchAtkItem=STATE.prepSwitchAtkItem||'';
   const switchDefItem=STATE.prepSwitchDefItem||'';
-  const switchSection=`<section id="prepSwitchAnalyser" class="panel prep-selectable-section" data-prep-section="switch"><h2>Switch-In Analyser</h2><p class="panel-desc">Choose an opposing Pokémon and one of its damaging learnset moves. Set the opposing attacker EVs and each switch-in Pokémon's defensive EVs individually.</p><div class="prep-switch-controls"><div><label>Opponent Pokémon</label><select id="prepSwitchMon">${opp.map(m=>`<option value="${esc(m.species)}" ${m.species===switchMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select></div><div><label>Damaging Move</label><select id="prepSwitchMove"><option value="">Loading learnset…</option></select></div></div><div class="prep-item-controls"><div><label>Opponent Item</label>${switchItemSelect('prepSwitchAtkItem',switchAtkItem)}</div><div><label>Switch-In Item</label>${switchItemSelect('prepSwitchDefItem',switchDefItem)}</div><div><label>Opponent EVs</label><button type="button" id="prepSwitchAtkEVs" class="damage-calc-primary">Set EVs</button></div><div><label>Defensive EVs</label><button type="button" id="prepSwitchAllDefEVs" class="prep-all-evs-btn">Set All EVs</button></div></div>${switchRows}</section>`;
+  const switchSection=`<section id="prepSwitchAnalyser" class="panel prep-selectable-section" data-prep-section="switch"><div class="switch-analyser-head"><div><h2>Switch-In Analyser</h2><p class="panel-desc">Choose the attacker, damaging move, and switch-in defender. Use the toggle to reverse the roles.</p></div><button type="button" id="prepSwitchRoleToggle" class="switch-role-toggle" aria-pressed="false">↔ Swap attacker / defender</button></div><p class="panel-desc">Choose an opposing Pokémon and one of its damaging learnset moves. Set the opposing attacker EVs and each switch-in Pokémon's defensive EVs individually.</p><div class="prep-switch-controls"><div><label>Opponent Pokémon</label><select id="prepSwitchMon">${opp.map(m=>`<option value="${esc(m.species)}" ${m.species===switchMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select></div><div><label>Damaging Move</label><select id="prepSwitchMove"><option value="">Loading learnset…</option></select></div></div><div class="prep-item-controls"><div><label>Opponent Item</label>${switchItemSelect('prepSwitchAtkItem',switchAtkItem,'offensive')}</div><div><label>Switch-In Item</label>${switchItemSelect('prepSwitchDefItem',switchDefItem,'defensive')}</div><div><label>Opponent EVs</label><button type="button" id="prepSwitchAtkEVs" class="damage-calc-primary">Set EVs</button></div><div><label>Defensive EVs</label><button type="button" id="prepSwitchAllDefEVs" class="prep-all-evs-btn">Set All EVs</button></div></div>${switchRows}</section>`;
 
   const latestMatchesSection=matchHistoryForTeam(opponent,false).replace('<section class="panel">','<section id="prepLatestMatches" class="panel prep-selectable-section" data-prep-section="matches">');
-  return `<section class="panel"><div class="prep-hero"><div><h2>Match Prep</h2><p class="panel-desc" style="margin:0">Prepare <strong>${esc(yourTeam)}</strong> for a match against <strong>${esc(opponent)}</strong>. Match usage, scouting, recent replays and battle tools are combined here.</p></div><div class="prep-hero-controls"><div><label>Your Team</label><select id="prepYourTeam">${names.map(n=>`<option value="${esc(n)}" ${sameTeam(n,yourTeam)?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div><label>Opponent</label><select id="prepOpponent">${names.filter(n=>!sameTeam(n,yourTeam)).map(n=>`<option value="${esc(n)}" ${sameTeam(n,opponent)?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div></div></section>
+  return `<section class="panel"><div class="prep-hero"><div><h2>Match Prep</h2><p class="panel-desc" style="margin:0">Prepare <strong>${esc(yourTeam)}</strong> for a match against <strong>${esc(opponent)}</strong>. Match usage, scouting, recent replays and battle tools are combined here.</p></div><div class="prep-hero-controls"><div><label>Your Team</label><select id="prepYourTeam">${names.map(n=>`<option value="${esc(n)}" ${sameTeam(n,yourTeam)?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div><label>Opponent</label><select id="prepOpponent">${names.filter(n=>!sameTeam(n,yourTeam)).map(n=>`<option value="${esc(n)}" ${sameTeam(n,opponent)?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div class="prep-side-swap"><span class="prep-side-swap-label">Matchup sides</span><button type="button" id="prepGlobalRoleToggle" aria-pressed="false">↔ Swap Your Team / Opponent</button></div></div></div></section>
   <section class="panel prep-section-picker"><label for="prepSectionSelect">View Section</label><select id="prepSectionSelect"><option value="overview">Opponent Team Overview</option><option value="switch">Switch-In Analyser</option><option value="speed">Speed Workbench</option><option value="matches">Replays</option></select></section>
   <section class="panel prep-selectable-section" data-prep-section="damage"><div class="prep-calc-head"><div><h2>Damage Calculator</h2><p class="panel-desc" style="margin:0">Run a full calculation with your actual roster Pokémon, items, abilities, natures, EVs, status and weather.</p></div><div class="prep-calc-actions" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" id="prepImportShowdown" class="prep-import-set-btn">Import Showdown Set</button><button id="openDamageCalc" class="damage-calc-primary">Open Damage Calculator</button></div></div></section>
   <section id="prepTeamOverview" class="panel prep-selectable-section" data-prep-section="overview"><h2>Opponent Team Overview</h2><p class="panel-desc">Click a Pokémon to switch between <strong>Usage Stats</strong> and <strong>Scouting</strong>. Scouting includes typing, abilities, observed moves, roles, point value, base stats and type effectiveness.</p><div class="prep-opponent-grid">${opponentCards}</div></section>
@@ -2355,6 +2407,14 @@ async function render(){
         modal.querySelector('#prepModeContent').innerHTML=tab.dataset.mode==='opponent'?analysisOverview:teamOverview;
         if(tab.dataset.mode==='team') loadPrepPokemonData();
       }));
+      modal.querySelector('#prepModeContent')?.addEventListener('click',e=>{
+        const week=e.target.closest('.prep-week-pill'); if(!week)return;
+        const movesBox=e.currentTarget.querySelector('.prep-week-moves'); if(!movesBox)return;
+        e.currentTarget.querySelectorAll('.prep-week-pill').forEach(w=>w.classList.toggle('active',w===week));
+        let moves=[]; try{moves=JSON.parse(week.dataset.movesJson||'[]')}catch{}
+        movesBox.innerHTML=`<div class="prep-week-moves-title">Moves used in ${esc(week.textContent.replace('›','').trim())}</div><div class="prep-week-moves-list">${moves.length?moves.map(m=>`<span class="prep-chip">${esc(m)}</span>`).join(''):'<span class="small">No recorded moves for this week.</span>'}</div>`;
+        movesBox.hidden=false;
+      });
 
       async function loadPrepPokemonData(){
         const root=modal.querySelector('#prepModeContent');
@@ -2427,12 +2487,22 @@ $('prepYourTeam')?.addEventListener('change',async e=>{
     });
     $('prepSwitchAtkEVs')?.addEventListener('click',e=>{e.preventDefault();openSwitchAtkEvModal();});
     $('prepSwitchAllDefEVs')?.addEventListener('click',e=>{e.preventDefault();openSwitchAllDefEvModal();});
+    const swapPrepSides=async()=>{
+      const oldYour=STATE.prepYourTeam, oldOpp=STATE.prepOpponent;
+      STATE.prepYourTeam=oldOpp; STATE.prepOpponent=oldYour;
+      STATE.prepSwitchMon=''; STATE.prepSwitchMove='';
+      STATE.prepSwitchAtkItem=''; STATE.prepSwitchDefItem='';
+      STATE.prepSwitchEVsByMon={}; STATE.prepSwitchAtkEVs={hp:0,atk:0,def:0,spa:0,spd:0,spe:0};
+      await render();
+    };
+    $('prepGlobalRoleToggle')?.addEventListener('click',async e=>{e.preventDefault();await swapPrepSides();});
+    $('prepSwitchRoleToggle')?.addEventListener('click',async e=>{e.preventDefault();await swapPrepSides();});
 
     // -------- Speed Workbench wiring --------
     document.querySelectorAll('.speed-mod-btn[data-speed-mod]').forEach(b=>{
       b.addEventListener('click',async()=>{
         const side=b.dataset.speedSide, key=b.dataset.speedMod;
-        STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,stage:0},trickRoom:false};
+        STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,webs:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,webs:false,stage:0},trickRoom:false};
         STATE.prepSpeedMods[side][key]=!STATE.prepSpeedMods[side][key];
         await render();
       });
@@ -2440,13 +2510,13 @@ $('prepYourTeam')?.addEventListener('change',async e=>{
     document.querySelectorAll('.speed-mod-btn[data-speed-stage]').forEach(b=>{
       b.addEventListener('click',async()=>{
         const side=b.dataset.speedSide, val=Number(b.dataset.speedStage);
-        STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,stage:0},trickRoom:false};
+        STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,webs:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,webs:false,stage:0},trickRoom:false};
         STATE.prepSpeedMods[side].stage=(STATE.prepSpeedMods[side].stage||0)===val?0:val;
         await render();
       });
     });
     $('main').querySelector('[data-speed-trickroom]')?.addEventListener('click',async()=>{
-      STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,stage:0},trickRoom:false};
+      STATE.prepSpeedMods=STATE.prepSpeedMods||{your:{tailwind:false,paralysis:false,scarf:false,webs:false,stage:0},opp:{tailwind:false,paralysis:false,scarf:false,webs:false,stage:0},trickRoom:false};
       STATE.prepSpeedMods.trickRoom=!STATE.prepSpeedMods.trickRoom;
       await render();
     });
@@ -2489,7 +2559,22 @@ $('prepYourTeam')?.addEventListener('change',async e=>{
           return `<button type="button" class="speed-picker-clean-option ${selected?'selected':''}" data-species="${esc(mon.species)}">${sprite(mon.species,'speed-picker-clean-sprite')}<span><strong>${esc(displaySpecies(mon))}</strong><small>${selected?'Selected':'Click to select'}</small></span><i>${selected?'✓':''}</i></button>`;
         }).join('');
       };
-      const close=()=>{
+      host.querySelector('#dcSwapSides')?.addEventListener('click',()=>{
+      const swapValue=(a,b)=>{const av=host.querySelector('#'+a)?.value??'';const bv=host.querySelector('#'+b)?.value??'';const ae=host.querySelector('#'+a),be=host.querySelector('#'+b);if(ae)ae.value=bv;if(be)be.value=av;};
+      const oldAtkTeam=host.querySelector('#dcAtkTeam')?.value||'';
+      const oldDefTeam=host.querySelector('#dcDefTeam')?.value||'';
+      const oldAtkMon=host.querySelector('#dcAtk')?.value||'';
+      const oldDefMon=host.querySelector('#dcDef')?.value||'';
+      swapValue('dcAtkTeam','dcDefTeam');
+      syncMons('dcAtkTeam','dcAtk',oldDefMon);
+      syncMons('dcDefTeam','dcDef',oldAtkMon);
+      const fields=[['dcAtkLevel','dcDefLevel'],['dcAtkItem','dcDefItem'],['dcAtkAbility','dcDefAbility'],['dcAtkNature','dcDefNature'],['dcAtkStatus','dcDefStatus'],['dcAtkEvHp','dcDefEvHp'],['dcAtkEvAtk','dcDefEvAtk'],['dcAtkEvDef','dcDefEvDef'],['dcAtkEvSpa','dcDefEvSpa'],['dcAtkEvSpd','dcDefEvSpd'],['dcAtkEvSpe','dcDefEvSpe']];
+      fields.forEach(([a,b])=>swapValue(a,b));
+      const atkSet=host.querySelector('#dcAtkSet'),defSet=host.querySelector('#dcDefSet'); if(atkSet&&defSet){const v=atkSet.value;atkSet.value=defSet.value;defSet.value=v;}
+      const tmp=appliedImportedSets.atk; appliedImportedSets.atk=appliedImportedSets.def; appliedImportedSets.def=tmp;
+      saveCalcState(host); scheduleDamageCalculation(0);
+    });
+    const close=()=>{
         document.removeEventListener('keydown',onKey);
         host.remove();
       };
@@ -2703,22 +2788,46 @@ requestAnimationFrame(()=>host.classList.add('open'));
             const dmg=Array.isArray(res.damage)?res.damage:[res.damage];
             const numericDmg=dmg.map(Number).filter(Number.isFinite);
             if(!numericDmg.length) throw new Error('No numeric damage result was returned for this move.');
-            const max=Math.max(...numericDmg);
-            const min=Math.min(...numericDmg);
+            let max=Math.max(...numericDmg);
+            let min=Math.min(...numericDmg);
+            // Type-resistance berries halve damage only when their matching type hits super effectively.
+            const resistBerryTypes={
+              'occa berry':'fire','passho berry':'water','wacan berry':'electric','rindo berry':'grass',
+              'yache berry':'ice','chople berry':'fighting','kebia berry':'poison','shuca berry':'ground',
+              'coba berry':'flying','payapa berry':'psychic','tanga berry':'bug','charti berry':'rock',
+              'kasib berry':'ghost','haban berry':'dragon','colbur berry':'dark','babiri berry':'steel',
+              'chilan berry':'normal','roseli berry':'fairy'
+            };
+            const heldDefItem=String(STATE.prepSwitchDefItem||'').toLowerCase();
+            const resistType=resistBerryTypes[heldDefItem];
+            if(resistType && moveType.toLowerCase()===resistType && typeMult>1){ min=Math.floor(min/2); max=Math.floor(max/2); }
+            const berryName=String(STATE.prepSwitchDefItem||'').toLowerCase();
+            const healingBerry=['sitrus berry','wiki berry','aguav berry','iapapa berry','figy berry','mago berry'].includes(berryName);
+            const berryHealFraction=berryName==='sitrus berry'?0.25:healingBerry?(1/3):0;
             const data=await fetchPokemonData(target.species);
             const baseHp=Number(data?.stats?.hp);
             const engineHp=Number(def.maxHP);
             const formulaHp=Number.isFinite(baseHp) ? (2*baseHp+31+110) : NaN;
             const hp=Number.isFinite(engineHp)&&engineHp>0 ? engineHp : formulaHp;
             const immune=max===0;
-            const pctMin=!immune&&Number.isFinite(hp)&&hp>0?(min/hp*100):immune?0:null;
-            const pctMax=!immune&&Number.isFinite(hp)&&hp>0?(max/hp*100):immune?0:null;
-            const ko=!immune&&Number.isFinite(hp)&&hp>0?(min>=hp?'guaranteed':max>=hp?'possible':'no'):null;
-            rows.push({target,min,max,pctMin,pctMax,ko,immune,hp,ability:defenderAbility,attackerAbility,desc:typeof res.fullDesc==='function'?res.fullDesc():''});
+            const healPct=healingBerry?berryHealFraction*100:0;
+            const healPctLabel=berryName==='sitrus berry'?'1/4':healingBerry?'1/3':'';
+            const heal=Math.floor(hp*berryHealFraction);
+            const healMin=healingBerry&&Number.isFinite(hp)&&min>=hp*0.5?heal:0;
+            const healMax=healingBerry&&Number.isFinite(hp)&&max>=hp*0.5?heal:0;
+            const netMin=Math.max(0,min-healMin), netMax=Math.max(0,max-healMax);
+            const pctMin=!immune&&Number.isFinite(hp)&&hp>0?(netMin/hp*100):immune?0:null;
+            const pctMax=!immune&&Number.isFinite(hp)&&hp>0?(netMax/hp*100):immune?0:null;
+            const rawPctMin=!immune&&Number.isFinite(hp)&&hp>0?(min/hp*100):immune?0:null;
+            const rawPctMax=!immune&&Number.isFinite(hp)&&hp>0?(max/hp*100):immune?0:null;
+            const focusSash=String(STATE.prepSwitchDefItem||'').toLowerCase()==='focus sash';
+            const wouldKoWithoutSash=!immune&&Number.isFinite(hp)&&hp>0&&netMax>=hp;
+            const ko=focusSash&&wouldKoWithoutSash?'sash':(!immune&&Number.isFinite(hp)&&hp>0?(netMin>=hp?'guaranteed':netMax>=hp?'possible':'no'):null);
+            rows.push({target,min,max,netMin,netMax,pctMin,pctMax,rawPctMin,rawPctMax,heal,healPct,healPctLabel,ko,focusSash,wouldKoWithoutSash,immune,hp,ability:defenderAbility,attackerAbility,desc:typeof res.fullDesc==='function'?res.fullDesc():''});
           }catch(err){rows.push({target,error:err.message||String(err)});}
         }
         /* Preserve roster order; switch-in cards are never sorted by damage. */
-        mount.innerHTML=`<div class="prep-switch-grid">${rows.map(r=>`<article class="prep-switch-card prep-switch-ev-card" data-switch-ev-mon="${esc(r.target.species)}"><div class="switch-card-top">${sprite(r.target.species,'prep-switch-sprite')}<div class="switch-card-identity"><strong class="switch-card-name">${esc(displaySpecies(r.target))}</strong><div class="switch-card-types">${typePills(typeMapForSpecies[r.target.species]||[])}</div></div><button type="button" class="prep-switch-ev-toggle">Set EVs</button></div>${r.error?`<div class="switch-card-detail">Calculation unavailable: ${esc(r.error)}</div>`:r.immune?`<div class="switch-card-result"><div><div class="switch-card-result-label">Damage</div><div class="prep-damage-range">No effect</div></div><div class="switch-card-verdict">Immune</div></div><div class="switch-card-detail">${esc(move)} does no damage to ${esc(displaySpecies(r.target))}.</div><div class="switch-card-footer"><span class="prep-switch-note">Safe switch-in</span></div>`:`<div class="switch-card-result"><div><div class="switch-card-result-label">Damage taken</div><div class="prep-damage-range">${Number.isFinite(r.pctMin)&&Number.isFinite(r.pctMax)?`${r.pctMin.toFixed(1)}%–${r.pctMax.toFixed(1)}%`:'Unavailable'}</div></div><div class="switch-card-verdict">${r.ko==='guaranteed'?'Guaranteed KO':r.ko==='possible'?'KO possible':r.pctMax<=35?'Excellent':r.pctMax<=55?'Generally safe':'Risky'}</div></div><div class="switch-card-detail">${r.min}–${r.max} damage from ${esc(move)}</div><div class="switch-card-footer"><span class="prep-switch-note">${r.ko==='guaranteed'?'KO — guaranteed from the minimum roll':r.ko==='possible'?'KO possible — maximum roll reaches 100% HP':r.pctMax<=35?'Excellent switch-in':r.pctMax<=55?'Generally safe':'Risky switch-in'}</span>${Number.isFinite(r.hp)?`<span class="switch-card-hp">${r.hp} HP</span>`:''}</div>`}</article>`).join('')}</div>`;
+        mount.innerHTML=`<div class="prep-switch-grid">${rows.map(r=>`<article class="prep-switch-card prep-switch-ev-card" data-switch-ev-mon="${esc(r.target.species)}"><div class="switch-card-top">${sprite(r.target.species,'prep-switch-sprite')}<div class="switch-card-identity"><strong class="switch-card-name">${esc(displaySpecies(r.target))}</strong><div class="switch-card-types">${typePills(typeMapForSpecies[r.target.species]||[])}</div></div><button type="button" class="prep-switch-ev-toggle">Set EVs</button></div>${r.error?`<div class="switch-card-detail">Calculation unavailable: ${esc(r.error)}</div>`:r.immune?`<div class="switch-card-result"><div><div class="switch-card-result-label">Damage</div><div class="prep-damage-range">No effect</div></div><div class="switch-card-verdict">Immune</div></div><div class="switch-card-detail">${esc(move)} does no damage to ${esc(displaySpecies(r.target))}.</div><div class="switch-card-footer"><span class="prep-switch-note">Safe switch-in</span></div>`:`<div class="switch-card-result"><div><div class="switch-card-result-label">Damage taken</div><div class="prep-damage-range">${Number.isFinite(r.pctMin)&&Number.isFinite(r.pctMax)?`${r.pctMin.toFixed(1)}%–${r.pctMax.toFixed(1)}%`:'Unavailable'}</div></div><div class="switch-card-verdict">${r.ko==='sash'?'Would KO without Focus Sash':r.ko==='guaranteed'?'Guaranteed KO':r.ko==='possible'?'KO possible':r.pctMax<=35?'Excellent':r.pctMax<=55?'Generally safe':'Risky'}</div></div><div class="switch-card-detail">${r.min}–${r.max} raw damage from ${esc(move)}${r.heal?` · ${r.heal} HP healed (${r.healPctLabel} max HP when triggered) · ${r.netMin}–${r.netMax} net damage`:''}</div><div class="switch-card-footer"><span class="prep-switch-note">${r.ko==='sash'?'Would KO without Focus Sash':r.ko==='guaranteed'?'KO — guaranteed from the minimum roll':r.ko==='possible'?'KO possible — maximum roll reaches 100% HP':r.pctMax<=35?'Excellent switch-in':r.pctMax<=55?'Generally safe':'Risky switch-in'}</span>${Number.isFinite(r.hp)?`<span class="switch-card-hp">${r.hp} HP</span>`:''}</div>`}</article>`).join('')}</div>`;
         mount.querySelectorAll('.prep-switch-ev-toggle').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const card=btn.closest('.prep-switch-ev-card');const species=card?.dataset.switchEvMon;if(species)openSwitchDefEvModal(species);}));
         mount.querySelectorAll('.prep-switch-ev-card').forEach(card=>card.addEventListener('click',e=>{if(e.target.closest('button'))return;const species=card.dataset.switchEvMon;if(species)openSwitchDefEvModal(species);}));
       }catch(err){mount.innerHTML=`<div class="empty">Could not calculate switch-ins: ${esc(err.message||err)}</div>`;}
@@ -3338,7 +3447,7 @@ load();
     const atkMon=preset.attacker||getSaved(saved,'dcAtk','');
     const defMon=preset.defender||getSaved(saved,'dcDef','');
     host.innerHTML=`<div class="damage-calc-card" role="dialog" aria-modal="true" aria-label="Damage Calculator">
-      <div class="damage-calc-head"><div><h2>Damage Calculator</h2><p>Choose your team and your opponent, then select the Pokémon to calculate.</p></div><div class="damage-calc-head-actions">${loadLastCalcSession() && !preset.restoreSession ? `<button type="button" id="dcRestoreSession" class="dc-secondary-btn">Restore previous session</button>` : ``}<button type="button" id="dcImportShowdown" class="dc-secondary-btn">Import Showdown Set</button><button id="damageCalcClose">Close ✕</button></div></div>
+      <div class="damage-calc-head"><div><h2>Damage Calculator</h2><p>Choose your team and your opponent, then select the Pokémon to calculate.</p></div><div class="damage-calc-head-actions"><button type="button" id="dcImportShowdown" class="dc-secondary-btn">Import Showdown Set</button><button type="button" id="dcSwapSides" class="dc-side-swap">↔ Swap sides</button><button id="damageCalcClose">Close ✕</button></div></div>
       <div class="dc-pokemon-grid">\n        <section class="dc-pokemon-card dc-atk-card">
           <div class="dc-pokemon-card-head">
             <div><div class="dc-pokemon-kicker">YOUR SIDE</div><h3>Your Pokémon</h3></div>
@@ -3372,27 +3481,27 @@ load();
               <div class="ev-title">EVs</div>
               <div class="ev-item"><span class="ev-label">HP</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcAtkEvHp" data-delta="-4" aria-label="Decrease HP EV">−</button>
-        <input id="dcAtkEvHp" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvHp',''))}" inputmode="numeric" aria-label="HP EV" readonly>
+        <input id="dcAtkEvHp" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvHp',''))}" inputmode="numeric" aria-label="HP EV">
         <button type="button" class="ev-step" data-ev="dcAtkEvHp" data-delta="4" aria-label="Increase HP EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Atk</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcAtkEvAtk" data-delta="-4" aria-label="Decrease Atk EV">−</button>
-        <input id="dcAtkEvAtk" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvAtk',''))}" inputmode="numeric" aria-label="Atk EV" readonly>
+        <input id="dcAtkEvAtk" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvAtk',''))}" inputmode="numeric" aria-label="Atk EV">
         <button type="button" class="ev-step" data-ev="dcAtkEvAtk" data-delta="4" aria-label="Increase Atk EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Def</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcAtkEvDef" data-delta="-4" aria-label="Decrease Def EV">−</button>
-        <input id="dcAtkEvDef" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvDef',''))}" inputmode="numeric" aria-label="Def EV" readonly>
+        <input id="dcAtkEvDef" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvDef',''))}" inputmode="numeric" aria-label="Def EV">
         <button type="button" class="ev-step" data-ev="dcAtkEvDef" data-delta="4" aria-label="Increase Def EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Sp. Atk</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcAtkEvSpa" data-delta="-4" aria-label="Decrease Sp. Atk EV">−</button>
-        <input id="dcAtkEvSpa" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvSpa',''))}" inputmode="numeric" aria-label="Sp. Atk EV" readonly>
+        <input id="dcAtkEvSpa" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvSpa',''))}" inputmode="numeric" aria-label="Sp. Atk EV">
         <button type="button" class="ev-step" data-ev="dcAtkEvSpa" data-delta="4" aria-label="Increase Sp. Atk EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Sp. Def</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcAtkEvSpd" data-delta="-4" aria-label="Decrease Sp. Def EV">−</button>
-        <input id="dcAtkEvSpd" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvSpd',''))}" inputmode="numeric" aria-label="Sp. Def EV" readonly>
+        <input id="dcAtkEvSpd" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvSpd',''))}" inputmode="numeric" aria-label="Sp. Def EV">
         <button type="button" class="ev-step" data-ev="dcAtkEvSpd" data-delta="4" aria-label="Increase Sp. Def EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Spe</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcAtkEvSpe" data-delta="-4" aria-label="Decrease Spe EV">−</button>
-        <input id="dcAtkEvSpe" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvSpe',''))}" inputmode="numeric" aria-label="Spe EV" readonly>
+        <input id="dcAtkEvSpe" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcAtkEvSpe',''))}" inputmode="numeric" aria-label="Spe EV">
         <button type="button" class="ev-step" data-ev="dcAtkEvSpe" data-delta="4" aria-label="Increase Spe EV">+</button>
         </div></div>
             </div>
@@ -3431,27 +3540,27 @@ load();
               <div class="ev-title">EVs</div>
               <div class="ev-item"><span class="ev-label">HP</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcDefEvHp" data-delta="-4" aria-label="Decrease HP EV">−</button>
-        <input id="dcDefEvHp" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvHp',''))}" inputmode="numeric" aria-label="HP EV" readonly>
+        <input id="dcDefEvHp" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvHp',''))}" inputmode="numeric" aria-label="HP EV">
         <button type="button" class="ev-step" data-ev="dcDefEvHp" data-delta="4" aria-label="Increase HP EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Atk</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcDefEvAtk" data-delta="-4" aria-label="Decrease Atk EV">−</button>
-        <input id="dcDefEvAtk" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvAtk',''))}" inputmode="numeric" aria-label="Atk EV" readonly>
+        <input id="dcDefEvAtk" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvAtk',''))}" inputmode="numeric" aria-label="Atk EV">
         <button type="button" class="ev-step" data-ev="dcDefEvAtk" data-delta="4" aria-label="Increase Atk EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Def</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcDefEvDef" data-delta="-4" aria-label="Decrease Def EV">−</button>
-        <input id="dcDefEvDef" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvDef',''))}" inputmode="numeric" aria-label="Def EV" readonly>
+        <input id="dcDefEvDef" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvDef',''))}" inputmode="numeric" aria-label="Def EV">
         <button type="button" class="ev-step" data-ev="dcDefEvDef" data-delta="4" aria-label="Increase Def EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Sp. Atk</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcDefEvSpa" data-delta="-4" aria-label="Decrease Sp. Atk EV">−</button>
-        <input id="dcDefEvSpa" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvSpa',''))}" inputmode="numeric" aria-label="Sp. Atk EV" readonly>
+        <input id="dcDefEvSpa" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvSpa',''))}" inputmode="numeric" aria-label="Sp. Atk EV">
         <button type="button" class="ev-step" data-ev="dcDefEvSpa" data-delta="4" aria-label="Increase Sp. Atk EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Sp. Def</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcDefEvSpd" data-delta="-4" aria-label="Decrease Sp. Def EV">−</button>
-        <input id="dcDefEvSpd" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvSpd',''))}" inputmode="numeric" aria-label="Sp. Def EV" readonly>
+        <input id="dcDefEvSpd" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvSpd',''))}" inputmode="numeric" aria-label="Sp. Def EV">
         <button type="button" class="ev-step" data-ev="dcDefEvSpd" data-delta="4" aria-label="Increase Sp. Def EV">+</button>
         </div></div><div class="ev-item"><span class="ev-label">Spe</span><div class="ev-cell">
         <button type="button" class="ev-step" data-ev="dcDefEvSpe" data-delta="-4" aria-label="Decrease Spe EV">−</button>
-        <input id="dcDefEvSpe" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvSpe',''))}" inputmode="numeric" aria-label="Spe EV" readonly>
+        <input id="dcDefEvSpe" type="number" min="0" max="252" step="4" value="${escOpt(getSaved(saved,'dcDefEvSpe',''))}" inputmode="numeric" aria-label="Spe EV">
         <button type="button" class="ev-step" data-ev="dcDefEvSpe" data-delta="4" aria-label="Increase Spe EV">+</button>
         </div></div>
             </div>
@@ -3466,6 +3575,17 @@ load();
       <div id="dcResult" class="damage-calc-result"><div class="dc-results-heading">Results</div><div class="muted">Choose both Pokémon and add at least one move.</div></div>
     </div>`;
     document.body.appendChild(host);
+
+    // Force a truly clean calculator on every normal page load/open.
+    // This also defeats browser form-state restoration (BFCache/autofill), which
+    // can repopulate number inputs even after localStorage has been cleared.
+    if(!preset.restoreSession){
+      ['dcAtkEvHp','dcAtkEvAtk','dcAtkEvDef','dcAtkEvSpa','dcAtkEvSpd','dcAtkEvSpe','dcDefEvHp','dcDefEvAtk','dcDefEvDef','dcDefEvSpa','dcDefEvSpd','dcDefEvSpe'].forEach(id=>{
+        const el=host.querySelector('#'+id);
+        if(el) el.value='';
+      });
+      appliedImportedSets={atk:null,def:null};
+    }
 
     // Damage calculator layout.
     // Keep the actual calculator sections in one explicit DOM order instead of
@@ -3552,7 +3672,6 @@ load();
     }
 
     host.querySelector('#dcImportShowdown')?.addEventListener('click',()=>window.openShowdownImportModal());
-    host.querySelector('#dcRestoreSession')?.addEventListener('click',()=>{ close(); setTimeout(()=>window.openDamageCalcModal({restoreSession:true}),0); });
     ['dcAtkEvHp','dcAtkEvAtk','dcAtkEvDef','dcAtkEvSpa','dcAtkEvSpd','dcAtkEvSpe','dcDefEvHp','dcDefEvAtk','dcDefEvDef','dcDefEvSpa','dcDefEvSpd','dcDefEvSpe','dcWeather','dcTerrain','dcAtkStatus','dcDefStatus'].forEach(id=>{const el=host.querySelector('#'+id); if(el&&saved[id]!==undefined) el.value=saved[id];});
 
     // Populate the large Showdown option sets once the calculator modal exists.
@@ -3670,20 +3789,23 @@ load();
       const sel=host.querySelector(side==='atk'?'#dcAtkSet':'#dcDefSet');
       const set=importedSetForIndex(sel?.value);
       if(!set) return;
-
-      // Snapshot the opposite side's EV inputs so applying one side can
-      // never accidentally overwrite the other side.
-      const other = side==='atk' ? 'dcDef' : 'dcAtk';
-      const otherIds=['Hp','Atk','Def','Spa','Spd','Spe'].map(s=>other+'Ev'+s);
-      const before=otherIds.map(id=>host.querySelector('#'+id)?.value ?? '');
+      // Apply strictly to the requested side. The defender side never writes
+      // attacker moves, and attacker-side EVs are never copied to defender.
       applyImportedSet(side,set);
-      otherIds.forEach((id,i)=>{
-        const el=host.querySelector('#'+id);
-        if(el && el.value!==before[i]) el.value=before[i];
-      });
-      saveCalcState(host);
+      saveCalcState(host); scheduleDamageCalculation(0);
     }));
-    ['dcAtkSet','dcDefSet'].forEach(id=>host.querySelector('#'+id)?.addEventListener('change',()=>saveCalcState(host)));
+    ['dcAtkSet','dcDefSet'].forEach(id=>host.querySelector('#'+id)?.addEventListener('change',e=>{
+      const side=id==='dcAtkSet'?'atk':'def';
+      const set=importedSetForIndex(e.target.value);
+      if(set){
+        const monId=side==='atk'?'dcAtk':'dcDef';
+        const mon=host.querySelector('#'+monId);
+        const species=set.species||set.name||'';
+        if(mon && species && Array.from(mon.options).some(o=>dcSameTeam(o.value,species))) mon.value=species;
+        applyImportedSet(side,set);
+      } else appliedImportedSets[side]=null;
+      saveCalcState(host); scheduleDamageCalculation(150);
+    }));
     const refreshImportedSetSelectors=()=>{ ['dcAtkSet','dcDefSet'].forEach(id=>{const el=host.querySelector('#'+id);if(!el)return;const current=el.value;el.innerHTML=window.importedSetOptions(current);}); };
     window.addEventListener('showdownSetsUpdated',refreshImportedSetSelectors);
 
@@ -3693,7 +3815,7 @@ load();
       const closingState={};
       const ids=['dcAtkTeam','dcAtkSet','dcAtk','dcAtkLevel','dcAtkItem','dcAtkAbility','dcAtkNature','dcAtkStatus','dcAtkEvHp','dcAtkEvAtk','dcAtkEvDef','dcAtkEvSpa','dcAtkEvSpd','dcAtkEvSpe','dcDefTeam','dcDefSet','dcDef','dcDefLevel','dcDefItem','dcDefAbility','dcDefNature','dcDefStatus','dcDefEvHp','dcDefEvAtk','dcDefEvDef','dcDefEvSpa','dcDefEvSpd','dcDefEvSpe','dcMove1','dcMove2','dcMove3','dcMove4','dcWeather','dcTerrain','dcReflect','dcLightScreen','dcAuroraVeil'];
       ids.forEach(id=>{const el=host.querySelector('#'+id);if(el) closingState[id]=el.type==='checkbox'?String(!!el.checked):el.value;});
-      saveLastCalcSession(closingState);
+      clearLastCalcSession();
       window.clearDamageCalcSavedState();
       host.classList.remove('open');window.removeEventListener('showdownSetsUpdated',refreshImportedSetSelectors);setTimeout(()=>host.remove(),160);document.removeEventListener('keydown',onKey);
     };
@@ -3721,8 +3843,18 @@ load();
 
     const persistedIds=['dcAtkTeam','dcAtk','dcAtkLevel','dcAtkItem','dcAtkAbility','dcAtkNature','dcAtkStatus','dcAtkEvHp','dcAtkEvAtk','dcAtkEvDef','dcAtkEvSpa','dcAtkEvSpd','dcAtkEvSpe','dcDefTeam','dcDef','dcDefLevel','dcDefItem','dcDefAbility','dcDefNature','dcDefStatus','dcDefEvHp','dcDefEvAtk','dcDefEvDef','dcDefEvSpa','dcDefEvSpd','dcDefEvSpe','dcMove1','dcMove2','dcMove3','dcMove4','dcWeather','dcTerrain','dcReflect','dcLightScreen','dcAuroraVeil'];
     persistedIds.forEach(id=>{const el=host.querySelector('#'+id); if(el){el.addEventListener('input',()=>saveCalcState(host));el.addEventListener('change',()=>saveCalcState(host));}});
-    host.querySelectorAll('.ev-step').forEach(btn=>btn.addEventListener('click',()=>{ const el=host.querySelector('#'+btn.dataset.ev); if(!el)return; const delta=Number(btn.dataset.delta)||0; const raw=String(el.value??'').trim(); const current=raw===''?0:Math.max(0,Math.min(252,Number(raw)||0)); const next=Math.max(0,Math.min(252,current+delta)); el.value=(next===0 && delta<0 && raw==='')?'':String(next); el.dispatchEvent(new Event('input',{bubbles:true})); }));
-    host.querySelectorAll('.ev-cell input').forEach(el=>{ const clamp=()=>{ const raw=String(el.value??'').trim(); if(raw===''){ el.value=''; return; } let v=Number(raw); if(!Number.isFinite(v)) v=0; v=Math.max(0,Math.min(252,Math.round(v/4)*4)); el.value=v===0?'':String(v); el.dispatchEvent(new Event('input',{bubbles:true})); }; el.addEventListener('change',clamp); el.addEventListener('blur',clamp); });
+    const adjustEv=(btn)=>{ const el=host.querySelector('#'+btn.dataset.ev); if(!el)return; const delta=Number(btn.dataset.delta)||0; const raw=String(el.value??'').trim(); const current=raw===''?0:Math.max(0,Math.min(252,Number(raw)||0)); const next=Math.max(0,Math.min(252,current+delta)); el.value=String(next); el.dispatchEvent(new Event('input',{bubbles:true})); };
+    host.querySelectorAll('.ev-step').forEach(btn=>{
+      let holdTimer=null, repeatTimer=null;
+      const stop=()=>{ if(holdTimer){clearTimeout(holdTimer);holdTimer=null;} if(repeatTimer){clearInterval(repeatTimer);repeatTimer=null;} };
+      const start=()=>{ stop(); adjustEv(btn); holdTimer=setTimeout(()=>{ repeatTimer=setInterval(()=>adjustEv(btn),55); },350); };
+      btn.addEventListener('pointerdown',e=>{e.preventDefault();start();});
+      btn.addEventListener('pointerup',stop); btn.addEventListener('pointercancel',stop); btn.addEventListener('pointerleave',stop);
+      btn.addEventListener('click',e=>e.preventDefault());
+      btn.addEventListener('keydown',e=>{ if((e.key==='+'||e.key==='='||e.key==='-') && !e.repeat){ e.preventDefault(); start(); } });
+      btn.addEventListener('keyup',e=>{ if(e.key==='+'||e.key==='='||e.key==='-'){ e.preventDefault(); stop(); } });
+    });
+    host.querySelectorAll('.ev-cell input').forEach(el=>{ const clamp=()=>{ const raw=String(el.value??'').trim(); if(raw===''){ el.value=''; el.dispatchEvent(new Event('input',{bubbles:true})); return; } let v=Number(raw); if(!Number.isFinite(v)) v=0; v=Math.max(0,Math.min(252,Math.round(v/4)*4)); el.value=v===0?'':String(v); el.dispatchEvent(new Event('input',{bubbles:true})); }; el.addEventListener('change',clamp); el.addEventListener('blur',clamp); });
     host.querySelector('#dcResetAll').addEventListener('click',()=>{
       const teamsNow=(typeof window.__dashboardGetTeams==='function' ? window.__dashboardGetTeams() : teams);
       const defaultAtkTeam=(typeof window.__dashboardProfileTeam==='function' ? window.__dashboardProfileTeam() : '')||teamsNow[0]||'';
@@ -3754,8 +3886,11 @@ load();
       const requestId=++dcCalcRequest;
       const result=host.querySelector('#dcResult');
       if(!result)return;
-      const atkName=(appliedImportedSets.atk?.species||host.querySelector('#dcAtk')?.value||'').trim();
-      const defName=(appliedImportedSets.def?.species||host.querySelector('#dcDef')?.value||'').trim();
+      // The calculation sides are ALWAYS the two Pokémon currently selected in the
+      // calculator. Imported sets only supply stats/options for their own side;
+      // they must never replace the opponent used by the calculation.
+      const atkName=(host.querySelector('#dcAtk')?.value||'').trim();
+      const defName=(host.querySelector('#dcDef')?.value||'').trim();
       const moveSlots=[1,2,3,4];
       const selectedMoves=moveSlots.map(slot=>({
         slot,
