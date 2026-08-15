@@ -114,6 +114,11 @@
     display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px;
     background:var(--panel-alt); border:1px solid var(--border); color:var(--text-dim); margin-left:6px;
   }
+  .update-badge-league{border-color:var(--amber); color:var(--amber);}
+  .update-badge-schedule{border-color:var(--teal); color:var(--teal);}
+  .update-badge-rules{border-color:var(--red); color:var(--red);}
+  .update-badge-site{border-color:#9aa8ff; color:#9aa8ff;}
+  .update-row{gap:14px;}
 
   /* sprites */
   .sprite{
@@ -540,6 +545,7 @@ a{color:var(--amber)}
       <button data-tab="draft" class="admin-nav-item">Draft</button>
       <button data-tab="freeagency" class="admin-nav-item">Free Agency</button>
       <button data-tab="trades" class="admin-nav-item">Trades</button>
+      <button data-tab="updates" class="admin-nav-item">League Updates</button>
     </div>
   </div>
   <div class="admin-nav-group" data-nav-group="admin">
@@ -547,6 +553,7 @@ a{color:var(--amber)}
     <div class="admin-nav-submenu">
       <button data-tab="commissioner" class="admin-nav-item">User Control</button>
       <button data-tab="admin-log" class="admin-nav-item">Admin Log</button>
+      <button data-tab="seasonsetup" class="admin-nav-item">Season Setup</button>
       <button data-tab="settings" class="admin-nav-item">Settings</button>
     </div>
   </div>
@@ -652,12 +659,13 @@ a{color:var(--amber)}
       STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
       STATE.settings.activeSeason = STATE.settings.activeSeason || DEFAULT_SEASON;
       STATE.settings.seasonArchives = (STATE.settings.seasonArchives && typeof STATE.settings.seasonArchives === 'object') ? STATE.settings.seasonArchives : {};
+      STATE.settings.leagueUpdates = Array.isArray(STATE.settings.leagueUpdates) ? STATE.settings.leagueUpdates : [];
       loaded = true;
     }catch(e){
       console.error('Supabase load failed:', e);
       STATE.replays = {};
       STATE.teamMap = {};
-      STATE.settings = {caseInsensitiveNames:true, rosters:{}, franchises:{}, conferenceNames:{a:'Conference A',b:'Conference B'}, draft:defaultDraftState(), activeSeason:DEFAULT_SEASON, seasonArchives:{}};
+      STATE.settings = {caseInsensitiveNames:true, rosters:{}, franchises:{}, conferenceNames:{a:'Conference A',b:'Conference B'}, draft:defaultDraftState(), activeSeason:DEFAULT_SEASON, seasonArchives:{}, leagueUpdates:[]};
       loaded = true;
       throw e;
     }finally{
@@ -2264,8 +2272,10 @@ a{color:var(--amber)}
     if(activeTab === 'draft') return renderDraft();
     if(activeTab === 'freeagency') return renderFreeAgency();
     if(activeTab === 'trades') return renderTrades();
+    if(activeTab === 'updates') return renderUpdates();
     if(activeTab === 'commissioner') return renderCommissioner();
     if(activeTab === 'admin-log') return drawAdminLog();
+    if(activeTab === 'seasonsetup') return renderSeasonSetup();
     if(activeTab === 'settings') return renderSettings();
   }
   // jump to another tab programmatically
@@ -4348,14 +4358,129 @@ a{color:var(--amber)}
     await saveSettings();
   }
 
-  function renderSettings(){
-    const entries = Object.entries(STATE.teamMap);
+  // ---------- League Updates ----------
+  // Simple announcement feed stored in the shared __dashboard_state__ blob
+  // (STATE.settings.leagueUpdates). Publishing writes an entry immediately;
+  // there is no separate draft state, matching "create/publish" as one action.
+  const UPDATE_CATEGORIES = ['League', 'Schedule', 'Rules', 'Site'];
+  function genUpdateId(){ return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  function renderUpdates(){
+    const updates = (Array.isArray(STATE.settings.leagueUpdates) ? STATE.settings.leagueUpdates : [])
+      .slice()
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Publish an Update</h2>
+        <div class="note">Posted updates appear here immediately for anyone with access to this shared league data. There's no draft/preview step — Publish posts it right away.</div>
+        <div class="row" style="margin-top:12px;">
+          <div style="flex:2; min-width:220px;">
+            <label>Title</label>
+            <input type="text" id="updateTitle" placeholder="e.g. Week 6 fixtures are live">
+          </div>
+          <div style="flex:1; min-width:160px;">
+            <label>Category</label>
+            <select id="updateCategory">
+              ${UPDATE_CATEGORIES.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label>Update</label>
+          <textarea id="updateBody" placeholder="What's the update?" style="min-height:110px;"></textarea>
+        </div>
+        <div class="foot-actions">
+          <button class="primary" id="publishUpdateBtn">Publish update</button>
+          <span id="publishUpdateStatus"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Published Updates <span class="badge">${updates.length}</span></h2>
+        <div id="updatesList" style="margin-top:6px;">
+          ${updates.length ? '' : '<div class="empty-state">Nothing published yet. Updates you publish above will show up here.</div>'}
+        </div>
+      </div>
+    `;
+
+    const listEl = document.getElementById('updatesList');
+    if(updates.length){
+      listEl.innerHTML = updates.map(u => `
+        <div class="map-row update-row" style="align-items:flex-start;">
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="pname">${escapeHtml(u.title || '(untitled)')}</span>
+              <span class="badge update-badge-${escapeHtml((u.category || 'League').toLowerCase())}">${escapeHtml(u.category || 'League')}</span>
+            </div>
+            <div class="note" style="margin-top:4px; white-space:pre-wrap;">${escapeHtml(u.body || '')}</div>
+            <div class="note" style="margin-top:6px; color:var(--text-dim);">${u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}${u.publishedBy ? ' · ' + escapeHtml(u.publishedBy) : ''}</div>
+          </div>
+          <button class="ghost small danger-btn" data-delete-update="${escapeHtml(u.id)}">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('publishUpdateBtn').addEventListener('click', async () => {
+      const title = document.getElementById('updateTitle').value.trim();
+      const category = document.getElementById('updateCategory').value;
+      const body = document.getElementById('updateBody').value.trim();
+      const status = document.getElementById('publishUpdateStatus');
+      if(!title || !body){
+        if(status) status.innerHTML = `<span style="color:var(--red);">Title and update text are both required.</span>`;
+        return;
+      }
+      const btn = document.getElementById('publishUpdateBtn');
+      btn.disabled = true;
+      try{
+        let publishedBy = null;
+        try{
+          const cachedProfile = (COMM_PROFILES || []).find(p => String(p.id) === String(adminUser?.id));
+          publishedBy = cachedProfile?.username || adminUser?.email || null;
+        }catch(e){ publishedBy = adminUser?.email || null; }
+        const entry = {
+          id: genUpdateId(),
+          title,
+          category: UPDATE_CATEGORIES.includes(category) ? category : 'League',
+          body,
+          createdAt: new Date().toISOString(),
+          publishedBy
+        };
+        STATE.settings.leagueUpdates = [entry, ...(Array.isArray(STATE.settings.leagueUpdates) ? STATE.settings.leagueUpdates : [])];
+        await saveSettings();
+        await logAdminAction('publish_league_update', `Published a "${entry.category}" update: ${entry.title}`, {updateId: entry.id, category: entry.category});
+        if(activeTab === 'updates') renderUpdates();
+      }catch(e){
+        if(status) status.innerHTML = `<span style="color:var(--red);">Could not publish: ${escapeHtml(e.message)}</span>`;
+        btn.disabled = false;
+      }
+    });
+
+    listEl?.querySelectorAll('[data-delete-update]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.deleteUpdate;
+        const target = (STATE.settings.leagueUpdates || []).find(u => u.id === id);
+        if(!confirm(`Delete this update${target ? ': "' + target.title + '"' : ''}? This can't be undone.`)) return;
+        btn.disabled = true;
+        try{
+          STATE.settings.leagueUpdates = (STATE.settings.leagueUpdates || []).filter(u => u.id !== id);
+          await saveSettings();
+          await logAdminAction('delete_league_update', `Deleted a published update: ${target ? target.title : id}`, {updateId: id});
+          if(activeTab === 'updates') renderUpdates();
+        }catch(e){
+          alert('Could not delete: ' + e.message);
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  function renderSeasonSetup(){
     const franchises = configuredFranchises();
     const conferenceMap = STATE.settings.conferenceNames || {};
     const conferenceA = conferenceMap.a || 'Conference A';
     const conferenceB = conferenceMap.b || 'Conference B';
     const manualDiffs = (STATE.settings.ladderDifferentials && typeof STATE.settings.ladderDifferentials === 'object') ? STATE.settings.ladderDifferentials : {};
-    contentEl.invisible;
     const seasonArchives = STATE.settings.seasonArchives || {};
     const archiveEntries = Object.entries(seasonArchives).sort((a,b)=> (b[1].archivedAt||'').localeCompare(a[1].archivedAt||''));
     contentEl.innerHTML = `
@@ -4429,6 +4554,16 @@ a{color:var(--amber)}
             </div>`).join('') : '<div class="empty-state">No franchise names found in Player → Team name mapping yet. Add mappings below, and each unique team name will appear here.</div>'}
         </div>
       </div>
+      <div class="panel">
+        <h2>Playoffs / Qualification</h2>
+        <div class="note">Controls the "Qualification" tab in each franchise's summary popup on the Season page — current standing, the path to the top 6 (who needs to win or lose), and remaining fixtures. Leave this off during the regular season and switch it on once the playoff picture is worth showing, typically toward the end of the season.</div>
+        <div class="row" style="margin-top:12px; align-items:center;">
+          <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
+            <input type="checkbox" id="qualificationToggle" ${STATE.settings.qualificationEnabled ? 'checked' : ''}>
+            Show the Qualification tab on the Season page
+          </label>
+        </div>
+      </div>
       ${(()=>{
         const fxTeamNames = franchises.map(f=>f.name);
         const fxConfA = franchises.filter(f=>f.conference==='a').map(f=>f.name);
@@ -4438,8 +4573,7 @@ a{color:var(--amber)}
             ? Math.max(circleRoundRobin(fxConfA).length, circleRoundRobin(fxConfB).length, 1)
             : circleRoundRobin(fxTeamNames).length;
         return '';
-      })()}
-      <div class="panel">
+      })()}      <div class="panel">
         <h2>Fixture / Schedule</h2>
         <div class="note">Generate a round-robin schedule from the current franchise list below, or upload a schedule you've already built in Excel. Whatever is saved here shows up on the public Season page alongside standings.</div>
         <div class="note" style="margin-top:6px;">Assign every franchise to a conference above first — the generator will then schedule each team against the other teams in its own conference, plus at most one inter-conference match per week (the league's actual rule). Uploads are checked against the same rule and flagged if a week ends up with more than one cross-conference game.</div>
@@ -4467,70 +4601,7 @@ a{color:var(--amber)}
           <button class="ghost" id="matchReplaysBtn">Match replays to fixture weeks</button>
           <button class="ghost danger-btn" id="clearFixtureBtn">Clear fixture</button>
         </div>
-      </div>
-      <div class="panel">
-        <h2>Player → Team name mapping</h2>
-        <div class="note">Map each Showdown username to your league's team/trainer name, so stats group correctly. These mapped team names are also the source for the league's franchise list used by Draft Setup, ordering, and budgets.</div>
-        <div class="row" style="margin-top:12px; align-items:center;">
-          <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
-            <input type="checkbox" id="caseInsensitiveToggle" ${STATE.settings.caseInsensitiveNames ? 'checked' : ''}>
-            Ignore case when grouping team names (e.g. "Team Fire" and "team fire" count as the same team)
-          </label>
-        </div>
-        <div id="mapRows" style="margin-top:12px;"></div>
-        <div class="map-row">
-          <input type="text" id="newUser" placeholder="showdown username">
-          <input type="text" id="newTeam" placeholder="team name">
-          <button class="ghost small" id="addMap">Add</button>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>Possible duplicate players</h2>
-        <div class="note">Usernames that look like the same person typed differently (e.g. <code>dossa37</code> / <code>dossa_37</code>, or <code>podraa</code> / <code>podrrraaa</code>). Merging points every variant at whichever one has played the most games.</div>
-        <div id="dupPlayers" style="margin-top:12px;"></div>
-      </div>
-      <div class="panel">
-        <h2>Possible duplicate teams (shared roster)</h2>
-        <div class="note">Since this is a draft league each team's roster is fixed — two team tags whose Pokémon overlap heavily are probably the same team under two different names. Merging groups everything under the tag with the most total appearances.</div>
-        <div id="dupTeams" style="margin-top:12px;"></div>
-      </div>
-      <div class="panel">
-        <h2>Data</h2>
-        <div class="note">
-          Storage mode: <strong>Shared Supabase database</strong>
-        </div>
-        <div class="note">All replay, team, and settings data is stored in the shared Supabase database used by the public dashboard.</div>
-        <div class="foot-actions">
-          <button class="ghost" id="exportBackup">Download backup (.json)</button>
-          <button class="ghost" id="importBackupBtn">Restore from backup</button>
-          <input type="file" id="importBackupFile" accept="application/json" style="display:none;">
-          <button class="ghost danger-btn" id="resetAll">Clear all season data</button>
-        </div>
       </div>`;
-    const mapRows = document.getElementById('mapRows');
-    function drawMap(){
-      const entries = Object.entries(STATE.teamMap);
-      mapRows.innerHTML = entries.length===0 ? `<div class="empty-state">No mappings yet.</div>` :
-        entries.map(([u,t])=>`
-        <div class="map-row">
-          <input type="text" value="${escapeHtml(u)}" disabled>
-          <input type="text" value="${escapeHtml(t)}" disabled>
-          <button class="ghost small danger-btn" data-del="${escapeHtml(u)}">Remove</button>
-        </div>`).join('');
-      mapRows.querySelectorAll('[data-del]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          const removedTeam = STATE.teamMap[btn.dataset.del];
-          delete STATE.teamMap[btn.dataset.del];
-          await saveTeamMap();
-          await logAdminAction('remove_player_mapping', `Removed player → team mapping for ${btn.dataset.del}.`, {username:btn.dataset.del, team:removedTeam || null});
-          drawMap();
-          render();
-        });
-      });
-    }
-    drawMap();
-
-
     let pendingRosterUpload = null;
     const rosterStatus = document.getElementById('rosterUploadStatus');
     const rosterPreview = document.getElementById('rosterPreview');
@@ -4654,7 +4725,7 @@ a{color:var(--amber)}
       STATE.settings.ladderDifferentials = {};
       await saveSettings();
       await logAdminAction('clear_ladder_differentials', 'Cleared manual ladder differential overrides.', {});
-      renderSettings();
+      renderSeasonSetup();
     });
 
     const fixtureSummaryEl = document.getElementById('fixtureSummary');
@@ -4708,7 +4779,7 @@ a{color:var(--amber)}
         const rounds = generateFixture(teamNames, weeksInput, conferenceMap);
         await saveFixture({rounds}, 'generated');
         await logAdminAction('generate_fixture', `Generated a ${rounds.length}-week fixture for ${teamNames.length} franchises.`, {teams:teamNames.length, weeks:rounds.length, conferenceSplit:!unassigned.length});
-        renderSettings();
+        renderSeasonSetup();
       }catch(err){
         alert('Could not generate the fixture: ' + err.message);
         btn.disabled = false;
@@ -4735,7 +4806,7 @@ a{color:var(--amber)}
           ? `<div class="note" style="margin-top:6px;">${corrections.map(c=>`"${escapeHtml(c.from)}" → "${escapeHtml(c.to)}"`).join('<br>')}</div>`
           : '';
         status.innerHTML = (parts.length ? `<div class="note${issues.length?' danger':''}">Imported ${rounds.length} week(s); ${parts.join('; ')}.</div>` : `<div class="note">Imported ${rounds.length} week(s). ✓</div>`) + correctionsList;
-        renderSettings();
+        renderSeasonSetup();
       }catch(err){
         status.innerHTML = `<div class="note danger">Could not read that file: ${escapeHtml(err.message)}</div>`;
       }
@@ -4864,7 +4935,7 @@ a{color:var(--amber)}
       if(!confirm('Clear the saved fixture? This cannot be undone.')) return;
       await saveFixture(null, null);
       await logAdminAction('clear_fixture', 'Cleared the saved fixture.', {});
-      renderSettings();
+      renderSeasonSetup();
     });
 
     document.getElementById('newSeasonBtn').addEventListener('click', async ()=>{
@@ -4913,7 +4984,7 @@ a{color:var(--amber)}
       STATE.settings.franchises = current;
       await saveSettings();
       await logAdminAction('set_conference_names', `Set conference names to "${a}" and "${b}".`, {conferenceA:a, conferenceB:b});
-      renderSettings();
+      renderSeasonSetup();
     });
 
     document.querySelectorAll('.franchise-conference-select').forEach(select=>{
@@ -4927,10 +4998,83 @@ a{color:var(--amber)}
           await logAdminAction('set_franchise_conference', `Set ${franchise} to ${select.value ? (select.value==='a' ? conferenceA : conferenceB) : 'Unassigned'}.`, {franchise, conference:select.value || null});
         }catch(err){
           alert('Could not save conference assignment: ' + err.message);
-          renderSettings();
+          renderSeasonSetup();
         }
       });
     });
+
+    document.getElementById('qualificationToggle').addEventListener('change', async (e)=>{
+      STATE.settings.qualificationEnabled = e.target.checked;
+      await saveSettings();
+      await logAdminAction('set_qualification_enabled', `Qualification tab ${e.target.checked ? 'enabled' : 'disabled'} on the Season page.`, {enabled:e.target.checked});
+    });
+
+  }
+
+  function renderSettings(){
+    contentEl.innerHTML = `
+      <div class="panel">
+        <h2>Player → Team name mapping</h2>
+        <div class="note">Map each Showdown username to your league's team/trainer name, so stats group correctly. These mapped team names are also the source for the league's franchise list used by Draft Setup, ordering, and budgets.</div>
+        <div class="row" style="margin-top:12px; align-items:center;">
+          <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
+            <input type="checkbox" id="caseInsensitiveToggle" ${STATE.settings.caseInsensitiveNames ? 'checked' : ''}>
+            Ignore case when grouping team names (e.g. "Team Fire" and "team fire" count as the same team)
+          </label>
+        </div>
+        <div id="mapRows" style="margin-top:12px;"></div>
+        <div class="map-row">
+          <input type="text" id="newUser" placeholder="showdown username">
+          <input type="text" id="newTeam" placeholder="team name">
+          <button class="ghost small" id="addMap">Add</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Possible duplicate players</h2>
+        <div class="note">Usernames that look like the same person typed differently (e.g. <code>dossa37</code> / <code>dossa_37</code>, or <code>podraa</code> / <code>podrrraaa</code>). Merging points every variant at whichever one has played the most games.</div>
+        <div id="dupPlayers" style="margin-top:12px;"></div>
+      </div>
+      <div class="panel">
+        <h2>Possible duplicate teams (shared roster)</h2>
+        <div class="note">Since this is a draft league each team's roster is fixed — two team tags whose Pokémon overlap heavily are probably the same team under two different names. Merging groups everything under the tag with the most total appearances.</div>
+        <div id="dupTeams" style="margin-top:12px;"></div>
+      </div>
+      <div class="panel">
+        <h2>Data</h2>
+        <div class="note">
+          Storage mode: <strong>Shared Supabase database</strong>
+        </div>
+        <div class="note">All replay, team, and settings data is stored in the shared Supabase database used by the public dashboard.</div>
+        <div class="foot-actions">
+          <button class="ghost" id="exportBackup">Download backup (.json)</button>
+          <button class="ghost" id="importBackupBtn">Restore from backup</button>
+          <input type="file" id="importBackupFile" accept="application/json" style="display:none;">
+          <button class="ghost danger-btn" id="resetAll">Clear all season data</button>
+        </div>
+      </div>`;
+    const mapRows = document.getElementById('mapRows');
+    function drawMap(){
+      const entries = Object.entries(STATE.teamMap);
+      mapRows.innerHTML = entries.length===0 ? `<div class="empty-state">No mappings yet.</div>` :
+        entries.map(([u,t])=>`
+        <div class="map-row">
+          <input type="text" value="${escapeHtml(u)}" disabled>
+          <input type="text" value="${escapeHtml(t)}" disabled>
+          <button class="ghost small danger-btn" data-del="${escapeHtml(u)}">Remove</button>
+        </div>`).join('');
+      mapRows.querySelectorAll('[data-del]').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          const removedTeam = STATE.teamMap[btn.dataset.del];
+          delete STATE.teamMap[btn.dataset.del];
+          await saveTeamMap();
+          await logAdminAction('remove_player_mapping', `Removed player → team mapping for ${btn.dataset.del}.`, {username:btn.dataset.del, team:removedTeam || null});
+          drawMap();
+          render();
+        });
+      });
+    }
+    drawMap();
+
 
     const dupPlayersEl = document.getElementById('dupPlayers');
     function drawDupPlayers(){
