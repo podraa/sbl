@@ -584,7 +584,7 @@ button{touch-action:manipulation;}
 .switch-ev-card{width:min(620px,94vw);background:var(--panel);border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55);padding:20px;max-height:calc(100vh - 40px);overflow:auto;scrollbar-width:none;-ms-overflow-style:none}
 .switch-ev-card::-webkit-scrollbar{width:0;height:0;display:none}
 .switch-ev-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}.switch-ev-head h3{margin:0}.switch-ev-head p{margin:4px 0 0;color:var(--text-dim);font-size:12px}
-.switch-ev-grid-modal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.switch-ev-grid-modal label{margin:0}.switch-ev-grid-modal input{margin-top:5px;text-align:center}
+.switch-ev-grid-modal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.switch-ev-grid-modal label{margin:0}.switch-ev-field{min-width:0}.switch-ev-field-label{display:block;font-size:9px;font-weight:800;color:var(--text-dim);text-align:center;text-transform:uppercase;margin-bottom:4px}.switch-ev-cell{display:grid;grid-template-columns:26px minmax(0,1fr) 26px;align-items:center;height:32px;border:1px solid var(--border);border-radius:8px;background:var(--panel);overflow:hidden}.switch-ev-cell input{width:100%;min-width:0;box-sizing:border-box;border:0!important;background:transparent!important;text-align:center;padding:6px 2px!important;box-shadow:none!important;font-variant-numeric:tabular-nums}.switch-ev-step{width:26px;min-width:26px;height:32px;border:0;background:transparent;color:var(--text);font-size:19px;font-weight:900;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none}.switch-ev-step:hover{background:var(--panel-alt);color:var(--amber)}.switch-ev-step:active{background:var(--border)}.switch-ev-cell input[type=number]::-webkit-inner-spin-button,.switch-ev-cell input[type=number]::-webkit-outer-spin-button{opacity:0;width:0;margin:0}.switch-ev-cell input[type=number]{-moz-appearance:textfield}
 .switch-ev-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 @media(max-width:560px){.switch-ev-grid-modal{grid-template-columns:1fr}}
 </style><style>.prep-detail-summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;margin:0 58px 14px 0;min-width:0}.prep-detail-summary-row .prep-detail-title{min-width:0}.prep-popup-nav{display:flex;align-items:center;justify-content:flex-end;gap:7px;margin:0;padding:0;border:0;min-width:0}.prep-popup-nav .prep-mode-tabs{display:flex;align-items:center;gap:6px;margin:0;padding:0;border:0}.prep-popup-nav .prep-mode-tab{flex:0 0 auto}.prep-popup-calc{flex:0 0 auto;font-size:11px;padding:8px 13px;white-space:nowrap}.prep-detail-dialog{padding-top:20px}.prep-popup-nav .prep-popup-calc{margin-left:0}.prep-detail-summary-row .prep-card-head{min-width:0}.prep-detail-summary-row .prep-detail-title h2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1338,6 +1338,36 @@ a{color:var(--amber)}
     font-size:11px;
   }
 }
+</style>
+<style id="site-wide-ev-system">
+/* One EV component everywhere: - / +, identical sizing, blank when unset. */
+.ev-cell,.switch-ev-cell,.prep-switch-ev-grid .ev-cell{
+display:grid!important;grid-template-columns:26px minmax(0,1fr) 26px!important;
+align-items:center!important;height:32px!important;min-height:32px!important;
+box-sizing:border-box!important;border:1px solid var(--border)!important;
+border-radius:8px!important;background:var(--panel)!important;overflow:hidden!important;gap:0!important}
+.ev-cell input[type=number],.switch-ev-cell input[type=number],.prep-switch-ev-grid input[type=number]{
+width:100%!important;min-width:0!important;height:30px!important;box-sizing:border-box!important;
+border:0!important;background:transparent!important;text-align:center!important;padding:6px 2px!important;
+margin:0!important;box-shadow:none!important;font:inherit!important;font-variant-numeric:tabular-nums!important;
+-moz-appearance:textfield!important;appearance:textfield!important}
+.ev-cell input[type=number]::-webkit-inner-spin-button,.ev-cell input[type=number]::-webkit-outer-spin-button,
+.switch-ev-cell input[type=number]::-webkit-inner-spin-button,.switch-ev-cell input[type=number]::-webkit-outer-spin-button,
+.prep-switch-ev-grid input[type=number]::-webkit-inner-spin-button,.prep-switch-ev-grid input[type=number]::-webkit-outer-spin-button{
+-webkit-appearance:none!important;appearance:none!important;display:none!important;margin:0!important}
+.ev-step,.switch-ev-step{
+width:26px!important;min-width:26px!important;height:32px!important;min-height:32px!important;
+box-sizing:border-box!important;border:0!important;border-radius:0!important;background:transparent!important;
+color:var(--text)!important;font-size:19px!important;font-weight:900!important;line-height:1!important;
+padding:0!important;margin:0!important;display:flex!important;align-items:center!important;
+justify-content:center!important;cursor:pointer!important;user-select:none!important;
+-webkit-user-select:none!important;touch-action:none!important}
+.ev-step:hover,.switch-ev-step:hover{background:var(--panel-alt)!important;color:var(--amber)!important}
+.ev-step:active,.switch-ev-step:active{background:var(--border)!important}
+.ev-item{min-width:0!important}.ev-item .ev-cell{width:100%!important}
+.ev-label,.switch-ev-field-label{display:block!important;font-size:9px!important;font-weight:800!important;
+color:var(--text-dim)!important;text-align:center!important;text-transform:uppercase!important;
+margin-bottom:4px!important;letter-spacing:0!important}
 </style>
 </head>
 
@@ -2595,7 +2625,7 @@ $('prepYourTeam')?.addEventListener('change',async e=>{
       STATE.prepSwitchDefItem=e.target.value;await renderSwitchResults();
     });
     $('prepSwitchAtkEVs')?.addEventListener('click',e=>{e.preventDefault();openSwitchAtkEvModal();});
-    $('prepSwitchAllDefEVs')?.addEventListener('click',e=>{e.preventDefault();openSwitchAllDefEvModal();});
+    document.addEventListener('click',e=>{const btn=e.target.closest?.('#prepSwitchAllDefEVs');if(!btn)return;e.preventDefault();e.stopPropagation();openSwitchAllDefEvModal();},{capture:true});
     const swapPrepSides=async()=>{
       const oldYour=STATE.prepYourTeam, oldOpp=STATE.prepOpponent;
       STATE.prepYourTeam=oldOpp; STATE.prepOpponent=oldYour;
@@ -2729,12 +2759,12 @@ $('prepYourTeam')?.addEventListener('change',async e=>{
     function zeroEVs(){return {hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
     function openSwitchEvModal(mode,species){
       const isAtk=mode==='attacker';
-      const current=isAtk ? {...zeroEVs(),...(STATE.prepSwitchAtkEVs||{})} : {...zeroEVs(),...((STATE.prepSwitchEVsByMon||{})[species]||{})};
+      const current=isAtk ? {...(STATE.prepSwitchAtkEVs||{})} : {...((STATE.prepSwitchEVsByMon||{})[species]||{})};
       const title=isAtk ? `EVs for ${displaySpecies({species})}` : `Defensive EVs for ${displaySpecies({species})}`;
-      const stats=isAtk ? ['hp','atk','def','spa','spd','spe'] : ['hp','def','spd'];
+      const stats=isAtk ? ['atk','spa'] : ['hp','def','spd'];
       const labels={hp:'HP',atk:'Attack',def:'Defence',spa:'Sp. Attack',spd:'Sp. Defence',spe:'Speed'};
       const host=document.createElement('div');host.className='switch-ev-modal';
-      host.innerHTML=`<div class="switch-ev-card" role="dialog" aria-modal="true"><div class="switch-ev-head"><div><h3>${esc(title)}</h3><p>${isAtk?'These EVs control the opposing Pokémon using the selected move.':'Set only the defensive EVs used when this Pokémon switches in.'}</p></div><button type="button" id="switchEvClose">Close ✕</button></div><div class="switch-ev-grid-modal">${stats.map(k=>`<label>${labels[k]} EV<input id="switchEv_${k}" type="number" min="0" max="252" step="4" value="${Number(current[k])||0}"></label>`).join('')}</div><div class="switch-ev-actions"><button type="button" id="switchEvReset">Reset to 0</button><button type="button" id="switchEvSave" class="damage-calc-primary">Save EVs</button></div></div>`;
+      host.innerHTML=`<div class="switch-ev-card" role="dialog" aria-modal="true"><div class="switch-ev-head"><div><h3>${esc(title)}</h3><p>${isAtk?'These EVs control the opposing Pokémon using the selected move.':'Set only the defensive EVs used when this Pokémon switches in.'}</p></div><button type="button" id="switchEvClose">Close ✕</button></div><div class="switch-ev-grid-modal">${stats.map(k=>`<div class="switch-ev-field"><span class="switch-ev-field-label">${labels[k]}</span><div class="switch-ev-cell"><button type="button" class="switch-ev-step" data-ev-target="switchEv_${k}" data-delta="-4" aria-label="Decrease ${labels[k]} EV">−</button><input id="switchEv_${k}" type="number" min="0" max="252" step="4" value="${!current[k]?'':Number(current[k])}" inputmode="numeric"><button type="button" class="switch-ev-step" data-ev-target="switchEv_${k}" data-delta="4" aria-label="Increase ${labels[k]} EV">+</button></div></div>`).join('')}</div><div class="switch-ev-actions"><button type="button" id="switchEvReset">Reset to 0</button><button type="button" id="switchEvSave" class="damage-calc-primary">Save EVs</button></div></div>`;
       document.body.appendChild(host);
 requestAnimationFrame(()=>host.classList.add('open'));
       const close=()=>{host.classList.remove('open');setTimeout(()=>host.remove(),150);document.removeEventListener('keydown',onKey);};
@@ -2754,8 +2784,14 @@ requestAnimationFrame(()=>host.classList.add('open'));
       const current={hp:0,def:0,spd:0};
       const host=document.createElement('div');host.className='switch-ev-modal';
       const labels={hp:'HP',def:'Defence',spd:'Sp. Defence'};
-      host.innerHTML=`<div class="switch-ev-card" role="dialog" aria-modal="true"><div class="switch-ev-head"><div><h3>Set EVs for all switch-ins</h3><p>Apply the same HP, Defence, and Sp. Defence EVs to every Pokémon in your current team.</p></div><button type="button" id="switchAllEvClose">Close ✕</button></div><div class="switch-ev-grid-modal">${['hp','def','spd'].map(k=>`<label>${labels[k]} EV<input id="switchAllEv_${k}" type="number" min="0" max="252" step="4" value="${current[k]}"></label>`).join('')}</div><div class="switch-ev-actions"><button type="button" id="switchAllEvReset">Reset to 0</button><button type="button" id="switchAllEvSave" class="damage-calc-primary">Apply to all</button></div></div>`;
+      host.innerHTML=`<div class="switch-ev-card" role="dialog" aria-modal="true"><div class="switch-ev-head"><div><h3>Set EVs for all switch-ins</h3><p>Apply the same HP, Defence, and Sp. Defence EVs to every Pokémon in your current team.</p></div><button type="button" id="switchAllEvClose">Close ✕</button></div><div class="switch-ev-grid-modal">${['hp','def','spd'].map(k=>`<div class="switch-ev-field"><span class="switch-ev-field-label">${labels[k]}</span><div class="switch-ev-cell"><button type="button" class="switch-ev-step" data-ev-target="switchAllEv_${k}" data-delta="-4" aria-label="Decrease ${labels[k]} EV">−</button><input id="switchAllEv_${k}" type="number" min="0" max="252" step="4" value="${!current[k]?'':Number(current[k])}" inputmode="numeric"><button type="button" class="switch-ev-step" data-ev-target="switchAllEv_${k}" data-delta="4" aria-label="Increase ${labels[k]} EV">+</button></div></div>`).join('')}</div><div class="switch-ev-actions"><button type="button" id="switchAllEvReset">Reset to 0</button><button type="button" id="switchAllEvSave" class="damage-calc-primary">Apply to all</button></div></div>`;
       document.body.appendChild(host);requestAnimationFrame(()=>host.classList.add('open'));
+      host.querySelectorAll('.switch-ev-step').forEach(btn=>{
+        const apply=()=>{const input=host.querySelector('#'+btn.dataset.evTarget);if(!input)return;const min=Number(input.min)||0,max=Number(input.max)||252,step=Number(input.step)||4;const value=Number(input.value)||0;input.value=Math.max(min,Math.min(max,value+Number(btn.dataset.delta||0)));input.dispatchEvent(new Event('input',{bubbles:true}));};
+        btn.addEventListener('click',e=>{e.preventDefault();apply();});
+        let timer=null;btn.addEventListener('pointerdown',e=>{e.preventDefault();btn.setPointerCapture?.(e.pointerId);timer=setTimeout(()=>{timer=setInterval(apply,70);},350);});
+        const stop=()=>{if(timer){clearTimeout(timer);clearInterval(timer);timer=null;}};btn.addEventListener('pointerup',stop);btn.addEventListener('pointercancel',stop);btn.addEventListener('pointerleave',stop);
+      });
       const close=()=>{host.classList.remove('open');setTimeout(()=>host.remove(),150);document.removeEventListener('keydown',onKey);};
       const onKey=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',onKey);
       host.querySelector('#switchAllEvClose').onclick=close;
@@ -2894,7 +2930,9 @@ requestAnimationFrame(()=>host.classList.add('open'));
             };
             const heldDefItem=String(STATE.prepSwitchDefItem||'').toLowerCase();
             const resistType=resistBerryTypes[heldDefItem];
-            if(resistType && moveType.toLowerCase()===resistType && typeMult>1){ min=Math.floor(min/2); max=Math.floor(max/2); }
+            const resistApplies=resistType && moveType.toLowerCase()===resistType && typeMult>1;
+            if(resistApplies){ numericDmg=numericDmg.map(d=>Math.floor(d/2)); }
+            min=Math.min(...numericDmg); max=Math.max(...numericDmg);
             const berryName=String(STATE.prepSwitchDefItem||'').toLowerCase();
             const healingBerry=['sitrus berry','wiki berry','aguav berry','iapapa berry','figy berry','mago berry'].includes(berryName);
             const berryHealFraction=berryName==='sitrus berry'?0.25:healingBerry?(1/3):0;
@@ -2907,21 +2945,26 @@ requestAnimationFrame(()=>host.classList.add('open'));
             const healPct=healingBerry?berryHealFraction*100:0;
             const healPctLabel=berryName==='sitrus berry'?'1/4':healingBerry?'1/3':'';
             const heal=Math.floor(hp*berryHealFraction);
-            const healMin=healingBerry&&Number.isFinite(hp)&&min>=hp*0.5?heal:0;
-            const healMax=healingBerry&&Number.isFinite(hp)&&max>=hp*0.5?heal:0;
-            const netMin=Math.max(0,min-healMin), netMax=Math.max(0,max-healMax);
+            // Pokémon Showdown supplies the standard 16 damage rolls. Apply per-roll
+            // berry/healing effects before counting KOs so the displayed chance is
+            // always a true 1/16 (6.25%) increment.
+            const adjustedRolls=numericDmg.map(d=>Math.max(0,d-(healingBerry&&Number.isFinite(hp)&&d>=hp*0.5?heal:0)));
+            min=Math.min(...adjustedRolls); max=Math.max(...adjustedRolls);
+            const netMin=min, netMax=max;
             const pctMin=!immune&&Number.isFinite(hp)&&hp>0?(netMin/hp*100):immune?0:null;
             const pctMax=!immune&&Number.isFinite(hp)&&hp>0?(netMax/hp*100):immune?0:null;
-            const rawPctMin=!immune&&Number.isFinite(hp)&&hp>0?(min/hp*100):immune?0:null;
-            const rawPctMax=!immune&&Number.isFinite(hp)&&hp>0?(max/hp*100):immune?0:null;
+            const rawPctMin=!immune&&Number.isFinite(hp)&&hp>0?(Math.min(...numericDmg)/hp*100):immune?0:null;
+            const rawPctMax=!immune&&Number.isFinite(hp)&&hp>0?(Math.max(...numericDmg)/hp*100):immune?0:null;
             const focusSash=String(STATE.prepSwitchDefItem||'').toLowerCase()==='focus sash';
-            const wouldKoWithoutSash=!immune&&Number.isFinite(hp)&&hp>0&&netMax>=hp;
-            const ko=focusSash&&wouldKoWithoutSash?'sash':(!immune&&Number.isFinite(hp)&&hp>0?(netMin>=hp?'guaranteed':netMax>=hp?'possible':'no'):null);
-            rows.push({target,min,max,netMin,netMax,pctMin,pctMax,rawPctMin,rawPctMax,heal,healPct,healPctLabel,ko,focusSash,wouldKoWithoutSash,immune,hp,ability:defenderAbility,attackerAbility,desc:typeof res.fullDesc==='function'?res.fullDesc():''});
+            const koRolls=!immune&&Number.isFinite(hp)&&hp>0?adjustedRolls.filter(d=>d>=hp).length:0;
+            const koChance=adjustedRolls.length?koRolls/adjustedRolls.length*100:null;
+            const wouldKoWithoutSash=koRolls>0;
+            const ko=focusSash&&wouldKoWithoutSash?'sash':(!immune&&Number.isFinite(hp)&&hp>0?(koChance===100?'guaranteed':koChance>0?'possible':'no'):null);
+            rows.push({target,min,max,netMin,netMax,pctMin,pctMax,rawPctMin,rawPctMax,heal,healPct,healPctLabel,ko,koChance,focusSash,wouldKoWithoutSash,immune,hp,ability:defenderAbility,attackerAbility,desc:typeof res.fullDesc==='function'?res.fullDesc():''});
           }catch(err){rows.push({target,error:err.message||String(err)});}
         }
         /* Preserve roster order; switch-in cards are never sorted by damage. */
-        mount.innerHTML=`<div class="prep-switch-grid">${rows.map(r=>`<article class="prep-switch-card prep-switch-ev-card" data-switch-ev-mon="${esc(r.target.species)}"><div class="switch-card-top">${sprite(r.target.species,'prep-switch-sprite')}<div class="switch-card-identity"><strong class="switch-card-name">${esc(displaySpecies(r.target))}</strong><div class="switch-card-types">${typePills(typeMapForSpecies[r.target.species]||[])}</div></div><button type="button" class="prep-switch-ev-toggle">Set EVs</button></div>${r.error?`<div class="switch-card-detail">Calculation unavailable: ${esc(r.error)}</div>`:r.immune?`<div class="switch-card-result"><div><div class="switch-card-result-label">Damage</div><div class="prep-damage-range">No effect</div></div><div class="switch-card-verdict">Immune</div></div><div class="switch-card-detail">${esc(move)} does no damage to ${esc(displaySpecies(r.target))}.</div><div class="switch-card-footer"><span class="prep-switch-note">Safe switch-in</span></div>`:`<div class="switch-card-result"><div><div class="switch-card-result-label">Damage taken</div><div class="prep-damage-range">${Number.isFinite(r.pctMin)&&Number.isFinite(r.pctMax)?`${r.pctMin.toFixed(1)}%–${r.pctMax.toFixed(1)}%`:'Unavailable'}</div></div><div class="switch-card-verdict">${r.ko==='sash'?'Would KO without Focus Sash':r.ko==='guaranteed'?'Guaranteed KO':r.ko==='possible'?'KO possible':r.pctMax<=35?'Excellent':r.pctMax<=55?'Generally safe':'Risky'}</div></div><div class="switch-card-detail">${r.min}–${r.max} raw damage from ${esc(move)}${r.heal?` · ${r.heal} HP healed (${r.healPctLabel} max HP when triggered) · ${r.netMin}–${r.netMax} net damage`:''}</div><div class="switch-card-footer"><span class="prep-switch-note">${r.ko==='sash'?'Would KO without Focus Sash':r.ko==='guaranteed'?'KO — guaranteed from the minimum roll':r.ko==='possible'?'KO possible — maximum roll reaches 100% HP':r.pctMax<=35?'Excellent switch-in':r.pctMax<=55?'Generally safe':'Risky switch-in'}</span>${Number.isFinite(r.hp)?`<span class="switch-card-hp">${r.hp} HP</span>`:''}</div>`}</article>`).join('')}</div>`;
+        mount.innerHTML=`<div class="prep-switch-grid">${rows.map(r=>`<article class="prep-switch-card prep-switch-ev-card" data-switch-ev-mon="${esc(r.target.species)}"><div class="switch-card-top">${sprite(r.target.species,'prep-switch-sprite')}<div class="switch-card-identity"><strong class="switch-card-name">${esc(displaySpecies(r.target))}</strong><div class="switch-card-types">${typePills(typeMapForSpecies[r.target.species]||[])}</div></div><button type="button" class="prep-switch-ev-toggle">Set EVs</button></div>${r.error?`<div class="switch-card-detail">Calculation unavailable: ${esc(r.error)}</div>`:r.immune?`<div class="switch-card-result"><div><div class="switch-card-result-label">Damage</div><div class="prep-damage-range">No effect</div></div><div class="switch-card-verdict">Immune</div></div><div class="switch-card-detail">${esc(move)} does no damage to ${esc(displaySpecies(r.target))}.</div><div class="switch-card-footer"><span class="prep-switch-note">Safe switch-in</span></div>`:`<div class="switch-card-result"><div><div class="switch-card-result-label">Damage taken</div><div class="prep-damage-range">${Number.isFinite(r.pctMin)&&Number.isFinite(r.pctMax)?`${r.pctMin.toFixed(1)}%–${r.pctMax.toFixed(1)}%`:'Unavailable'}</div></div><div class="switch-card-verdict">${r.ko==='sash'?'Would KO without Focus Sash':r.ko==='guaranteed'?'Guaranteed KO':r.ko==='possible'?`KO ${Number.isInteger(r.koChance)?r.koChance:r.koChance.toFixed(2)}% of the time`:r.pctMax<=35?'Excellent':r.pctMax<=55?'Generally safe':'Risky'}</div></div><div class="switch-card-detail">${r.min}–${r.max} raw damage from ${esc(move)}${r.heal?` · ${r.heal} HP healed (${r.healPctLabel} max HP when triggered) · ${r.netMin}–${r.netMax} net damage`:''}</div><div class="switch-card-footer"><span class="prep-switch-note">${r.ko==='sash'?'Would KO without Focus Sash':r.ko==='guaranteed'?'KO — guaranteed from the minimum roll':r.ko==='possible'?`KO ${Number.isInteger(r.koChance)?r.koChance:r.koChance.toFixed(2)}% of the time`:r.pctMax<=35?'Excellent switch-in':r.pctMax<=55?'Generally safe':'Risky switch-in'}</span>${Number.isFinite(r.hp)?`<span class="switch-card-hp">${r.hp} HP</span>`:''}</div>`}</article>`).join('')}</div>`;
         mount.querySelectorAll('.prep-switch-ev-toggle').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const card=btn.closest('.prep-switch-ev-card');const species=card?.dataset.switchEvMon;if(species)openSwitchDefEvModal(species);}));
         mount.querySelectorAll('.prep-switch-ev-card').forEach(card=>card.addEventListener('click',e=>{if(e.target.closest('button'))return;const species=card.dataset.switchEvMon;if(species)openSwitchDefEvModal(species);}));
       }catch(err){mount.innerHTML=`<div class="empty">Could not calculate switch-ins: ${esc(err.message||err)}</div>`;}
@@ -4055,7 +4098,7 @@ load();
               }
             }
             const critLabel=entry.crit?'Critical hit':'';
-            const chanceLabel=koChance===null?'KO chance unavailable':`${Number.isInteger(koChance)?koChance:koChance.toFixed(1)}% chance to KO`;
+            const chanceLabel=koChance===null?'KO chance unavailable':`${koChance.toFixed(1)}% chance to KO`;
             rows.push(`<article class="dc-result-move"><div class="dc-result-move-head"><div><strong>${escCalc(entry.name)}</strong>${critLabel?`<span class="dc-result-meta">${escCalc(critLabel)}</span>`:''}</div><span class="dc-result-percent">${escCalc(pctText)}</span></div><div class="dc-result-detail">${ko?escCalc(ko):'No KO information'}</div><div class="dc-result-footer"><span class="dc-result-ko">${escCalc(chanceLabel)}</span></div></article>`);
           }catch(moveErr){
             rows.push(`<article class="dc-result-move"><div class="dc-result-move-head"><strong>${escCalc(entry.name)}</strong><span class="dc-result-percent">—</span></div><div class="dc-result-ko-detail">${escCalc(moveErr?.message||'Calculation unavailable')}</div></article>`);
