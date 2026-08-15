@@ -184,7 +184,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 .prep-side-swap-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);font-weight:800}
 .prep-side-swap button{padding:7px 12px;border-radius:999px;font-size:11px;font-weight:850}
 .prep-side-swap button.active{background:var(--amber);color:var(--amber-text,#171224);border-color:var(--amber)}
-.dc-side-swap{padding:8px 11px;font-size:10px;font-weight:850;white-space:nowrap}
+.damage-calc-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.damage-calc-head-actions>button{box-sizing:border-box;width:148px;height:36px;min-height:36px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.dc-side-swap{font-size:10px;font-weight:850;white-space:nowrap}
 .dc-side-swap.active{background:var(--amber);color:var(--amber-text,#171224);border-color:var(--amber)}
 .ev-cell input{cursor:text!important}
 .ev-step{user-select:none;-webkit-user-select:none;touch-action:none}
@@ -646,17 +648,27 @@ button{touch-action:manipulation;}
 .dc-move-slot{display:flex;flex-direction:column;gap:5px;min-width:0}
 .dc-move-slot>span{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:800}
 .dc-move-slot select{width:100%}
-.dc-results-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:9px}
-.dc-result-move{padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--panel)}
-.dc-result-move-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.dc-result-move-head strong{font-size:12px}
+.dc-results-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:9px}
+.dc-result-move{position:relative;display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden;background:var(--panel-alt);border:1px solid var(--border);border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.10);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.dc-result-move:hover{transform:translateY(-2px);border-color:var(--accent,#8b5cf6);box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.dc-result-move-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:11px;padding:14px 14px 12px}
+.dc-result-move-head>div:first-child{min-width:0;display:flex;flex-direction:column;gap:5px}
+.dc-result-move-head strong{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:850;line-height:1.15}
+.dc-result-move-sub{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden}
+.dc-result-move-sub .dc-result-meta{margin-left:0}
 .dc-auto-status{font-size:11px;color:var(--text-dim);margin-left:auto;align-self:center}
 .dc-results-subheading{font-size:12px;color:var(--text-dim);margin:-6px 0 10px}
-.dc-result-percent{font-size:18px;font-weight:900;white-space:nowrap}
-.dc-result-damage{font-size:12px;color:var(--text-dim);margin-top:4px}
-.dc-result-meta{font-size:10px;color:var(--text-dim);margin-left:7px}
+.dc-result-percent{font-size:20px;font-weight:900;white-space:nowrap;color:var(--amber);font-family:var(--mono)}
+.dc-result-damage{display:grid;grid-template-columns:1fr auto;align-items:end;gap:12px;margin:0 12px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--panel)}
+.dc-result-damage-label{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);font-weight:850;margin-bottom:3px}
+.dc-result-damage-value{font-family:var(--mono);font-size:20px;line-height:1.05;color:var(--amber);font-weight:800}
+.dc-result-verdict{font-size:10px;font-weight:850;text-align:right;white-space:nowrap}
+.dc-result-detail{padding:9px 14px 11px;font-size:10px;line-height:1.4;color:var(--text-dim)}
+.dc-result-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px;border-top:1px solid var(--border);font-size:10px;font-weight:750}
 .dc-result-ko{font-size:10px;color:var(--text-dim);font-weight:750}
-@media(max-width:650px){.dc-move-grid,.dc-results-list{grid-template-columns:1fr}}
+.dc-result-hp{font-family:var(--mono);color:var(--text-dim);white-space:nowrap}
+.dc-result-type{display:inline-flex;align-items:center;padding:2px 6px;border:1px solid var(--border);border-radius:999px;font-size:8px;font-weight:800;line-height:1.1;color:var(--text-dim);white-space:nowrap}
+@media(max-width:650px){.dc-move-grid,.dc-results-list{grid-template-columns:1fr}.dc-result-damage{grid-template-columns:1fr;align-items:start}.dc-result-verdict{text-align:left}}
 </style>
 
 <style id="dc-pokemon-ui-v2">
@@ -1254,6 +1266,79 @@ a{color:var(--amber)}
 })();
 </script>
 <style id="switch-analyser-enhancements">.switch-analyser-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.switch-role-toggle{flex:0 0 auto;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--panel-alt);color:var(--text);font-weight:850;font-size:10px;cursor:pointer}.switch-role-toggle:hover{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 10%,var(--panel-alt))}.switch-card-detail{line-height:1.45}@media(max-width:700px){.switch-analyser-head{flex-direction:column}.switch-role-toggle{width:100%}}</style>
+<style id="dc-button-ui-fix">
+/* Damage Calculator button consistency */
+.damage-calc-card button,
+.damage-calc-card select,
+.damage-calc-card input{
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.damage-calc-card button{
+  line-height:1;
+  box-sizing:border-box;
+}
+.damage-calc-card .dc-side-swap,
+.damage-calc-card .dc-secondary-btn,
+.damage-calc-card #damageCalcClose,
+.damage-calc-card .dc-apply-set{
+  height:36px;
+  min-height:36px;
+  padding:0 12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  line-height:1;
+  font-weight:800;
+  white-space:nowrap;
+}
+.damage-calc-card .dc-crit-btn{
+  width:54px;
+  height:28px;
+  min-height:28px;
+  padding:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:10px;
+  line-height:1;
+  font-weight:850;
+  flex:0 0 54px;
+}
+.damage-calc-card .ev-step{
+  width:26px;
+  min-width:26px;
+  height:26px;
+  min-height:26px;
+  padding:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+  line-height:1;
+  font-weight:800;
+}
+.damage-calc-card .dc-calc-nav button{
+  height:44px;
+  min-height:44px;
+  padding:0 10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  line-height:1.1;
+  font-weight:800;
+}
+@media(max-width:640px){
+  .damage-calc-card .dc-calc-nav button{
+    height:48px;
+    min-height:48px;
+    font-size:11px;
+  }
+}
+</style>
 </head>
 
 <style>
@@ -1443,6 +1528,30 @@ function aggregate(team){
     }
     seen.sort();for(let i=0;i<seen.length;i++)for(let j=i+1;j<seen.length;j++){const key=seen[i]+'|'+seen[j];pairCounts[key]=(pairCounts[key]||0)+1}
   }
+  // Kills and deaths in Team Analysis must use the exact same source as
+  // the Golden Fist leaderboard: aggregate the per-Pokémon replay fields
+  // across the full replay set, independent of the current team roster.
+  // This prevents the Team Overview counts from drifting from Golden Fist.
+  const goldenFistKD={};
+  for(const r of allRows()){
+    for(const k in (r.mons||{})){
+      const m=r.mons[k];
+      const species=canonicalSpecies(m?.species);
+      const nk=norm(species);
+      if(!nk) continue;
+      if(!goldenFistKD[nk]) goldenFistKD[nk]={kills:0,deaths:0};
+      goldenFistKD[nk].kills += Number(m?.kills||0)||0;
+      goldenFistKD[nk].deaths += Number(m?.deaths||0)||0;
+    }
+  }
+  Object.values(mons).forEach(a=>{
+    const kd=goldenFistKD[norm(a.species)];
+    if(kd){
+      a.kills=kd.kills;
+      a.deaths=kd.deaths;
+    }
+  });
+
   if(hasCurrentRoster(team)){
     const allowed=new Set(currentRoster.map(x=>norm(rosterMonName(x))).filter(Boolean));
     Object.keys(mons).forEach(k=>{if(!allowed.has(norm(mons[k].species)))delete mons[k]});
@@ -2559,21 +2668,6 @@ $('prepYourTeam')?.addEventListener('change',async e=>{
           return `<button type="button" class="speed-picker-clean-option ${selected?'selected':''}" data-species="${esc(mon.species)}">${sprite(mon.species,'speed-picker-clean-sprite')}<span><strong>${esc(displaySpecies(mon))}</strong><small>${selected?'Selected':'Click to select'}</small></span><i>${selected?'✓':''}</i></button>`;
         }).join('');
       };
-      host.querySelector('#dcSwapSides')?.addEventListener('click',()=>{
-      const swapValue=(a,b)=>{const av=host.querySelector('#'+a)?.value??'';const bv=host.querySelector('#'+b)?.value??'';const ae=host.querySelector('#'+a),be=host.querySelector('#'+b);if(ae)ae.value=bv;if(be)be.value=av;};
-      const oldAtkTeam=host.querySelector('#dcAtkTeam')?.value||'';
-      const oldDefTeam=host.querySelector('#dcDefTeam')?.value||'';
-      const oldAtkMon=host.querySelector('#dcAtk')?.value||'';
-      const oldDefMon=host.querySelector('#dcDef')?.value||'';
-      swapValue('dcAtkTeam','dcDefTeam');
-      syncMons('dcAtkTeam','dcAtk',oldDefMon);
-      syncMons('dcDefTeam','dcDef',oldAtkMon);
-      const fields=[['dcAtkLevel','dcDefLevel'],['dcAtkItem','dcDefItem'],['dcAtkAbility','dcDefAbility'],['dcAtkNature','dcDefNature'],['dcAtkStatus','dcDefStatus'],['dcAtkEvHp','dcDefEvHp'],['dcAtkEvAtk','dcDefEvAtk'],['dcAtkEvDef','dcDefEvDef'],['dcAtkEvSpa','dcDefEvSpa'],['dcAtkEvSpd','dcDefEvSpd'],['dcAtkEvSpe','dcDefEvSpe']];
-      fields.forEach(([a,b])=>swapValue(a,b));
-      const atkSet=host.querySelector('#dcAtkSet'),defSet=host.querySelector('#dcDefSet'); if(atkSet&&defSet){const v=atkSet.value;atkSet.value=defSet.value;defSet.value=v;}
-      const tmp=appliedImportedSets.atk; appliedImportedSets.atk=appliedImportedSets.def; appliedImportedSets.def=tmp;
-      saveCalcState(host); scheduleDamageCalculation(0);
-    });
     const close=()=>{
         document.removeEventListener('keydown',onKey);
         host.remove();
@@ -3447,7 +3541,7 @@ load();
     const atkMon=preset.attacker||getSaved(saved,'dcAtk','');
     const defMon=preset.defender||getSaved(saved,'dcDef','');
     host.innerHTML=`<div class="damage-calc-card" role="dialog" aria-modal="true" aria-label="Damage Calculator">
-      <div class="damage-calc-head"><div><h2>Damage Calculator</h2><p>Choose your team and your opponent, then select the Pokémon to calculate.</p></div><div class="damage-calc-head-actions"><button type="button" id="dcImportShowdown" class="dc-secondary-btn">Import Showdown Set</button><button type="button" id="dcSwapSides" class="dc-side-swap">↔ Swap sides</button><button id="damageCalcClose">Close ✕</button></div></div>
+      <div class="damage-calc-head"><div><h2>Damage Calculator</h2><p>Choose your team and your opponent, then select the Pokémon to calculate.</p></div><div class="damage-calc-head-actions"><button type="button" id="dcSwapSides" class="dc-side-swap">↔ Swap sides</button><button type="button" id="dcImportShowdown" class="dc-secondary-btn">Import Showdown Set</button><button type="button" id="damageCalcClose">Close ✕</button></div></div>
       <div class="dc-pokemon-grid">\n        <section class="dc-pokemon-card dc-atk-card">
           <div class="dc-pokemon-card-head">
             <div><div class="dc-pokemon-kicker">YOUR SIDE</div><h3>Your Pokémon</h3></div>
@@ -3575,6 +3669,21 @@ load();
       <div id="dcResult" class="damage-calc-result"><div class="dc-results-heading">Results</div><div class="muted">Choose both Pokémon and add at least one move.</div></div>
     </div>`;
     document.body.appendChild(host);
+    host.querySelector('#dcSwapSides')?.addEventListener('click',()=>{
+      const swapValue=(a,b)=>{const ae=host.querySelector('#'+a),be=host.querySelector('#'+b);if(!ae||!be)return;const v=ae.value;ae.value=be.value;be.value=v;};
+      const oldAtkMon=host.querySelector('#dcAtk')?.value||'';
+      const oldDefMon=host.querySelector('#dcDef')?.value||'';
+      swapValue('dcAtkTeam','dcDefTeam');
+      syncMons('dcAtkTeam','dcAtk',oldDefMon);
+      syncMons('dcDefTeam','dcDef',oldAtkMon);
+      const fields=[['dcAtkLevel','dcDefLevel'],['dcAtkItem','dcDefItem'],['dcAtkAbility','dcDefAbility'],['dcAtkNature','dcDefNature'],['dcAtkStatus','dcDefStatus'],['dcAtkEvHp','dcDefEvHp'],['dcAtkEvAtk','dcDefEvAtk'],['dcAtkEvDef','dcDefEvDef'],['dcAtkEvSpa','dcDefEvSpa'],['dcAtkEvSpd','dcDefEvSpd'],['dcAtkEvSpe','dcDefEvSpe']];
+      fields.forEach(([a,b])=>swapValue(a,b));
+      const atkSet=host.querySelector('#dcAtkSet'),defSet=host.querySelector('#dcDefSet');
+      if(atkSet&&defSet){const v=atkSet.value;atkSet.value=defSet.value;defSet.value=v;}
+      const tmp=appliedImportedSets.atk;appliedImportedSets.atk=appliedImportedSets.def;appliedImportedSets.def=tmp;
+      saveCalcState(host);
+      scheduleDamageCalculation(0);
+    });
 
     // Force a truly clean calculator on every normal page load/open.
     // This also defeats browser form-state restoration (BFCache/autofill), which
@@ -3920,7 +4029,11 @@ load();
         if(terrain) fieldOptions.terrain=terrain;
         if(Object.keys(defenderSide).length) fieldOptions.defenderSide=defenderSide;
         const field=typeof C.Field==='function' ? new C.Field(fieldOptions) : undefined;
-        const defenderMaxHp=Number(defender.maxHP)||Number(defender.maxhp)||Number(defender.hp)||0;
+        // Use the calculator engine's own HP value. Do not call the page-level
+        // fetchPokemonData helper here: that helper lives inside the main dashboard
+        // IIFE and is intentionally not part of the damage-calculator scope.
+        const defenderMaxHp=Number(defender.maxHP)||Number(defender.maxhp)||Number(defender.hp)||
+          Number(defender.stats?.hp)||Number(defender.rawStats?.hp)||0;
         const rows=[];
         for(const entry of selectedMoves){
           if(requestId!==dcCalcRequest)return;
@@ -3930,17 +4043,20 @@ load();
             let ko='';
             try{ko=res.kochance().text||'';}catch(e){}
             const rolls=(Array.isArray(res.damage)?res.damage:[res.damage]).map(Number).filter(Number.isFinite);
-            let damageText='—', pctText='—';
+            let pctText='—', minPct=NaN, maxPct=NaN, koChance=null;
             if(rolls.length){
               const minDamage=Math.min(...rolls), maxDamage=Math.max(...rolls);
-              damageText=minDamage===maxDamage?`${minDamage}`:`${minDamage}–${maxDamage}`;
               if(defenderMaxHp>0){
-                const minPct=minDamage/defenderMaxHp*100, maxPct=maxDamage/defenderMaxHp*100;
+                minPct=minDamage/defenderMaxHp*100;
+                maxPct=maxDamage/defenderMaxHp*100;
                 pctText=minPct===maxPct?`${minPct.toFixed(1)}%`:`${minPct.toFixed(1)}–${maxPct.toFixed(1)}%`;
+                const koRolls=rolls.filter(d=>d>=defenderMaxHp).length;
+                koChance=rolls.length?koRolls/rolls.length*100:null;
               }
             }
-            const critLabel=entry.crit?' · Critical hit':'';
-            rows.push(`<article class="dc-result-move"><div class="dc-result-move-head"><div><strong>${escCalc(entry.name)}</strong><span class="dc-result-meta">${escCalc(critLabel)}</span></div><span class="dc-result-percent">${escCalc(pctText)}</span></div><div class="dc-result-damage">${escCalc(damageText)} HP damage</div>${ko?`<div class="dc-result-ko-detail">${escCalc(ko)}</div>`:''}</article>`);
+            const critLabel=entry.crit?'Critical hit':'';
+            const chanceLabel=koChance===null?'KO chance unavailable':`${Number.isInteger(koChance)?koChance:koChance.toFixed(1)}% chance to KO`;
+            rows.push(`<article class="dc-result-move"><div class="dc-result-move-head"><div><strong>${escCalc(entry.name)}</strong>${critLabel?`<span class="dc-result-meta">${escCalc(critLabel)}</span>`:''}</div><span class="dc-result-percent">${escCalc(pctText)}</span></div><div class="dc-result-detail">${ko?escCalc(ko):'No KO information'}</div><div class="dc-result-footer"><span class="dc-result-ko">${escCalc(chanceLabel)}</span></div></article>`);
           }catch(moveErr){
             rows.push(`<article class="dc-result-move"><div class="dc-result-move-head"><strong>${escCalc(entry.name)}</strong><span class="dc-result-percent">—</span></div><div class="dc-result-ko-detail">${escCalc(moveErr?.message||'Calculation unavailable')}</div></article>`);
           }
