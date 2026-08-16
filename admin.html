@@ -1491,6 +1491,64 @@ input,textarea,select{
       return mons[k];
     }
 
+    // Re-label the mon currently in `slot` when its true species is revealed
+    // or changes WITHOUT a switch event — Illusion breaking (`|replace|`) or
+    // a mid-battle forme change like Terapagos Terastallizing into
+    // Terapagos-Terastal (`|-formechange|`/`|detailschange|`). Until this is
+    // called, everything recorded for that slot stays keyed to whatever
+    // species was last seen at switch-in (the Illusion disguise, or
+    // Terapagos's pre-transform forme).
+    //
+    // This renames/merges the existing stats OBJECT rather than starting a
+    // fresh one at the new key, because lastAttacker/damageContributors/
+    // statusSourceByMon/hazardSetter/etc. all hold direct references to that
+    // object (see the note above lastAttacker) — relabeling it in place is
+    // what makes credit already "in flight" resolve to the true species once
+    // it's known, instead of only fixing future events.
+    function migrateSlotSpecies(slot, newSpecies){
+      const s = slots[slot];
+      if(!s || !newSpecies) return;
+      const side = s.side;
+      const oldNorm = normName(s.species);
+      const newNorm = normName(newSpecies);
+      s.species = newSpecies;
+      if(oldNorm === newNorm) return;
+      const oldKey = side + '|' + oldNorm;
+      const newKey = side + '|' + newNorm;
+      const oldMon = mons[oldKey];
+      if(!oldMon) return; // nothing recorded yet under the old identity this stint
+      // Relabel in place first so any stray reference to this exact object
+      // (e.g. a pending hazard/delayed-hit credit) resolves to the true
+      // species even if it's never merged into `mons` below.
+      oldMon.species = newSpecies;
+      oldMon.side = side;
+      delete mons[oldKey];
+      const existing = mons[newKey];
+      if(existing && existing !== oldMon){
+        // The true species already has its own stats object this game (an
+        // earlier undisguised/pre-transform stint, or toggling back to a
+        // forme it already held). Merge this stint's totals into it.
+        existing.damageDealt += oldMon.damageDealt;
+        existing.damageTaken += oldMon.damageTaken;
+        existing.kills += oldMon.kills;
+        existing.deaths += oldMon.deaths;
+        existing.assists += oldMon.assists;
+        existing.appearances += oldMon.appearances;
+        existing.killLog = existing.killLog.concat(oldMon.killLog);
+        existing.deathLog = existing.deathLog.concat(oldMon.deathLog);
+        existing.assistLog = existing.assistLog.concat(oldMon.assistLog);
+        for(const mv in oldMon.moves) existing.moves[mv] = (existing.moves[mv] || 0) + oldMon.moves[mv];
+        if(Number.isFinite(oldMon.maxHpObserved)) existing.maxHpObserved = Math.max(existing.maxHpObserved || 0, oldMon.maxHpObserved);
+        mons[newKey] = existing;
+      } else {
+        mons[newKey] = oldMon;
+      }
+      if(appearedThisReplay.has(oldKey)){
+        appearedThisReplay.delete(oldKey);
+        appearedThisReplay.add(newKey);
+      }
+    }
+
 
     function addStatusDodgeLuck(targetSide, chance, targetMk){
       const score = statusDodgeLuck(chance);
@@ -1619,6 +1677,26 @@ input,textarea,select{
         delete pendingDelayedHit[slot];
         if(oldMonKey) delete residualSourceByMon[oldMonKey];
         ensureMon(slot);
+      } else if(cmd === 'replace'){
+        // Illusion breaking: Showdown reveals the true species of whatever
+        // is currently in this slot. No switch occurs — the same physical
+        // stint continues, so re-key its stats to the real species instead
+        // of leaving them attributed to the disguise.
+        const slotFull = parts[2];
+        const slot = slotFull ? slotFull.split(':')[0].trim() : null;
+        const species = parts[3] ? parts[3].split(',')[0].trim() : '';
+        if(slot && species) migrateSlotSpecies(slot, species);
+      } else if(cmd === '-formechange' || cmd === 'detailschange'){
+        // Mid-battle forme change with no accompanying switch — e.g.
+        // Terapagos Terastallizing into Terapagos-Terastal, or any other
+        // battle-only forme (Aegislash stance, Morpeko Hunger Switch, etc.).
+        // Re-key so stats for the rest of this stint land on the new forme;
+        // canonicalSpecies() downstream still collapses battle-only formes
+        // back to their base species for aggregation.
+        const slotFull = parts[2];
+        const slot = slotFull ? slotFull.split(':')[0].trim() : null;
+        const species = parts[3] ? parts[3].split(',')[0].trim() : '';
+        if(slot && species) migrateSlotSpecies(slot, species);
       } else if(cmd === 'move'){
         finalizePendingStatusChecks();
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
