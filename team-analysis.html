@@ -1156,6 +1156,52 @@ a{color:var(--amber)}
 </style>
 <script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
 <style id="switch-analyser-enhancements">.switch-analyser-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.switch-role-toggle{flex:0 0 auto;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--panel-alt);color:var(--text);font-weight:850;font-size:10px;cursor:pointer}.switch-role-toggle:hover{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 10%,var(--panel-alt))}.switch-card-detail{line-height:1.45}@media(max-width:700px){.switch-analyser-head{flex-direction:column}.switch-role-toggle{width:100%}}</style>
+<style id="team-overview-your-team-toggle">
+.team-overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.team-overview-toggle{flex:0 0 auto;display:inline-flex;gap:4px;padding:4px;border:1px solid var(--border);border-radius:11px;background:var(--panel-alt)}
+.team-overview-toggle-btn{border:none;background:none;color:var(--text-dim);border-radius:8px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer}
+.team-overview-toggle-btn:hover{color:var(--text)}
+.team-overview-toggle-btn.active{background:var(--amber);color:var(--bg)}
+@media(max-width:700px){.team-overview-head{flex-direction:column}.team-overview-toggle{width:100%;justify-content:stretch}.team-overview-toggle-btn{flex:1}}
+</style>
+<style id="type-chart-coverage-styles">
+.tc-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+.tc-table{border-collapse:collapse;width:100%;min-width:900px;font-size:12px}
+.tc-table th,.tc-table td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border)}
+.tc-table thead th{background:var(--panel-alt);position:sticky;top:0;font-size:11px}
+.tc-table .tc-corner{text-align:left;min-width:150px}
+.tc-table tbody th{text-align:left;background:var(--panel-alt);position:sticky;left:0;min-width:150px}
+.tc-row-mon{display:flex;align-items:center;gap:8px}
+.tc-row-sprite{width:32px;height:32px;object-fit:contain;image-rendering:pixelated;flex:0 0 32px}
+.tc-table td span{font-weight:800;font-size:11px}
+.tc-cell-unknown{color:var(--text-dim)}
+.tc-cell-neutral{background:transparent}
+.tc-cell-immune{background:#2b2b2b;color:#eee}
+.tc-cell-vweak{background:#8a1f2b;color:#fff}
+.tc-cell-weak{background:#c24a4a;color:#fff}
+.tc-cell-resist{background:#2f7a52;color:#fff}
+.tc-cell-vresist{background:#1c5c3c;color:#fff}
+.tc-cell-noeffect{background:#2b2b2b;color:#eee}
+.tc-cell-vsuper{background:#1c5c3c;color:#fff}
+.tc-cell-super{background:#2f7a52;color:#fff}
+.tc-cell-weakhit{background:#4a4a4a;color:#ddd}
+.tc-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;font-size:11px;color:var(--text-dim)}
+.tc-legend-item{display:inline-flex;align-items:center;gap:6px}
+.tc-legend-item i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--border)}
+.coverage-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+.coverage-table{border-collapse:collapse;width:100%;min-width:640px}
+.coverage-table th,.coverage-table td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.coverage-table thead th{background:var(--panel-alt);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim)}
+.coverage-row-gap{background:rgba(227,154,182,.08)}
+.coverage-cell{display:flex;flex-direction:column;gap:6px;min-width:220px}
+.coverage-count{font-family:var(--mono);font-weight:800;font-size:13px}
+.coverage-bar-track{width:100%;height:6px;border-radius:999px;background:var(--panel-alt);overflow:hidden}
+.coverage-bar-fill{height:100%;border-radius:999px}
+.coverage-fill-good{background:var(--teal)}
+.coverage-fill-bad{background:var(--red)}
+.coverage-chip-row{margin-top:2px}
+@media(max-width:700px){.tc-table{min-width:760px}.coverage-cell{min-width:160px}}
+</style>
 <style id="dc-button-ui-fix">
 /* Damage Calculator button consistency */
 .damage-calc-card button,
@@ -1453,7 +1499,7 @@ function nextScheduledOpponent(team){
 }
 function rowsForTeam(team){return allRows().filter(r=>sameTeam(teamFor(r.players?.p1),team)||sameTeam(teamFor(r.players?.p2),team))}
 function sideForTeam(r,team){if(sameTeam(teamFor(r.players?.p1),team))return 'p1';if(sameTeam(teamFor(r.players?.p2),team))return 'p2';return null}
-function monsForSide(r,side){const out={};for(const m of Object.values(r.mons||{})){if(String(m?.side||'').toLowerCase()===side && m.species){const species=canonicalSpecies(m.species);out[norm(species)]={...m,species}}}for(const sp of (r.teamRoster?.[side]||[])){const k=norm(sp);if(!out[k])out[k]={species:sp,appearances:0,kills:0,deaths:0,damageDealt:0,damageTaken:0,moves:{}}}return Object.values(out)}
+function monsForSide(r,side){const out={};for(const m of Object.values(r.mons||{})){if(String(m?.side||'').toLowerCase()===side && m.species){const species=canonicalSpecies(m.species);out[norm(species)]={...m,species}}}for(const sp of (r.teamRoster?.[side]||[])){const species=canonicalSpecies(sp);const k=norm(species);if(!out[k])out[k]={species,appearances:0,kills:0,deaths:0,damageDealt:0,damageTaken:0,moves:{}}}return Object.values(out)}
 function rosterForTeam(team){
   const rosters=STATE.settings?.rosters||{};
   const key=Object.keys(rosters).find(k=>sameTeam(k,team));
@@ -1464,7 +1510,37 @@ function rosterMonName(mon){
   if(mon && typeof mon==='object') return String(mon.name ?? mon.species ?? mon.pokemon ?? '').trim();
   return String(mon ?? '').trim();
 }
-function canonicalSpecies(s){return norm(s)==='comfey'?'Comfey':String(s??'').trim()}
+// Some Pokémon change their reported species mid-battle (or are always logged
+// under a held-item-triggered forme) even though they were drafted/rostered
+// under their base name. Without collapsing these back to the base species,
+// the roster-seeded entry (0 games) and the replay-logged entry (the actual
+// games) end up under two different keys — the replay-logged one then gets
+// dropped entirely because it doesn't match the roster's "allowed" set, which
+// is why some Pokémon (mostly ones with multiple forms) showed no replays.
+const BATTLE_ONLY_FORM_MAP={
+  'mimikyu busted':'Mimikyu','mimikyu busted totem':'Mimikyu',
+  'eiscue noice':'Eiscue',
+  'morpeko hangry':'Morpeko',
+  'aegislash blade':'Aegislash',
+  'wishiwashi school':'Wishiwashi',
+  'cramorant gulping':'Cramorant','cramorant gorging':'Cramorant',
+  'darmanitan zen':'Darmanitan','darmanitan zen galar':'Darmanitan-Galar',
+  'zacian crowned':'Zacian','zamazenta crowned':'Zamazenta',
+  'terapagos terastal':'Terapagos','terapagos stellar':'Terapagos',
+  'palafin hero':'Palafin',
+  'minior meteor':'Minior',
+  'meloetta pirouette':'Meloetta'
+};
+function canonicalSpecies(s){
+  const raw=String(s??'').trim();
+  const n=norm(raw);
+  if(n==='comfey')return 'Comfey';
+  if(BATTLE_ONLY_FORM_MAP[n])return BATTLE_ONLY_FORM_MAP[n];
+  // Terastallized Ogerpon is logged with a trailing "-Tera" — that's the same
+  // drafted Pokémon as the mask forme without it.
+  if(/-tera$/i.test(raw))return raw.replace(/-tera$/i,'');
+  return raw;
+}
 function hasCurrentRoster(team){return rosterForTeam(team).length>0}
 function aggregate(team){
   const games=rowsForTeam(team);const mons={};let wins=0;const pairCounts={};
@@ -1520,7 +1596,7 @@ function aggregate(team){
   });
 
   if(hasCurrentRoster(team)){
-    const allowed=new Set(currentRoster.map(x=>norm(rosterMonName(x))).filter(Boolean));
+    const allowed=new Set(currentRoster.map(x=>norm(canonicalSpecies(rosterMonName(x)))).filter(Boolean));
     Object.keys(mons).forEach(k=>{if(!allowed.has(norm(mons[k].species)))delete mons[k]});
     Object.keys(pairCounts).forEach(k=>{const [x,y]=k.split('|');if(!allowed.has(x)||!allowed.has(y))delete pairCounts[k]});
   }
@@ -2217,10 +2293,140 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
     </div>`;
     const threat=goodInto.length?`Strong into ${goodInto.length} Pokémon`:'No clear type advantage';
     const tc=goodInto.length?'matchup-bad':'matchup-neutral';
-    return `<article class="prep-opponent-card prep-opponent-popout" data-prep-popout="${esc(m.species)}"><button type="button" class="prep-popout-trigger legacy-mon-card"><span class="mon-head">${sprite(m.species,'prep-sprite')}<span><span class="mon-name prep-legacy-name"><strong>${esc(displaySpecies(m))}</strong><span class="prep-inline-types">${effTypes.map(t=>typePill(t)).join('')}</span></span><span class="muted">${usage.replays?.size||0} replay${(usage.replays?.size||0)===1?'':'s'} · ${usage.appearances||0} appearances</span></span></span><span class="chips prep-legacy-chips"><span class="chip"><b>${usage.kills||0}</b> K</span><span class="chip"><b>${usage.deaths||0}</b> D</span><span class="chip"><b>${Number(usage.dealt||0).toFixed(0)}</b> dmg</span><span class="chip"><b>${(usage.gameSets||[]).filter(g=>g.moves?.length).length}</b> sets recorded</span></span><span class="small prep-legacy-threat">${esc(threat)}</span></button><div class="prep-popout-data" hidden data-usage="${esc(usageHtml)}" data-scouting="${esc(scoutingHtml)}" data-analysis="${esc(analysisHtml)}" data-appearances="${usage.appearances||0}" data-kills="${usage.kills||0}" data-deaths="${usage.deaths||0}" data-dealt="${Number(usage.dealt||0).toFixed(0)}" data-taken="${Number(usage.taken||0).toFixed(0)}"></div></article>`;
+    return `<article class="prep-opponent-card prep-opponent-popout" data-prep-popout="${esc(m.species)}" data-prep-team="opponent"><button type="button" class="prep-popout-trigger legacy-mon-card"><span class="mon-head">${sprite(m.species,'prep-sprite')}<span><span class="mon-name prep-legacy-name"><strong>${esc(displaySpecies(m))}</strong><span class="prep-inline-types">${effTypes.map(t=>typePill(t)).join('')}</span></span><span class="muted">${usage.replays?.size||0} replay${(usage.replays?.size||0)===1?'':'s'} · ${usage.appearances||0} appearances</span></span></span><span class="chips prep-legacy-chips"><span class="chip"><b>${usage.kills||0}</b> K</span><span class="chip"><b>${usage.deaths||0}</b> D</span><span class="chip"><b>${Number(usage.dealt||0).toFixed(0)}</b> dmg</span><span class="chip"><b>${(usage.gameSets||[]).filter(g=>g.moves?.length).length}</b> sets recorded</span></span><span class="small prep-legacy-threat">${esc(threat)}</span></button><div class="prep-popout-data" hidden data-usage="${esc(usageHtml)}" data-scouting="${esc(scoutingHtml)}" data-analysis="${esc(analysisHtml)}" data-appearances="${usage.appearances||0}" data-kills="${usage.kills||0}" data-deaths="${usage.deaths||0}" data-dealt="${Number(usage.dealt||0).toFixed(0)}" data-taken="${Number(usage.taken||0).toFixed(0)}"></div></article>`;
   }))).join('');
 
-  // -------- Speed Workbench --------
+  // -------- Your Team Overview --------
+  // Mirrors the opponent card grid above but for YOUR roster, so both sides
+  // of the matchup can be scouted from the same panel via a tab toggle.
+  const weakToFor=(m)=>opp.filter(o=>{
+    const mult=combinedMultiplier(typeMap[o.species]||[],typeMap[m.species]||[]);
+    return mult>=2;
+  });
+  const strongIntoFor=(m)=>opp.filter(o=>{
+    const mult=combinedMultiplier(typeMap[m.species]||[],typeMap[o.species]||[]);
+    return mult>=2;
+  });
+  const yourAggregate=aggregate(yourTeam);
+  const yourUsageFor=m=>yourAggregate.mons[norm(m.species)] || yourAggregate.mons[m.species] || {appearances:0,kills:0,deaths:0,dealt:0,taken:0,replays:new Set(),gameSets:[],weeks:new Set()};
+  const yourCards=(await Promise.all(your.map(async m=>{
+    const info=yourRoster.get(norm(m.species));
+    const weakTo=weakToFor(m);
+    const strongInto=strongIntoFor(m);
+    const moves=observedFor(m).slice(0,6);
+    const roles=rolesFor(m).slice(0,3);
+    const usage=yourUsageFor(m);
+    const pdata=await fetchPokemonData(m.species);
+    const abilities=pdata?.abilities||[];
+    const baseStats=pdata?.stats||{};
+    const prettyAbility=a=>String(a).replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    const effTypes=(typeMap[m.species]||pdata?.types||[]).map(String).filter(Boolean);
+    const allTypes=['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
+    const eff=allTypes.map(type=>({type,mult:effTypes.reduce((v,def)=>v*typeChartMultiplier(type,def),1)})).filter(x=>x.mult!==1);
+    const weaknesses=eff.filter(x=>x.mult>1),resistances=eff.filter(x=>x.mult>0&&x.mult<1),immunities=eff.filter(x=>x.mult===0);
+    const group=(title,items)=>`<div class="prep-popup-subsection"><strong>${title}</strong><div class="prep-chip-row">${items.length?items.map(x=>`<span class="prep-chip">${esc(x.type)} ${fmtMult(x.mult)}</span>`).join(''):'<span class="small">None</span>'}</div></div>`;
+    const scoutingHtml=`<div class="prep-popup-grid">
+      <div class="prep-card-section"><span>Typing</span><div class="type-row">${effTypes.length?effTypes.map(t=>typePill(t)).join(''):'<span class="small">Typing unavailable</span>'}</div></div>
+      <div class="prep-card-section"><span>Strong into</span><div class="prep-chip-row">${strongInto.length?strongInto.map(x=>`<span class="prep-chip">${esc(displaySpecies(x))}</span>`).join(''):'<span class="small">No clear type advantage</span>'}</div></div>
+      <div class="prep-card-section"><span>Vulnerable to</span><div class="prep-chip-row">${weakTo.length?weakTo.map(x=>`<span class="prep-chip">${esc(displaySpecies(x))}</span>`).join(''):'<span class="small">No clear type disadvantage</span>'}</div></div>
+      <div class="prep-card-section"><span>Abilities</span><div class="prep-chip-row">${abilities.length?abilities.map(a=>`<span class="prep-chip">${esc(prettyAbility(a))}</span>`).join(''):'<span class="small">Unavailable</span>'}</div></div>
+      <div class="prep-card-section"><span>Observed moves</span><div class="prep-chip-row">${moves.length?moves.map(x=>`<span class="prep-chip">${esc(x)}</span>`).join(''):'<span class="small">No recorded moves</span>'}</div></div>
+      <div class="prep-card-section"><span>Likely roles</span><div class="prep-chip-row">${roles.length?roles.map(x=>`<span class="prep-chip">${esc(x)}</span>`).join(''):'<span class="small">Unclear</span>'}</div></div>
+      <div class="prep-card-section"><span>Point value</span><div class="small">${info?.points!==''&&info?.points!=null?esc(info.points)+' pts':'Point value unavailable'}</div></div>
+    </div>
+    <div class="prep-card-section"><span>Type effectiveness</span>${group('Weaknesses',weaknesses)}${group('Resistances',resistances)}${group('Immunities',immunities)}</div>
+    <div class="prep-card-section"><span>Base stats</span><div class="prep-stat-grid">${[['hp','HP'],['attack','Atk'],['defense','Def'],['special-attack','SpA'],['special-defense','SpD'],['speed','Spe']].map(([k,l])=>`<span class="prep-chip">${l}: ${baseStats[k]??'—'}</span>`).join('')}</div></div>`;
+    const usageHtml=`<div class="prep-usage-grid"><div><span>Appearances</span><strong>${usage.appearances||0}</strong></div><div><span>KOs</span><strong>${usage.kills||0}</strong></div><div><span>Deaths</span><strong>${usage.deaths||0}</strong></div><div><span>Damage dealt</span><strong>${Number(usage.dealt||0).toFixed(0)}</strong></div><div><span>Damage taken</span><strong>${Number(usage.taken||0).toFixed(0)}</strong></div><div><span>Sets recorded</span><strong>${(usage.gameSets||[]).filter(g=>g.moves?.length).length}</strong></div></div>`;
+    const broughtInWeeks=[...(usage.weeks||[])].sort((a,b)=>{const na=Number(a),nb=Number(b);if(Number.isFinite(na)&&Number.isFinite(nb))return na-nb;return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});});
+    const weekLabel=w=>/^\d+$/.test(String(w))?`Week ${w}`:String(w);
+    const weekMoves=new Map();
+    for(const set of (usage.gameSets||[])){const wk=String(set.week??'').trim();if(!wk)continue;const list=weekMoves.get(wk)||new Set();(set.moves||[]).filter(Boolean).forEach(move=>list.add(move));weekMoves.set(wk,list);}
+    const analysisHtml=`<div class="matchprep-analysis-overview">
+      <div class="prep-card-section prep-analysis-week-card"><span>Brought in on</span><div class="prep-week-summary">${broughtInWeeks.length?broughtInWeeks.map(w=>{const moves=[...(weekMoves.get(String(w))||[])];return `<button type="button" class="prep-week-pill" data-prep-week="${esc(String(w))}" data-moves-json="${esc(JSON.stringify(moves))}"><span class="prep-week-dot"></span>${esc(weekLabel(w))}<span class="prep-week-chevron">›</span></button>`;}).join(''):'<span class="small">No recorded battle week for this Pokémon.</span>'}</div><div class="prep-week-moves" hidden></div><small class="prep-analysis-note">${broughtInWeeks.length?'Click a week to see the moves used that week.':'This Pokémon has not appeared in a recorded replay yet.'}</small></div>
+      <div class="prep-card-section"><span>Vulnerable to</span><div class="prep-chip-row">${weakTo.length?weakTo.map(x=>`<span class="prep-chip">${esc(displaySpecies(x))}</span>`).join(''):'<span class="small">No clear type disadvantage</span>'}</div></div>
+      <div class="prep-card-section"><span>Observed moves</span><div class="prep-chip-row">${moves.length?moves.map(x=>`<span class="prep-chip">${esc(x)}</span>`).join(''):'<span class="small">No recorded moves</span>'}</div></div>
+      <div class="prep-card-section"><span>Likely roles</span><div class="prep-chip-row">${roles.length?roles.map(x=>`<span class="prep-chip">${esc(x)}</span>`).join(''):'<span class="small">Unclear</span>'}</div></div>
+    </div>`;
+    const threat=weakTo.length?`Vulnerable to ${weakTo.length} Pokémon`:'No clear type disadvantage';
+    const tc=weakTo.length?'matchup-bad':'matchup-neutral';
+    return `<article class="prep-opponent-card prep-opponent-popout" data-prep-popout="${esc(m.species)}" data-prep-team="your"><button type="button" class="prep-popout-trigger legacy-mon-card"><span class="mon-head">${sprite(m.species,'prep-sprite')}<span><span class="mon-name prep-legacy-name"><strong>${esc(displaySpecies(m))}</strong><span class="prep-inline-types">${effTypes.map(t=>typePill(t)).join('')}</span></span><span class="muted">${usage.replays?.size||0} replay${(usage.replays?.size||0)===1?'':'s'} · ${usage.appearances||0} appearances</span></span></span><span class="chips prep-legacy-chips"><span class="chip"><b>${usage.kills||0}</b> K</span><span class="chip"><b>${usage.deaths||0}</b> D</span><span class="chip"><b>${Number(usage.dealt||0).toFixed(0)}</b> dmg</span><span class="chip"><b>${(usage.gameSets||[]).filter(g=>g.moves?.length).length}</b> sets recorded</span></span><span class="small prep-legacy-threat">${esc(threat)}</span></button><div class="prep-popout-data" hidden data-usage="${esc(usageHtml)}" data-scouting="${esc(scoutingHtml)}" data-analysis="${esc(analysisHtml)}" data-appearances="${usage.appearances||0}" data-kills="${usage.kills||0}" data-deaths="${usage.deaths||0}" data-dealt="${Number(usage.dealt||0).toFixed(0)}" data-taken="${Number(usage.taken||0).toFixed(0)}"></div></article>`;
+  }))).join('');
+
+  // -------- Defensive / Offensive Type Chart & Team Coverage Chart --------
+  // Both built from YOUR roster's typing (via typeMap, already fetched above).
+  // Defensive: how each of your Pokémon takes each attacking type.
+  // Offensive: the best multiplier each of your Pokémon can land on each
+  // defending type, assuming a same-type (STAB) move — a simple, move-data-free
+  // proxy for offensive coverage that's accurate for typing-driven matchups.
+  const typeChartMonRow=(mon)=>{
+    const types=(typeMap[mon.species]||[]).map(String).filter(Boolean);
+    const defensive=TYPE_NAMES.map(atk=>types.length?types.reduce((v,def)=>v*typeChartMultiplier(atk,def),1):null);
+    const offensive=TYPE_NAMES.map(def=>types.length?Math.max(...types.map(atk=>typeChartMultiplier(atk,def))):null);
+    return {mon,types,defensive,offensive};
+  };
+  const typeChartRows=your.map(typeChartMonRow);
+  const defCellClass=(mult)=>{
+    if(mult===null)return 'tc-cell-unknown';
+    if(mult===0)return 'tc-cell-immune';
+    if(mult>=4)return 'tc-cell-vweak';
+    if(mult>=2)return 'tc-cell-weak';
+    if(mult<=0.25)return 'tc-cell-vresist';
+    if(mult<1)return 'tc-cell-resist';
+    return 'tc-cell-neutral';
+  };
+  const offCellClass=(mult)=>{
+    if(mult===null)return 'tc-cell-unknown';
+    if(mult===0)return 'tc-cell-noeffect';
+    if(mult>=4)return 'tc-cell-vsuper';
+    if(mult>=2)return 'tc-cell-super';
+    if(mult<1)return 'tc-cell-weakhit';
+    return 'tc-cell-neutral';
+  };
+  const typeChartTable=(rows,cellsKey,cellClassFn)=>`<div class="tc-table-wrap"><table class="tc-table">
+    <thead><tr><th class="tc-corner">Pokémon</th>${TYPE_NAMES.map(t=>`<th>${typePill(t)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.length?rows.map(r=>`<tr><th><div class="tc-row-mon">${sprite(r.mon.species,'tc-row-sprite')}<span>${esc(displaySpecies(r.mon))}</span></div></th>${r[cellsKey].map(mult=>`<td class="${cellClassFn(mult)}"><span>${mult===null?'—':fmtMult(mult)}</span></td>`).join('')}</tr>`).join(''):`<tr><td colspan="${TYPE_NAMES.length+1}"><div class="empty">No Pokémon on your current roster yet.</div></td></tr>`}</tbody>
+  </table></div>`;
+  const typeChartSection=`<section id="prepTypeChart" class="panel prep-selectable-section" data-prep-section="typechart">
+    <div class="team-overview-head">
+      <div><h2 id="prepTypeChartTitle">Defensive Type Chart</h2><p class="panel-desc" style="margin:0">How your current roster's typing holds up against each attacking type (Defensive), or hits each defending type with a same-type move (Offensive).</p></div>
+      <div class="team-overview-toggle" role="tablist" aria-label="Type Chart mode">
+        <button type="button" class="team-overview-toggle-btn active" data-typechart-mode="defensive" aria-pressed="true">Defensive</button>
+        <button type="button" class="team-overview-toggle-btn" data-typechart-mode="offensive" aria-pressed="false">Offensive</button>
+      </div>
+    </div>
+    <div data-typechart-grid="defensive">${typeChartTable(typeChartRows,'defensive',defCellClass)}</div>
+    <div data-typechart-grid="offensive" hidden>${typeChartTable(typeChartRows,'offensive',offCellClass)}</div>
+    <div class="tc-legend"><span class="tc-legend-item"><i class="tc-cell-vweak"></i>4× weak</span><span class="tc-legend-item"><i class="tc-cell-weak"></i>2× weak</span><span class="tc-legend-item"><i class="tc-cell-neutral"></i>1×</span><span class="tc-legend-item"><i class="tc-cell-resist"></i>½× resist</span><span class="tc-legend-item"><i class="tc-cell-vresist"></i>¼× resist</span><span class="tc-legend-item"><i class="tc-cell-immune"></i>Immune</span></div>
+  </section>`;
+
+  // Team Coverage Chart: for each of the 18 types, how many of your Pokémon
+  // can hit it super-effectively with a same-type move, and how many of your
+  // Pokémon are weak to it defensively — surfaces coverage gaps and shared
+  // team weaknesses at a glance.
+  const coverageForType=(type)=>{
+    const superEffective=typeChartRows.filter(r=>r.types.length&&Math.max(...r.types.map(atk=>typeChartMultiplier(atk,type)))>=2);
+    const noEffect=typeChartRows.filter(r=>r.types.length&&Math.max(...r.types.map(atk=>typeChartMultiplier(atk,type)))===0 && !r.types.some(atk=>typeChartMultiplier(atk,type)>=1));
+    const weakTo=typeChartRows.filter(r=>r.types.length&&r.types.reduce((v,def)=>v*typeChartMultiplier(type,def),1)>=2);
+    return {type,superEffective,weakTo};
+  };
+  const coverageRows=TYPE_NAMES.map(coverageForType);
+  const coverageBar=(count,total,cls)=>{
+    const pct=total?Math.round((count/total)*100):0;
+    return `<div class="coverage-bar-track"><div class="coverage-bar-fill ${cls}" style="width:${pct}%"></div></div>`;
+  };
+  const totalYourMons=your.length;
+  const coverageSection=`<section id="prepTeamCoverage" class="panel prep-selectable-section" data-prep-section="coverage">
+    <h2>Team Coverage Chart</h2>
+    <p class="panel-desc">For each type, how many of your current roster's Pokémon can hit it super-effectively with a same-type move (offense), and how many of your Pokémon are weak to it (defense). Types with no super-effective coverage are highlighted.</p>
+    <div class="coverage-table-wrap"><table class="coverage-table">
+      <thead><tr><th>Type</th><th>Offensive coverage</th><th>Team weak to</th></tr></thead>
+      <tbody>${coverageRows.map(r=>`<tr class="${r.superEffective.length===0?'coverage-row-gap':''}"><td>${typePill(r.type)}</td>
+        <td><div class="coverage-cell"><span class="coverage-count">${r.superEffective.length}/${totalYourMons}</span>${coverageBar(r.superEffective.length,totalYourMons,'coverage-fill-good')}<div class="prep-chip-row coverage-chip-row">${r.superEffective.length?r.superEffective.map(x=>`<span class="prep-chip">${esc(displaySpecies(x.mon))}</span>`).join(''):'<span class="small">No coverage</span>'}</div></div></td>
+        <td><div class="coverage-cell"><span class="coverage-count">${r.weakTo.length}/${totalYourMons}</span>${coverageBar(r.weakTo.length,totalYourMons,'coverage-fill-bad')}<div class="prep-chip-row coverage-chip-row">${r.weakTo.length?r.weakTo.map(x=>`<span class="prep-chip">${esc(displaySpecies(x.mon))}</span>`).join(''):'<span class="small">None</span>'}</div></div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </section>`;
+
   const speedNature=(n)=>n==='positive'?1.1:n==='negative'?0.9:1;
   const speedStatFor=(base,evs,natureKey)=>Math.floor(Math.floor((2*base+31+Math.floor((evs||0)/4))*100/100+5)*speedNature(natureKey));
   const speedCfgFor=(species)=>({nature:'positive',evs:252,...(STATE.prepSpeedConfig?.[species]||{})});
@@ -2243,14 +2449,21 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
 
   // Speed Workbench: select multiple Pokémon from YOUR team; always show every
   // Pokémon on the opponent team as columns in the comparison matrix.
-  const validYourSpecies=your.map(m=>m.species);
+  // Speed Workbench reads best when everything is laid out fastest-to-slowest
+  // by base Speed, so sort both the opponent columns and the Pokémon picker
+  // by base Speed (highest first; unknown base Speed sinks to the bottom).
+  const byBaseSpeedDesc=(a,b)=>(b.baseSpeed??-1)-(a.baseSpeed??-1)||a.species.localeCompare(b.species);
+  const yourSpeedSorted=[...your].sort(byBaseSpeedDesc);
+  const oppSpeedSorted=[...opp].sort(byBaseSpeedDesc);
+  const validYourSpecies=yourSpeedSorted.map(m=>m.species);
   let selectedSpeedMons=Array.isArray(STATE.prepSpeedSelected)
     ?STATE.prepSpeedSelected.filter(x=>validYourSpecies.includes(x))
     :(STATE.prepSpeedSelected&&validYourSpecies.includes(STATE.prepSpeedSelected)?[STATE.prepSpeedSelected]:[]);
+  selectedSpeedMons=validYourSpecies.filter(sp=>selectedSpeedMons.includes(sp));
   STATE.prepSpeedSelected=selectedSpeedMons;
-  window.__speedWorkbenchData={your,opp};
-  const selectedFirst=selectedSpeedMons[0]||your[0]?.species||'';
-  const selMonObj=your.find(m=>m.species===selectedFirst);
+  window.__speedWorkbenchData={your:yourSpeedSorted,opp:oppSpeedSorted};
+  const selectedFirst=selectedSpeedMons[0]||yourSpeedSorted[0]?.species||'';
+  let selMonObj=yourSpeedSorted.find(m=>m.species===selectedFirst);
   const selCfg=selMonObj?speedCfgFor(selMonObj.species):{nature:'positive',evs:252};
 
   const speedValueFor=(mon,side)=>effectiveSpeed(mon.baseSpeed||0,mon.species,side);
@@ -2265,26 +2478,26 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
       <table class="speed-matrix"><caption class="speed-axis-opponents"><span>OPPONENT POKÉMON</span></caption>
         <thead><tr>
           <th class="speed-axis-corner"><span class="speed-axis-you">YOUR POKÉMON</span></th>
-          ${opp.map(m=>`<th><div class="speed-matrix-mon">${sprite(m.species,'speed-matrix-sprite')}<span>${esc(displaySpecies(m))}</span></div></th>`).join('')}
+          ${oppSpeedSorted.map(m=>`<th><div class="speed-matrix-mon">${sprite(m.species,'speed-matrix-sprite')}<span>${esc(displaySpecies(m))}</span></div></th>`).join('')}
         </tr></thead>
         <tbody>
           ${selectedSpeedMons.length ? selectedSpeedMons.map(species=>{
-            const ym=your.find(m=>m.species===species); if(!ym)return '';
+            const ym=yourSpeedSorted.find(m=>m.species===species); if(!ym)return '';
             const yv=speedValueFor(ym,'your');
             return `<tr data-speed-row="${esc(species)}"><th><div class="speed-matrix-mon speed-matrix-your">${sprite(ym.species,'speed-matrix-sprite')}<span>${esc(displaySpecies(ym))}</span><small>${yv} Spe</small></div></th>
-              ${opp.map(om=>{
+              ${oppSpeedSorted.map(om=>{
                 const ov=speedValueFor(om,'opp');
                 const [label,cls]=speedOutcome(yv,ov);
                 return `<td><div class="speed-cell ${cls}"><strong>${label}</strong><span>${yv} vs ${ov}</span></div></td>`;
               }).join('')}
             </tr>`;
-          }).join('') : `<tr class="speed-no-selection-row"><td colspan="${Math.max(1,opp.length+1)}"><strong>Select your Pokémon above</strong><span>All ${opp.length} opponent Pokémon are already shown across the matrix.</span></td></tr>`}
+          }).join('') : `<tr class="speed-no-selection-row"><td colspan="${Math.max(1,oppSpeedSorted.length+1)}"><strong>Select your Pokémon above</strong><span>All ${oppSpeedSorted.length} opponent Pokémon are already shown across the matrix.</span></td></tr>`}
         </tbody>
       </table>
     </div>`;
 
   let solverText='Select one of your Pokémon to see the EV threshold against the first opponent.';
-  const solverOpp=opp[0];
+  const solverOpp=oppSpeedSorted[0];
   if(selMonObj&&solverOpp){
     const selectedOppSpeed=effectiveSpeed(solverOpp.baseSpeed||0,solverOpp.species,'opp');
     let neededEvs=null;
@@ -2383,10 +2596,22 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
 
   const latestMatchesSection=matchHistoryForTeam(opponent,false).replace('<section class="panel">','<section id="prepLatestMatches" class="panel prep-selectable-section" data-prep-section="matches">');
   return `<section class="panel"><div class="prep-hero"><div><h2>Match Prep</h2><p class="panel-desc" style="margin:0">Prepare <strong>${esc(yourTeam)}</strong> for a match against <strong>${esc(opponent)}</strong>. Match usage, scouting, recent replays and battle tools are combined here.</p></div><div class="prep-hero-controls"><div><label>Your Team</label><select id="prepYourTeam">${names.map(n=>`<option value="${esc(n)}" ${sameTeam(n,yourTeam)?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div><label>Opponent</label><select id="prepOpponent">${names.filter(n=>!sameTeam(n,yourTeam)).map(n=>`<option value="${esc(n)}" ${sameTeam(n,opponent)?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div class="prep-side-swap"><span class="prep-side-swap-label">Matchup sides</span><button type="button" id="prepGlobalRoleToggle" aria-pressed="false">↔ Swap Your Team / Opponent</button></div></div></div></section>
-  <section class="panel prep-section-picker"><label for="prepSectionSelect">View Section</label><select id="prepSectionSelect"><option value="overview">Opponent Team Overview</option><option value="switch">Switch-In Analyser</option><option value="speed">Speed Workbench</option><option value="matches">Replays</option></select></section>
+  <section class="panel prep-section-picker"><label for="prepSectionSelect">View Section</label><select id="prepSectionSelect"><option value="overview">Team Overview</option><option value="typechart">Type Chart</option><option value="coverage">Team Coverage</option><option value="switch">Switch-In Analyser</option><option value="speed">Speed Workbench</option><option value="matches">Replays</option></select></section>
   <section class="panel prep-selectable-section" data-prep-section="damage"><div class="prep-calc-head"><div><h2>Damage Calculator</h2><p class="panel-desc" style="margin:0">Run a full calculation with your actual roster Pokémon, items, abilities, natures, EVs, status and weather.</p></div><div class="prep-calc-actions" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" id="prepImportShowdown" class="prep-import-set-btn">Import Showdown Set</button><button id="openDamageCalc" class="damage-calc-primary">Open Damage Calculator</button></div></div></section>
-  <section id="prepTeamOverview" class="panel prep-selectable-section" data-prep-section="overview"><h2>Opponent Team Overview</h2><p class="panel-desc">Click a Pokémon to switch between <strong>Usage Stats</strong> and <strong>Scouting</strong>. Scouting includes typing, abilities, observed moves, roles, point value, base stats and type effectiveness.</p><div class="prep-opponent-grid">${opponentCards}</div></section>
+  <section id="prepTeamOverview" class="panel prep-selectable-section" data-prep-section="overview">
+    <div class="team-overview-head">
+      <div><h2 id="prepTeamOverviewTitle">Opponent Team Overview</h2><p class="panel-desc" style="margin:0">Click a Pokémon to switch between <strong>Usage Stats</strong> and <strong>Scouting</strong>. Scouting includes typing, abilities, observed moves, roles, point value, base stats and type effectiveness.</p></div>
+      <div class="team-overview-toggle" role="tablist" aria-label="Team Overview side">
+        <button type="button" class="team-overview-toggle-btn active" data-overview-side="opponent" aria-pressed="true">Opponent</button>
+        <button type="button" class="team-overview-toggle-btn" data-overview-side="your" aria-pressed="false">Your Team</button>
+      </div>
+    </div>
+    <div class="prep-opponent-grid" data-overview-grid="opponent">${opponentCards}</div>
+    <div class="prep-opponent-grid" data-overview-grid="your" hidden>${yourCards}</div>
+  </section>
   ${latestMatchesSection}
+  ${typeChartSection}
+  ${coverageSection}
   ${speedSection}
   ${switchSection}`;
 }
@@ -2424,6 +2649,52 @@ async function render(){
     }
     document.getElementById('prepImportShowdown')?.addEventListener('click',()=>window.openShowdownImportModal());
 
+    // Team Overview: toggle between the opponent's card grid and your own.
+    {
+      const toggleBtns=document.querySelectorAll('.team-overview-toggle-btn[data-overview-side]');
+      const grids={
+        opponent: document.querySelector('.prep-opponent-grid[data-overview-grid="opponent"]'),
+        your: document.querySelector('.prep-opponent-grid[data-overview-grid="your"]')
+      };
+      const title=document.getElementById('prepTeamOverviewTitle');
+      const setOverviewSide=(side)=>{
+        STATE.prepTeamOverviewSide=side;
+        toggleBtns.forEach(btn=>{
+          const active=btn.dataset.overviewSide===side;
+          btn.classList.toggle('active',active);
+          btn.setAttribute('aria-pressed',active?'true':'false');
+        });
+        if(grids.opponent)grids.opponent.hidden=side!=='opponent';
+        if(grids.your)grids.your.hidden=side!=='your';
+        if(title)title.textContent=side==='your'?'Your Team Overview':'Opponent Team Overview';
+      };
+      toggleBtns.forEach(btn=>btn.addEventListener('click',()=>setOverviewSide(btn.dataset.overviewSide)));
+      setOverviewSide(STATE.prepTeamOverviewSide==='your'?'your':'opponent');
+    }
+
+    // Type Chart: toggle between Defensive and Offensive matrices.
+    {
+      const toggleBtns=document.querySelectorAll('#prepTypeChart .team-overview-toggle-btn[data-typechart-mode]');
+      const grids={
+        defensive: document.querySelector('[data-typechart-grid="defensive"]'),
+        offensive: document.querySelector('[data-typechart-grid="offensive"]')
+      };
+      const title=document.getElementById('prepTypeChartTitle');
+      const setTypeChartMode=(mode)=>{
+        STATE.prepTypeChartMode=mode;
+        toggleBtns.forEach(btn=>{
+          const active=btn.dataset.typechartMode===mode;
+          btn.classList.toggle('active',active);
+          btn.setAttribute('aria-pressed',active?'true':'false');
+        });
+        if(grids.defensive)grids.defensive.hidden=mode!=='defensive';
+        if(grids.offensive)grids.offensive.hidden=mode!=='offensive';
+        if(title)title.textContent=mode==='offensive'?'Offensive Type Chart':'Defensive Type Chart';
+      };
+      toggleBtns.forEach(btn=>btn.addEventListener('click',()=>setTypeChartMode(btn.dataset.typechartMode)));
+      setTypeChartMode(STATE.prepTypeChartMode==='offensive'?'offensive':'defensive');
+    }
+
     // Match Prep opponent cards open their detailed scouting information in a modal popout.
     document.querySelectorAll('[data-prep-calc]').forEach(btn=>btn.addEventListener('click',e=>{
       e.preventDefault(); e.stopPropagation();
@@ -2438,6 +2709,8 @@ async function render(){
       const existing=document.getElementById('prepOpponentDetailModal');
       if(existing)existing.remove();
       const species=card.dataset.prepPopout||'';
+      const cardSide=card.dataset.prepTeam==='your'?'your':'opponent';
+      const calcDefenderTeam=cardSide==='your'?STATE.prepYourTeam:STATE.prepOpponent;
       const title=displaySpecies({species})||card.querySelector('.prep-card-title strong')?.textContent||species||'Opponent Pokémon';
       const spriteHtml=card.querySelector('.prep-popout-trigger img')?.outerHTML||'';
       const cardTypes=card.querySelector('.prep-inline-types')?.innerHTML||'';
@@ -2478,7 +2751,7 @@ async function render(){
       modal.className='prep-detail-modal';
       modal.innerHTML=`<div class="prep-detail-backdrop"></div><div class="prep-detail-dialog" role="dialog" aria-modal="true" aria-label="${esc(title)}"><button type="button" class="prep-detail-close" aria-label="Close">×</button><div class="prep-detail-summary-row"><div class="prep-card-head"><div>${spriteHtml}</div><div class="prep-detail-title"><h2>${esc(title)}</h2><div class="prep-detail-types">${cardTypes||'<span class="small">Typing loading…</span>'}</div></div></div><div class="prep-popup-nav"><div class="prep-mode-tabs"><button type="button" class="prep-mode-tab active" data-mode="team">Pokémon Data</button><button type="button" class="prep-mode-tab" data-mode="opponent">Analysis</button></div><button type="button" class="damage-calc-primary prep-popup-calc" id="prepPopupCalc">Calc vs this Pokémon</button></div></div><div id="prepModeContent">${teamOverview}</div></div>`;
       document.body.appendChild(modal);
-      modal.querySelector('#prepPopupCalc')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openDamageCalcModal({defenderTeam:STATE.prepOpponent,defender:species});});
+      modal.querySelector('#prepPopupCalc')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openDamageCalcModal({defenderTeam:calcDefenderTeam,defender:species});});
       const close=()=>{modal.remove();document.removeEventListener('keydown',onKey);};
       const onKey=e=>{if(e.key==='Escape')close();};
       modal.querySelector('.prep-detail-close').addEventListener('click',close);
