@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -494,10 +493,24 @@
   .modal-tab-panel{padding-top:4px;}
 
   /* route to qualification (franchise modal) */
-  .route-status{font-size:12.5px;padding:9px 12px;border-radius:8px;margin:10px 0 4px;border:1px solid var(--border);}
+  .route-status{font-size:12.5px;padding:11px 13px;border-radius:10px;margin:10px 0 8px;border:1px solid var(--border);line-height:1.5;}
   .route-status.qualified{border-color:var(--teal);color:var(--teal);background:rgba(94,234,212,.08);}
   .route-status.alive{border-color:var(--amber);color:var(--amber);background:rgba(255,180,84,.08);}
   .route-status.eliminated{border-color:var(--red,#ff7a7a);color:var(--red,#ff7a7a);background:rgba(255,122,122,.08);}
+  .seed-change-panel{margin-top:14px;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.008));width:100%;}
+  .seed-change-intro{font-size:12px;line-height:1.5;color:var(--text-dim);margin:0 0 13px;}
+  .seed-change-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  .seed-change-card{border:1px solid var(--border);border-radius:10px;background:var(--panel-alt);overflow:hidden;min-width:0;}
+  .seed-change-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 13px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.018);}
+  .seed-change-title{font-size:13px;font-weight:750;color:var(--text);}
+  .seed-change-tag{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);white-space:nowrap;}
+  .seed-change-body{padding:8px 13px 10px;}
+  .seed-route{font-size:12px;line-height:1.5;color:var(--text);padding:5px 0 5px 12px;position:relative;}
+  .seed-route:before{content:'→';position:absolute;left:0;color:var(--amber);font-weight:700;}
+  .seed-route + .seed-route{border-top:1px solid rgba(255,255,255,.045);}
+  .seed-tiebreak{font-size:11px;line-height:1.45;color:var(--text-dim);margin:4px 0 4px 12px;padding:7px 9px;border-left:2px solid var(--border);background:rgba(255,255,255,.018);border-radius:0 6px 6px 0;}
+  .seed-tiebreak strong{color:var(--text);}
+  @media(max-width:760px){.seed-change-list{grid-template-columns:1fr;}}
   .route-cutline{display:flex;flex-direction:column;gap:4px;margin-top:6px;}
   .route-cutline-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:6px 10px;border-radius:6px;background:var(--panel-alt);}
   .route-cutline-row.self{background:transparent;border:1px solid var(--accent,var(--teal));font-weight:700;}
@@ -1012,6 +1025,142 @@ body{
 }
 </style>
 
+
+<style id="qualification-seed-ui-uniform">
+/* Qualification seed-change card: match the site's panel width and visual rhythm. */
+.seed-change-panel{
+  width:100%;
+  max-width:none;
+  margin:16px 0 0;
+  padding:18px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--panel);
+  box-shadow:none;
+}
+.seed-change-panel .mini-heading{
+  font-size:13px;
+  color:var(--text);
+  letter-spacing:.04em;
+  margin:0 0 5px;
+}
+.seed-change-intro{
+  max-width:900px;
+  margin:0 0 14px;
+  font-size:12.5px;
+  line-height:1.55;
+}
+.seed-change-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  width:100%;
+}
+.seed-change-card{
+  min-width:0;
+  width:100%;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:var(--panel-alt);
+  overflow:hidden;
+}
+.seed-change-head{
+  min-height:42px;
+  padding:9px 12px;
+  background:rgba(255,255,255,.018);
+  border-bottom:1px solid var(--border);
+}
+.seed-change-title{font-size:13px;line-height:1.3;}
+.seed-change-tag{font-size:9px;letter-spacing:.07em;}
+.seed-change-body{padding:9px 12px 11px;}
+.seed-route{font-size:12px;line-height:1.5;padding:5px 0 5px 13px;}
+.seed-tiebreak{font-size:11px;line-height:1.45;margin:5px 0 5px 13px;padding:7px 9px;}
+@media(min-width:1200px){
+  .seed-change-list{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media(max-width:850px){
+  .seed-change-list{grid-template-columns:1fr;}
+}
+@media(max-width:520px){
+  .seed-change-panel{padding:14px;}
+  .seed-change-list{gap:9px;}
+  .seed-change-head{padding:9px 10px;}
+  .seed-change-body{padding:8px 10px 10px;}
+}
+</style>
+
+
+<style id="seed-ui-final-override">
+.seed-change-panel{
+  width:100% !important;
+  max-width:none !important;
+  box-sizing:border-box !important;
+  display:block !important;
+  margin:14px 0 0 !important;
+  padding:18px 20px !important;
+}
+.seed-change-list{
+  width:100% !important;
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:12px !important;
+}
+.seed-change-card{
+  width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+}
+@media(min-width:1200px){
+  .seed-change-list{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+}
+@media(max-width:900px){
+  .seed-change-list{grid-template-columns:1fr !important;}
+}
+</style>
+<style id="seed-change-row-layout">
+.seed-change-panel{width:100%!important;max-width:none!important;box-sizing:border-box!important}
+.seed-change-list{display:flex!important;flex-direction:column!important;width:100%!important;gap:10px!important}
+.seed-change-card{width:100%!important;min-width:0!important;box-sizing:border-box!important}
+</style>
+
+<style id="scrollbar-modal-lock-fix">
+/* Keep scrollbars functional, but never show the scrollbar chrome. */
+html, body, * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+/* Any open popup locks the page behind it; only the popup's own scroll area moves. */
+html.modal-page-locked,
+body.modal-page-locked {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+body.modal-page-locked {
+  touch-action: none;
+}
+
+/* Popup content remains scrollable when it is taller than the viewport. */
+.audit-overlay,
+.pokemon-overlay {
+  overscroll-behavior: contain;
+}
+.audit-box,
+.pokemon-modal,
+.pokemon-modal-body,
+.audit-list,
+.route-remaining {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+</style>
 </head>
 <body data-admin="false">
 <style>
@@ -2355,10 +2504,23 @@ body{
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 
+  function updateModalPageLock(){
+    const locked = !!document.querySelector('.audit-overlay, .pokemon-overlay');
+    document.documentElement.classList.toggle('modal-page-locked', locked);
+    document.body.classList.toggle('modal-page-locked', locked);
+    if(locked){
+      document.documentElement.style.overflow='hidden';
+      document.body.style.overflow='hidden';
+    }else{
+      document.documentElement.style.overflow='';
+      document.body.style.overflow='';
+    }
+  }
+
   function closePokemonProfile(){
     const el=document.getElementById('pokemonProfileModal');
     if(el) el.remove();
-    document.body.style.overflow='';
+    updateModalPageLock();
   }
   function openPokemonProfile(species){
     const modalId='pokemonProfileModal';
@@ -2374,7 +2536,7 @@ body{
       </div>
     </div>`;
     document.body.appendChild(root.firstElementChild);
-    document.body.style.overflow='hidden';
+    updateModalPageLock();
     const overlay=document.getElementById(modalId);
     document.getElementById('pokemonProfileClose').addEventListener('click',closePokemonProfile);
     overlay.addEventListener('click',e=>{ if(e.target===overlay) closePokemonProfile(); });
@@ -2418,6 +2580,7 @@ body{
           <div class="summary-actions"><a class="primary nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(r.id)}" target="_blank" rel="noopener">Open Showdown replay</a><button class="ghost" id="summaryClose">Close</button></div>
         </div>
       </div>`;
+    updateModalPageLock();
     document.getElementById('summaryClose').addEventListener('click', closeAudit);
     document.getElementById('replaySummaryOverlay').addEventListener('click', e=>{ if(e.target.id==='replaySummaryOverlay') closeAudit(); });
   }
@@ -2442,11 +2605,13 @@ body{
     const overlay = el.querySelector('.audit-overlay');
     if(!overlay || overlay.classList.contains('is-closing')){
       el.innerHTML = '';
+      updateModalPageLock();
       return;
     }
     overlay.classList.add('is-closing');
     window.setTimeout(()=>{
       if(el.contains(overlay)) el.innerHTML = '';
+      updateModalPageLock();
     }, 210);
   }
   function openAudit(species, type, list, showLink){
@@ -2467,6 +2632,7 @@ body{
           <div class="foot-actions"><button class="ghost" id="auditClose">Close</button></div>
         </div>
       </div>`;
+    updateModalPageLock();
     document.getElementById('auditClose').addEventListener('click', closeAudit);
     document.getElementById('auditOverlay').addEventListener('click', (e)=>{ if(e.target.id === 'auditOverlay') closeAudit(); });
   }
@@ -2541,119 +2707,289 @@ body{
     return remaining;
   }
 
-  // Builds the body of the "Qualification" tab shown in a franchise's
-  // summary modal: current qualification status (clinched / alive /
-  // mathematically eliminated) spelled out as who-needs-to-win-or-lose
-  // scenarios, the ladder around the #6 cutline, and the team's remaining
-  // fixtures. Wins/losses of *other* teams are projected from their own
-  // remaining fixtures, same as the team being viewed. Elimination is judged
-  // on wins alone (the simplest reading of "can this team still catch #6 on
-  // wins"); the K-D differential / damage tiebreakers only matter once wins
-  // are tied, so this stays a readable approximation rather than a full
-  // simulation.
-  function qualificationPathHtml(team){
-    const conf = conferenceOf(team);
-    if(!conf){
-      return `<div class="route-status" style="border-color:var(--text-dim);color:var(--text-dim);background:transparent;">
-        Not yet assigned to a conference, so there's no qualification path to show yet — assign this franchise to a conference from Admin → Season Setup.
-      </div>`;
-    }
-    const groups = conferenceGroups();
-    const list = conf === 'a' ? groups.one : groups.two;
-    const confName = conferenceDisplayName(conf);
-    const idx = list.findIndex(x => x.team === team);
-    if(idx === -1) return '';
-    const t = list[idx];
-    const cutIdx = Math.min(5, list.length - 1); // 0-based index of the #6 seed
-    const cutTeam = list[cutIdx];
-    const remaining = conferenceRemainingFixtures(team);
-    const gamesLeft = remaining.length;
-    const qualified = idx < 6;
-    const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-
-    let statusHtml;
-    if(qualified){
-      const bubble = list[6]; // first team just outside the cutline
-      if(!bubble){
-        statusHtml = `<div class="route-status qualified">Clinched — #${idx+1} in ${escapeHtml(confName)}. Every franchise in the conference already sits in the top 6, so there's no bubble team left to hold off.</div>`;
-      } else {
-        const bubbleGamesLeft = conferenceRemainingFixtures(bubble.team).length;
-        const bubbleMaxWins = bubble.wins + bubbleGamesLeft;
-        if(t.wins >= bubbleMaxWins){
-          statusHtml = `<div class="route-status qualified">Clinched — #${idx+1} in ${escapeHtml(confName)}. Even if ${escapeHtml(bubble.team)} (#7) wins every game left, they can only reach ${bubbleMaxWins} win${bubbleMaxWins===1?'':'s'} — short of your ${t.wins}. ${escapeHtml(bubble.team)} cannot catch you.</div>`;
-        } else {
-          const winsToClinch = clamp(bubbleMaxWins - t.wins + 1, 0, gamesLeft);
-          const bubbleLossesForSafety = clamp(bubbleGamesLeft - (t.wins - 1 - bubble.wins), 0, bubbleGamesLeft);
-          const paths = [];
-          if(gamesLeft > 0) paths.push(`win ${winsToClinch} of your final ${gamesLeft} game${gamesLeft===1?'':'s'}`);
-          if(bubbleGamesLeft > 0) paths.push(`have ${escapeHtml(bubble.team)} lose at least ${bubbleLossesForSafety} of its final ${bubbleGamesLeft} game${bubbleGamesLeft===1?'':'s'}`);
-          statusHtml = `<div class="route-status qualified">Currently qualified — #${idx+1} in ${escapeHtml(confName)}, holding a spot over ${escapeHtml(bubble.team)} (#7). To clinch it outright${paths.length?`, ${paths.join(', or ')}`:''}.</div>`;
-        }
-      }
-    } else {
-      const cutGamesLeft = cutTeam ? conferenceRemainingFixtures(cutTeam.team).length : 0;
-      const cutMaxWins = cutTeam ? cutTeam.wins + cutGamesLeft : 0;
-      const maxPossibleWins = t.wins + gamesLeft;
-      const eliminated = cutTeam ? maxPossibleWins <= cutTeam.wins : false;
-      if(eliminated){
-        statusHtml = `<div class="route-status eliminated">Mathematically eliminated from the top 6 — #${idx+1} in ${escapeHtml(confName)}. Even winning out (${gamesLeft} of ${gamesLeft} left), you'd finish on ${maxPossibleWins} win${maxPossibleWins===1?'':'s'}, which can't pass ${cutTeam?escapeHtml(cutTeam.team):'#6'}'s ${cutTeam?cutTeam.wins:0} already-banked wins.</div>`;
-      } else {
-        const minWinsIfCutLosesOut = cutTeam ? clamp(cutTeam.wins - t.wins + 1, 0, gamesLeft) : 0;
-        const winOutRequiredCutLosses = cutTeam ? clamp(cutGamesLeft - (maxPossibleWins - 1 - cutTeam.wins), 0, cutGamesLeft) : 0;
-        let scenarios;
-        if(!cutTeam || cutGamesLeft === 0){
-          scenarios = `${escapeHtml(cutTeam?cutTeam.team:'#6')}'s season is already done on ${cutTeam?cutTeam.wins:0} wins — win at least ${minWinsIfCutLosesOut} of your final ${gamesLeft} game${gamesLeft===1?'':'s'} to pass them.`;
-        } else {
-          scenarios = `Best case: if ${escapeHtml(cutTeam.team)} loses out, ${minWinsIfCutLosesOut} more win${minWinsIfCutLosesOut===1?'':'s'} from your final ${gamesLeft} game${gamesLeft===1?'':'s'} gets you past them. Worst case: to get in no matter what they do, you'd need to win out (${gamesLeft} of ${gamesLeft}) and have ${escapeHtml(cutTeam.team)} lose at least ${winOutRequiredCutLosses} of its final ${cutGamesLeft} game${cutGamesLeft===1?'':'s'}.`;
-        }
-        statusHtml = `<div class="route-status alive">Still in the hunt — #${idx+1} in ${escapeHtml(confName)}. ${scenarios}</div>`;
+  // Qualification engine: exhaustive final-table simulation for the current
+  // conference. It considers every remaining fixture that can change the
+  // conference teams' overall win totals, including cross-conference games.
+  // A team is qualified only if EVERY possible final table keeps it inside
+  // the finals cut. An exact seed is clinched only if EVERY possible final
+  // table gives that same seed.
+  function qualificationMatches(conf){
+    const rounds = Array.isArray(STATE.settings?.fixture?.rounds) ? STATE.settings.fixture.rounds : [];
+    const out=[];
+    for(const r of rounds){
+      for(const m of (r.matches||[])){
+        const home=String(m.home||'').trim(), away=String(m.away||'').trim();
+        if(!home||!away) continue;
+        // Conference qualification is based on the same overall win totals
+        // used by the standings. Therefore EVERY remaining game involving a
+        // team in this conference can change its final seed, including
+        // cross-conference games. A cross-conference winner simply gives no
+        // additional win to a conference team.
+        if(conferenceOf(home)!==conf && conferenceOf(away)!==conf) continue;
+        const res=findFixtureResult(r.week,home,away);
+        if(res.played) continue;
+        out.push({week:r.week,home,away,homeKey:groupKey(home),awayKey:groupKey(away)});
       }
     }
-
-    const cutlineTeams = list.slice(Math.max(0, cutIdx - 1), Math.min(list.length, cutIdx + 3));
-    const cutlineHtml = cutlineTeams.length ? `<h3 class="mini-heading" style="margin-top:14px;">Around the cutline</h3><div class="route-cutline">${cutlineTeams.map(x=>{
-      const rank = list.indexOf(x) + 1;
-      return `<div class="route-cutline-row ${x.team===team?'self':''}">
-        <span>#${rank} ${escapeHtml(x.team)}${rank===6?' <span class="finals-chip">Cut</span>':''}</span>
-        <span>${x.wins}-${x.losses}</span>
-      </div>`;
-    }).join('')}</div>` : '';
-
-    const remainingHtml = remaining.length
-      ? `<h3 class="mini-heading" style="margin-top:14px;">Remaining fixtures</h3><div class="route-remaining">${remaining.map(r=>`<div class="route-remaining-row"><span>${escapeHtml(r.week)}</span><span>vs ${escapeHtml(r.opponent)}</span></div>`).join('')}</div>`
-      : `<div class="note" style="margin-top:10px;">No unplayed fixture games found for this franchise — either the season's complete, or a fixture hasn't been published yet.</div>`;
-
-    return `${statusHtml}${cutlineHtml}${remainingHtml}`;
+    return out;
   }
 
-  // Compact version of the qualificationPathHtml logic above, for the small
-  // status chip shown inline on each standings row (Clinched / In / Alive /
-  // Eliminated) rather than the full prose explanation shown in the modal.
-  function qualificationStatus(team){
-    const conf = conferenceOf(team);
-    if(!conf) return null;
-    const groups = conferenceGroups();
-    const list = conf === 'a' ? groups.one : groups.two;
-    const idx = list.findIndex(x => x.team === team);
-    if(idx === -1) return null;
-    const t = list[idx];
-    const cutIdx = Math.min(5, list.length - 1);
-    const cutTeam = list[cutIdx];
-    const gamesLeft = conferenceRemainingFixtures(team).length;
-    const qualified = idx < 6;
-    if(qualified){
-      const bubble = list[6];
-      if(!bubble) return {cls:'clinched', label:'Clinched'};
-      const bubbleGamesLeft = conferenceRemainingFixtures(bubble.team).length;
-      const bubbleMaxWins = bubble.wins + bubbleGamesLeft;
-      if(t.wins >= bubbleMaxWins) return {cls:'clinched', label:'Clinched'};
-      return {cls:'in', label:'In'};
-    } else {
-      const maxPossibleWins = t.wins + gamesLeft;
-      const eliminated = cutTeam ? maxPossibleWins <= cutTeam.wins : false;
-      if(eliminated) return {cls:'eliminated', label:'Eliminated'};
-      return {cls:'alive', label:'Alive'};
+  function qualificationBaseTeams(conf){
+    return (conferenceGroups()[conf==='a'?'one':'two']||[]).map(x=>({
+      team:x.team,wins:Number(x.wins||0),diff:Number(x.diff||0),dealt:Number(x.dealt||0)
+    }));
+  }
+
+  function qualificationRank(base,matches,assignment){
+    const rows=base.map(x=>({...x}));
+    const byKey=new Map(rows.map(x=>[groupKey(x.team),x]));
+    assignment.forEach((v,i)=>{
+      if(v==null) return;
+      const m=matches[i];
+      const winner=byKey.get(v===0?m.homeKey:m.awayKey);
+      if(winner) winner.wins++;
+    });
+    rows.sort((a,b)=>b.wins-a.wins||b.diff-a.diff||b.dealt-a.dealt||a.team.localeCompare(b.team,undefined,{sensitivity:'base'}));
+    return rows;
+  }
+
+  function qualificationEnumerate(conf){
+    const matches=qualificationMatches(conf), base=qualificationBaseTeams(conf);
+    const outcomes=[];
+    const a=Array(matches.length).fill(0);
+    function dfs(i){
+      if(i===matches.length){outcomes.push({assignment:a.slice(),ranking:qualificationRank(base,matches,a)});return;}
+      a[i]=0; dfs(i+1); a[i]=1; dfs(i+1);
     }
+    // Conference schedules are normally small. If a pathological schedule is
+    // supplied, stop rather than fabricate qualification results.
+    if(matches.length>18) return {matches,base,outcomes:[],tooMany:true};
+    dfs(0);
+    return {matches,base,outcomes,tooMany:false};
+  }
+
+  function qualificationScenarioResults(team,matches,assignment){
+    const key=groupKey(team), own=[], other=[];
+    matches.forEach((m,i)=>{
+      const v=assignment[i]; if(v==null) return;
+      const winner=v===0?m.home:m.away, loser=v===0?m.away:m.home;
+      if(m.homeKey===key||m.awayKey===key) own.push({winner,loser,won:m.homeKey===key?v===0:v===1});
+      else other.push({winner,loser,index:i});
+    });
+    return {own,other};
+  }
+
+  // A result is relevant to a displayed route only when flipping that single
+  // game changes the team's final seed. This removes the old "X stays ahead"
+  // filler while retaining every result that actually changes the seed.
+  function qualificationPivotalAssignment(team,seed,matches,base,assignment){
+    const out=[];
+    for(let i=0;i<assignment.length;i++){
+      const flipped=assignment.slice(); flipped[i]=assignment[i]===0?1:0;
+      const s1=qualificationRank(base,matches,assignment).findIndex(x=>groupKey(x.team)===groupKey(team))+1;
+      const s2=qualificationRank(base,matches,flipped).findIndex(x=>groupKey(x.team)===groupKey(team))+1;
+      if(s2!==s1) out.push(i);
+    }
+    return out;
+  }
+
+  function qualificationScenarioText(team,seed,matches,base,assignment){
+    const rank=qualificationRank(base,matches,assignment);
+    const currentSeed=rank.findIndex(x=>groupKey(x.team)===groupKey(team))+1;
+    const pivotal=qualificationPivotalAssignment(team,seed,matches,base,assignment);
+    const indexes=new Set(pivotal);
+    const own=[], others=[];
+    matches.forEach((m,i)=>{
+      if(!indexes.has(i)) return;
+      const v=assignment[i];
+      const winner=v===0?m.home:m.away, loser=v===0?m.away:m.home;
+      if(m.homeKey===groupKey(team)||m.awayKey===groupKey(team)) own.push({winner,loser,won:(m.homeKey===groupKey(team)?v===0:v===1)});
+      else others.push({winner,loser});
+    });
+    const parts=[];
+    if(own.length){
+      const wins=own.filter(x=>x.won).length, total=conferenceRemainingFixtures(team).length;
+      if(wins===own.length && wins===total) parts.push(`Win your final game${total===1?'':'s'}`);
+      else if(wins===0 && own.length===total) parts.push(`Lose your final game${total===1?'':'s'}`);
+      else own.forEach(x=>parts.push(x.won?`Beat ${escapeHtml(x.loser)}`:`Lose to ${escapeHtml(x.winner)}`));
+    }
+    for(const x of others) parts.push(`Have ${escapeHtml(x.winner)} beat ${escapeHtml(x.loser)}`);
+    if(!parts.length) return 'This seed is reachable without any single result being decisive; multiple result combinations can produce it.';
+    return parts.join('; ');
+  }
+
+  // Maximum possible differential swing between two tied teams from the
+  // remaining games. A win can add at most 6 differential and a loss can
+  // subtract at most 6, so a pair of independent final games can swing the
+  // gap by at most 12. This prevents impossible tiebreak routes (for example
+  // a required +17 swing) from being presented as reachable scenarios.
+  function qualificationMaxDifferentialSwing(team,opp,matches){
+    const teamKey=groupKey(team), oppKey=groupKey(opp);
+    let maxSwing=0;
+    for(const m of matches){
+      const involvesTeam=m.homeKey===teamKey||m.awayKey===teamKey;
+      const involvesOpp=m.homeKey===oppKey||m.awayKey===oppKey;
+      if(involvesTeam && involvesOpp) maxSwing += 12;
+      else if(involvesTeam || involvesOpp) maxSwing += 6;
+    }
+    return maxSwing;
+  }
+
+  function qualificationDifferentialFeasible(team,ranked,base,matches=[]){
+    const me=ranked.find(x=>groupKey(x.team)===groupKey(team)); if(!me) return true;
+    const mine=base.find(x=>groupKey(x.team)===groupKey(team));
+    if(!mine) return true;
+    for(const o of ranked){
+      if(groupKey(o.team)===groupKey(team)||o.wins!==me.wins) continue;
+      const opp=base.find(x=>groupKey(x.team)===groupKey(o.team));
+      const gap=Number(opp?.diff||0)-Number(mine?.diff||0);
+      const need=Math.abs(gap)+1;
+      if(need>qualificationMaxDifferentialSwing(team,o.team,matches)) return false;
+    }
+    return true;
+  }
+
+  function qualificationDifferentialNote(team,ranked,base,matches=[],assignment=[]){
+    const me=ranked.find(x=>groupKey(x.team)===groupKey(team)); if(!me) return '';
+    const mine=base.find(x=>groupKey(x.team)===groupKey(team));
+    if(!mine) return '';
+
+    const notes=[];
+    for(const o of ranked){
+      if(groupKey(o.team)===groupKey(team)||o.wins!==me.wins) continue;
+      const opp=base.find(x=>groupKey(x.team)===groupKey(o.team));
+      const gap=Number(opp?.diff||0)-Number(mine?.diff||0);
+      const need=Math.abs(gap)+1;
+
+      // Find the remaining games that actually move the two tied teams'
+      // differentials in this scenario. A win margin for the user's team
+      // adds that margin; a loss subtracts it. Likewise, the opponent's
+      // win adds its margin. This lets the explanation describe the two
+      // margins together instead of giving only an abstract differential gap.
+      let myGame=null, oppGame=null;
+      matches.forEach((m,i)=>{
+        const hk=m.homeKey, ak=m.awayKey;
+        if(hk===groupKey(team)||ak===groupKey(team)) myGame={m,i};
+        if(hk===groupKey(o.team)||ak===groupKey(o.team)) oppGame={m,i};
+      });
+
+      if(gap>0){
+        let detail='';
+        if(myGame && oppGame && myGame.i!==oppGame.i){
+          // If both teams are playing, the required relative swing is: 
+          // user's win margin + opponent's loss margin >= need.
+          detail=` <strong>Need a +${need} swing.</strong> Your win margin + ${escapeHtml(o.team)}'s loss margin must be at least ${need}.`;
+          detail+=` Example: they lose by 5 → you need to win by ${Math.max(1,need-5)}.`;
+          detail+=` They lose by 1 → you need to win by ${Math.max(1,need-1)}.`;
+        } else if(myGame){
+          detail=` Your result is the relevant margin swing: you need to win by at least ${need} more differential than your current deficit allows.`;
+        } else if(oppGame){
+          detail=` Their result is the relevant margin swing: they need to lose by enough to give you the required ${need}-point swing.`;
+        }
+        notes.push(`${escapeHtml(o.team)} is currently ${gap} differential ahead. If you finish tied on ${me.wins} wins, you need to gain at least ${need} differential to pass them.${detail}`);
+      } else if(gap<0){
+        const lead=-gap;
+        let detail='';
+        if(myGame && oppGame && myGame.i!==oppGame.i){
+          detail=` <strong>Need a +${lead+1} swing.</strong> Their win margin + your loss margin must be at least ${lead+1}.`;
+          detail+=` Example: you lose by 5 → they need to win by ${Math.max(1,lead+1-5)}.`;
+          detail+=` You lose by 1 → they need to win by ${Math.max(1,lead)}.`;
+        }
+        notes.push(`You are currently ${lead} differential ahead of ${escapeHtml(o.team)}. If you finish tied on ${me.wins} wins, they need to gain at least ${lead+1} differential to pass you.${detail}`);
+      } else {
+        notes.push(`You and ${escapeHtml(o.team)} are currently tied on differential at ${me.wins} wins, so the remaining game margins will decide the seed.`);
+      }
+    }
+    return notes.join('<br>');
+  }
+
+  function qualificationBuildAnalysis(team){
+    const conf=conferenceOf(team); if(!conf) return null;
+    const currentList=conferenceGroups()[conf==='a'?'one':'two']||[];
+    const currentSeed=currentList.findIndex(x=>groupKey(x.team)===groupKey(team))+1;
+    if(currentSeed<1) return null;
+    const engine=qualificationEnumerate(conf);
+    if(engine.tooMany) return {error:'Too many unplayed conference games to enumerate safely.'};
+    const {matches,base,outcomes}=engine;
+    const bySeed=new Map();
+    outcomes.forEach(o=>{
+      const seed=o.ranking.findIndex(x=>groupKey(x.team)===groupKey(team))+1;
+      if(!bySeed.has(seed)) bySeed.set(seed,[]);
+      bySeed.get(seed).push(o);
+    });
+    const reachableSeeds=[...bySeed.keys()].sort((a,b)=>a-b);
+    const finalsSeeds=reachableSeeds.filter(s=>s<=6);
+    // A franchise outside the top six of its conference can never be
+    // finals-clinched, even if a malformed/partial scenario enumeration only
+    // exposes its current seed. Keep the cutoff as a hard invariant.
+    const finalsClinched=currentSeed<=6 && reachableSeeds.length>0 && reachableSeeds.every(s=>s<=6);
+    const exactClinched=currentSeed<=6 && reachableSeeds.length===1 && reachableSeeds[0]===currentSeed;
+
+    // Pick routes by number of pivotal games, then by total wording length.
+    const routes={};
+    for(const [seed,arr] of bySeed){
+      const candidates=[];
+      for(const o of arr){
+        const pivotal=qualificationPivotalAssignment(team,seed,matches,base,o.assignment);
+        const text=qualificationScenarioText(team,seed,matches,base,o.assignment);
+        const ranked=qualificationRank(base,matches,o.assignment);
+        // Do not display a route if its final tiebreak would require more
+        // differential swing than the remaining games can physically produce.
+        if(!qualificationDifferentialFeasible(team,ranked,base,matches)) continue;
+        candidates.push({assignment:o.assignment,text,pivotalCount:pivotal.length});
+      }
+      candidates.sort((a,b)=>a.pivotalCount-b.pivotalCount||a.text.length-b.text.length);
+      const seen=new Set(); routes[seed]=[];
+      for(const c of candidates){
+        const sig=c.text;
+        if(seen.has(sig)) continue;
+        seen.add(sig); routes[seed].push(c);
+        // A maximum of three genuinely different routes keeps the panel readable
+        // without hiding distinct ways a seed can be reached.
+        if(routes[seed].length>=3) break;
+      }
+    }
+    return {conf,currentSeed,reachableSeeds,finalsSeeds,finalsClinched,exactClinched,routes,matches,base};
+  }
+
+  function qualificationPathHtml(team){
+    const a=qualificationBuildAnalysis(team);
+    if(!a) return `<div class="route-status">No conference qualification picture is available.</div>`;
+    if(a.error) return `<div class="route-status">${escapeHtml(a.error)}</div>`;
+    const confName=conferenceDisplayName(a.conf);
+    const status=a.exactClinched?`Finals Qualified — #${a.currentSeed} Clinched`:a.finalsClinched?`Finals Qualified — currently #${a.currentSeed}`:a.finalsSeeds.length?`Still in the hunt — currently #${a.currentSeed}`:`Eliminated from the finals`;
+    const cls=a.finalsClinched?'qualified':(a.finalsSeeds.length?'alive':'eliminated');
+    const explanation=a.exactClinched?'Your seed is locked.':a.finalsClinched?'Your finals place is locked, but your seed can still change.':a.finalsSeeds.length?'You are not qualified yet. You can still reach the finals, but you can also miss them.':'No remaining results can put you in the top 6.';
+    let html=`<div class="route-status ${cls}"><strong>${status}</strong> in ${escapeHtml(confName)}. ${explanation}</div>`;
+    const other=a.finalsSeeds.length ? a.reachableSeeds.filter(s=>s!==a.currentSeed) : [];
+    if(other.length){
+      html+=`<div class="seed-change-panel"><h3 class="mini-heading" style="margin:0 0 4px;">How your seed can change</h3><p class="seed-change-intro">These are the possible finishing positions other than your current seed. Each one shows the results that would put you there.</p><div class="seed-change-list">`;
+      for(const seed of other){
+        const label=seed<=6?`Could finish #${seed}`:`Could finish #${seed} — outside the finals`;
+        const tag=seed<=6?'Finals position':'Outside finals';
+        html+=`<div class="seed-change-card"><div class="seed-change-head"><strong class="seed-change-title">${label}</strong><span class="seed-change-tag">${tag}</span></div><div class="seed-change-body">`;
+        const routes=a.routes[seed]||[];
+        routes.forEach(r=>{
+          html+=`<div class="seed-route">${r.text}.</div>`;
+          const ranked=qualificationRank(a.base,a.matches,r.assignment);
+          const note=qualificationDifferentialNote(team,ranked,a.base,a.matches,r.assignment);
+          if(note) html+=`<div class="seed-tiebreak">${note}</div>`;
+        });
+        html+=`</div></div>`;
+      }
+      html+=`</div></div>`;
+    }
+    const remaining=conferenceRemainingFixtures(team);
+    if(remaining.length){
+      html+=`<h3 class="mini-heading" style="margin-top:14px;">Remaining fixtures</h3><div class="route-remaining">${remaining.map(r=>`<div class="route-remaining-row"><span>${escapeHtml(r.week)}</span><span>vs ${escapeHtml(r.opponent)}</span></div>`).join('')}</div>`;
+    }
+    return html;
+  }
+
+  function qualificationStatus(team){
+    const a=qualificationBuildAnalysis(team); if(!a||a.error) return null;
+    if(a.finalsClinched) return {cls:a.exactClinched?'clinched':'in',label:a.exactClinched?'Clinched':'In'};
+    return a.finalsSeeds.length?{cls:'alive',label:'At Risk'}:{cls:'eliminated',label:'Eliminated'};
   }
 
   // Most recent `n` played fixture results for a franchise, in chronological
@@ -2705,6 +3041,7 @@ body{
     const qualificationPanelHtml = qualificationEnabled ? `<div class="modal-tab-panel" data-modal-panel="qualification" hidden>${qualificationPathHtml(team)}</div>` : '';
 
     document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">${escapeHtml(confName)} Position</div><h3>${ordinal(confIndex)} — ${escapeHtml(team)}</h3><div class="summary-result" style="color:var(--text-dim);font-weight:600;">${ordinal(i)} overall in the league</div></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div>${tabsHtml}<div class="modal-tab-panel" data-modal-panel="summary">${summaryTabHtml}</div>${qualificationPanelHtml}</div></div>`;
+    updateModalPageLock();
     document.getElementById('teamOverviewClose').addEventListener('click',closeAudit); document.getElementById('teamOverviewOverlay').addEventListener('click',e=>{if(e.target.id==='teamOverviewOverlay')closeAudit();});
 
     if(qualificationEnabled){
@@ -3074,10 +3411,10 @@ body{
     for(const e of events){ const k=String(e.turn||0); (byTurn[k] ||= []).push(e); }
     const root=document.createElement('div');
     root.innerHTML=`<div class="pokemon-overlay" id="luckPokemonModal"><div class="pokemon-modal" role="dialog" aria-modal="true" aria-label="Luck summary for ${escapeHtml(species)}"><div class="pokemon-modal-head"><div style="display:flex;align-items:center;gap:10px;">${spriteImg(species,'sprite-xl')}<div><strong>${escapeHtml(species)}</strong><div class="note">Luck summary · ${score>=0?'+':''}${score.toFixed(2)} luck</div></div></div><button class="ghost small" id="luckPokemonClose" type="button">Close ✕</button></div><div class="pokemon-modal-body"><div class="profile-grid"><div><span>Lucky events</span><strong>${events.filter(e=>e.score>0).length}</strong></div><div><span>Unlucky events</span><strong>${events.filter(e=>e.score<0).length}</strong></div><div><span>Games</span><strong>${rows.length}</strong></div><div><span>Net luck</span><strong>${score>=0?'+':''}${score.toFixed(2)}</strong></div></div><div class="section-divider"></div><h3 class="mini-heading">What turns did ${escapeHtml(species)} get lucky?</h3>${Object.keys(byTurn).sort((a,b)=>Number(a)-Number(b)).map(turn=>`<div style="margin:0 0 12px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;"><strong>Turn ${escapeHtml(turn)}</strong>${byTurn[turn].map(e=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-top:7px;">${e.score>=0?'🍀':'💀'}<div><strong>${escapeHtml(e.type.replace(/-/g,' '))}</strong> <span class="note">${e.score>=0?'+':''}${Number(e.score).toFixed(2)}</span><div class="note">${escapeHtml(e.detail)} · ${escapeHtml(e.team)} vs ${escapeHtml(e.opponent)} · <a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(e.replayId)}" target="_blank" rel="noopener">Replay</a></div></div></div>`).join('')}</div>`).join('') || '<div class="empty-state">No turn-by-turn luck events are stored yet. Reprocess the replays with the latest parser.</div>'}</div></div></div>`;
-    document.body.appendChild(root.firstElementChild); document.body.style.overflow='hidden';
+    document.body.appendChild(root.firstElementChild); updateModalPageLock();
     const modal=document.getElementById('luckPokemonModal');
-    document.getElementById('luckPokemonClose').addEventListener('click',()=>{modal.remove();document.body.style.overflow='';});
-    modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();document.body.style.overflow='';}});
+    document.getElementById('luckPokemonClose').addEventListener('click',()=>{modal.remove();updateModalPageLock();});
+    modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();updateModalPageLock();}});
   }
 
   function renderLuckiestTeam(){
