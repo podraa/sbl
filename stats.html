@@ -465,14 +465,39 @@
   @media(max-width:700px){.summary-grid{grid-template-columns:1fr}.summary-header{flex-direction:column}.summary-meta{align-items:flex-start;text-align:left}.replay-summary-box,.overview-modal{width:calc(100vw - 20px);max-width:none}.overview-modal{padding:16px}.replay-summary-box{padding:14px}}
 
 
-  /* compact league overview cards */
-  .overview-grid{gap:12px;}
-  .overview-card{min-height:118px !important; padding:14px 16px !important; border-radius:10px !important;}
-  .overview-card .team-name{font-weight:500 !important; font-size:17px !important;}
-  .overview-card .team-record{font-weight:400 !important; font-size:15px !important;}
-  .overview-card img{width:72px !important; height:72px !important;}
-  .overview-card *{font-weight:400;}
-  .overview-card .team-name{font-weight:500 !important;}
+  /* League Overview — minimal editorial standings cards */
+  .league-overview-wrap{display:flex;flex-direction:column;gap:18px;}
+  .league-overview-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:2px 2px 0;}
+  .league-overview-kicker{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:6px;}
+  .league-overview-head h2{margin:0;font-size:26px;letter-spacing:-.025em;}
+  .league-overview-head .note{margin-top:5px;}
+  .league-overview-count{font:700 11px var(--mono);color:var(--text-dim);white-space:nowrap;}
+  .league-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+  .league-card{position:relative;overflow:hidden;min-width:0;border:1px solid var(--border);border-radius:16px;background:linear-gradient(145deg,var(--panel-alt),var(--panel));box-shadow:0 8px 24px rgba(0,0,0,.12);cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;}
+  .league-card::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.035),transparent 42%);}
+  .league-card-glow{position:absolute;width:170px;height:170px;right:-70px;top:-85px;border-radius:50%;background:var(--amber);opacity:.055;filter:blur(8px);pointer-events:none;}
+  .league-card.gold .league-card-glow{opacity:.12;}
+  .league-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--amber) 42%,var(--border));box-shadow:0 14px 32px rgba(0,0,0,.18);}
+  .league-card:focus-visible{outline:2px solid var(--amber);outline-offset:3px;}
+  .league-card-main{position:relative;z-index:1;padding:17px;}
+  .league-card-top{display:grid;grid-template-columns:46px minmax(0,1fr) 82px;gap:13px;align-items:center;min-height:86px;}
+  .league-rank{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font:800 15px var(--mono);color:var(--text-dim);background:rgba(0,0,0,.08);border:1px solid var(--border);}
+  .league-card.gold .league-rank{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 55%,var(--border));background:color-mix(in srgb,var(--amber) 10%,transparent);}
+  .league-card.silver .league-rank{color:var(--teal);border-color:color-mix(in srgb,var(--teal) 40%,var(--border));}
+  .league-card.bronze .league-rank{color:var(--text);}
+  .league-card-identity{min-width:0;}
+  .league-position{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+  .league-team-name{font-size:18px;font-weight:850;line-height:1.18;overflow-wrap:anywhere;}
+  .league-record{display:inline-flex;margin-top:7px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:rgba(0,0,0,.06);font:800 11px var(--mono);color:var(--text);}
+  .league-card-sprite{width:78px;height:78px;display:grid;place-items:center;justify-self:end;}
+  .league-card-sprite img{max-width:78px;max-height:78px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 7px 7px rgba(0,0,0,.18));}
+  .league-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:15px;padding-top:12px;border-top:1px solid var(--border);}
+  .league-feature{display:flex;align-items:baseline;gap:7px;min-width:0;}
+  .league-feature-label{font-size:9px;color:var(--text-dim);white-space:nowrap;}
+  .league-feature-name{font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .league-open-hint{font-size:10px;font-weight:800;color:var(--amber);white-space:nowrap;}
+  @media(max-width:900px){.league-overview-grid{grid-template-columns:1fr;}.league-overview-head{align-items:flex-start;flex-direction:column;gap:6px;}}
+  @media(max-width:520px){.league-card-main{padding:14px;}.league-card-top{grid-template-columns:38px minmax(0,1fr) 62px;gap:9px;min-height:72px}.league-rank{width:35px;height:35px;border-radius:10px;font-size:13px}.league-team-name{font-size:16px}.league-card-sprite{width:60px;height:60px}.league-card-sprite img{max-width:60px;max-height:60px}.league-feature-label{display:none}.league-overview-head h2{font-size:22px;}}
 
 
   /* Larger, centered summary/profile overlay */
@@ -874,7 +899,8 @@ td{border-color:var(--sbl-card-border) !important;}
 
 /* Keep Pokémon type badges readable; their white text is intentional. */
 .type-badge,[class^="type-"],[class*=" type-"]{color:#fff !important;}
-</style>\n<style id="sbl-finals-theme-fix">
+</style>
+<style id="sbl-finals-theme-fix">
 /* Theme-aware finals highlight: top six in each conference. */
 .standings-row.finals-bound{
   background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 22%,var(--panel)) 0%,color-mix(in srgb,var(--amber) 9%,var(--panel)) 52%,var(--panel) 100%) !important;
@@ -895,8 +921,118 @@ td{border-color:var(--sbl-card-border) !important;}
 .luck-explanation-title{font-weight:800;font-size:13px;color:var(--text);margin-bottom:5px;}
 .luck-explanation-body{font-size:11px;line-height:1.55;color:var(--text-dim);}
 </style>
+
+<style id="stats-tabs-myteam-match">
+#tabs{
+  display:flex !important;
+  align-items:center !important;
+  gap:6px !important;
+  padding:5px !important;
+  margin:20px 0 16px !important;
+  border:1px solid var(--border) !important;
+  border-radius:12px !important;
+  background:var(--panel) !important;
+  box-sizing:border-box !important;
+}
+#tabs button{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  height:36px !important;
+  min-height:36px !important;
+  margin:0 !important;
+  padding:0 13px !important;
+  border:1px solid transparent !important;
+  border-radius:8px !important;
+  background:transparent !important;
+  color:var(--text-dim) !important;
+  font:700 12px/1 inherit !important;
+  cursor:pointer !important;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease !important;
+}
+#tabs button:hover{
+  color:var(--text) !important;
+  background:color-mix(in srgb,var(--panel-alt) 70%,transparent) !important;
+}
+#tabs button.active{
+  color:var(--text) !important;
+  background:var(--panel-alt) !important;
+  border-color:var(--border) !important;
+  box-shadow:0 2px 7px rgba(0,0,0,.06) !important;
+}
+@media(max-width:700px){
+  #tabs{
+    overflow-x:auto !important;
+    flex-wrap:nowrap !important;
+    scrollbar-width:none !important;
+  }
+  #tabs::-webkit-scrollbar{display:none}
+  #tabs button{flex:0 0 auto !important;white-space:nowrap !important}
+}
+</style>
+
+
+<style id="stats-nav-top-fix">
+html,body{
+  margin:0 !important;
+  padding:0 !important;
+}
+body{
+  padding-top:58px !important;
+}
+.page-nav{
+  position:fixed !important;
+  top:0 !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  height:58px !important;
+  min-height:58px !important;
+  margin:0 !important;
+  padding:10px 16px !important;
+  box-sizing:border-box !important;
+  z-index:10000 !important;
+  transform:none !important;
+}
+.page-nav.nav-hidden{
+  transform:translateY(-100%) !important;
+}
+</style>
+
+
+
+<style id="league-overview-safe-ui">
+.team-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+.team-card{position:relative;overflow:hidden;min-height:150px;padding:20px;border:1px solid var(--border);border-radius:16px;background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.12);cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+.team-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(0,0,0,.16);border-color:var(--amber);}
+.team-card:focus-visible{outline:2px solid var(--amber);outline-offset:3px;}
+.team-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:90px;}
+.team-card-copy{min-width:0;flex:1;}
+.team-card-name{font-size:20px;font-weight:800;line-height:1.2;overflow-wrap:anywhere;}
+.team-card-sub{display:inline-block;margin-top:8px;padding:5px 10px;border-radius:999px;background:var(--panel-alt);border:1px solid var(--border);font-weight:800;}
+.team-card-top-wrap{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:82px;height:82px;}
+.team-card-top-sprite{max-width:82px;max-height:82px;object-fit:contain;filter:drop-shadow(0 5px 5px rgba(0,0,0,.15));}
+@media(max-width:700px){.team-card-grid{grid-template-columns:1fr;}.team-card{padding:16px;}.team-card-name{font-size:18px;}}
+</style>
+
+<style id="league-overview-three-column-final">
+/* League Overview: exactly three cards across on desktop */
+.league-overview-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  width: 100% !important;
+}
+.league-overview-grid .league-card { min-width: 0 !important; }
+@media (max-width: 900px) {
+  .league-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 600px) {
+  .league-overview-grid { grid-template-columns: 1fr !important; }
+}
+</style>
 </head>
-<body data-admin="false">
+<body data-admin="true">
 <style>
 .page-nav{position:fixed;top:14px;right:18px;z-index:1000;display:flex;align-items:center;gap:7px}
 .page-nav label{font-size:11px;color:var(--text-dim,#777);font-weight:700}
@@ -1115,18 +1251,17 @@ td{border-color:var(--sbl-card-border) !important;}
   }
 
   async function initAdminAuth(){
+    // Stats requires an authenticated Supabase session, but it must not require
+    // a team/profile lookup just to render the dashboard. The login page is the
+    // place where team assignment is handled.
     const {data, error} = await supabase.auth.getSession();
-    if(error){ showAdminLogin(); return false; }
-    if(!data.session){ showAdminLogin(); return false; }
-    const {data:profile, error:profErr} = await supabase.from('profiles').select('team_name').eq('id', data.session.user.id).maybeSingle();
-    if(profErr || !profile?.team_name){
-      // Logged in but hasn't claimed/been assigned a team yet — no access to
-      // the rest of the site until that's done from the login page.
+    if(error || !data?.session){
       showAdminLogin();
       return false;
     }
     adminUser = data.session.user;
-    document.getElementById('app').style.display = '';
+    const app = document.getElementById('app');
+    if(app) app.style.display = '';
     return true;
   }
 
@@ -2237,7 +2372,7 @@ td{border-color:var(--sbl-card-border) !important;}
   // ---------- rendering ----------
   const contentEl = document.getElementById('content');
   const tabsEl = document.getElementById('tabs');
-  let activeTab = IS_ADMIN_PAGE ? 'process' : 'overview';
+  let activeTab = 'overview';
 
   tabsEl.addEventListener('click', (e)=>{
     if(e.target.tagName !== 'BUTTON') return;
@@ -2284,14 +2419,26 @@ td{border-color:var(--sbl-card-border) !important;}
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 
+  function hideStatsNav(){
+    const nav=document.getElementById('pageNav');
+    if(nav) nav.classList.add('nav-hidden');
+  }
+  function showStatsNav(){
+    const nav=document.getElementById('pageNav');
+    if(nav) nav.classList.remove('nav-hidden');
+  }
   function lockPopupScroll(){
     document.documentElement.style.overflow='hidden';
     document.body.style.overflow='hidden';
+    hideStatsNav();
   }
   function unlockPopupScroll(){
     if(!document.querySelector('.pokemon-overlay, .audit-overlay')){
       document.documentElement.style.overflow='';
       document.body.style.overflow='';
+    }
+    if(!document.querySelector('.pokemon-overlay, .audit-overlay, [role="dialog"]')){
+      showStatsNav();
     }
   }
   function closePokemonProfile(){
@@ -2458,39 +2605,53 @@ td{border-color:var(--sbl-card-border) !important;}
 
   function teamStandings(weekFilter='ALL'){ return teamComparisonData(weekFilter); }
   function teamLogo(team){ return STATE.settings.teamLogos?.[groupKey(team)] || STATE.settings.teamLogos?.[team] || ''; }
-  function renderBanner(){
-    const mode=STATE.settings.bannerMode||'top';
-    const teams=teamStandings('ALL');
-    const teamOptions=teams.map(t=>`<option value="${escapeHtml(t.team)}" ${STATE.settings.bannerTeam===t.team?'selected':''}>${escapeHtml(t.team)}</option>`).join('');
-    const controls=`<div class="banner-controls"><div><label>Banner</label><select id="bannerMode"><option value="top" ${mode==='top'?'selected':''}>Top Pokémon</option><option value="team" ${mode==='team'?'selected':''}>Team Stats</option><option value="golden" ${mode==='golden'?'selected':''}>Golden Fist</option></select></div><div id="bannerTeamWrap" style="display:${mode==='top'||mode==='golden'?'none':'block'}"><label>Team</label><select id="bannerTeam">${teamOptions}</select></div></div>`;
-    let cards='';
-    if(mode==='golden'){
-      cards=globalPokemonStats('ALL').map(s=>({...s,diff:s.kills-s.deaths})).sort((a,b)=>b.diff-a.diff||b.kills-a.kills).slice(0,5).map((s,i)=>`<div class="banner-pokemon"><div style="font-family:var(--mono);color:var(--text-dim);width:24px">${i+1}</div>${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.diff>0?'+':''}${s.diff}</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.assists||0} A · ${s.deaths} D</div></div></div>`).join('');
-    } else if(mode==='top'){
-      cards=globalPokemonStats('ALL').slice(0,5).map(s=>`<div class="banner-pokemon">${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.dealt.toFixed(0)} ⚔</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.assists||0} A · ${s.deaths} D</div></div></div>`).join('');
-    } else {
-      const selected=teams.find(t=>t.team===STATE.settings.bannerTeam)||teams[0];
-      if(selected){
-        const list=Object.values(teamPokemonStats('ALL')[selected.team]||{}).sort((a,b)=>b.appearances-a.appearances||b.dealt-a.dealt).slice(0,5);
-        cards=`<div class="banner-team-card"><img class="team-logo" src="${escapeHtml(teamLogo(selected.team))}" onerror="this.style.display='none'" alt=""><div><div class="name">${escapeHtml(selected.team)}</div><div class="banner-stat">${selected.wins}-${selected.losses}</div><div class="note" style="margin:2px 0 0">${selected.games?((100*selected.wins/selected.games).toFixed(1)+'% win rate'): 'No games'}</div></div></div>`+list.map(s=>`<div class="banner-pokemon">${spriteImg(s.species,'sprite')}<div><div class="name">${escapeHtml(s.species)}</div><div class="banner-stat">${s.appearances} games</div><div class="note" style="margin:2px 0 0">${s.kills} K · ${s.assists||0} A · ${s.deaths} D</div></div></div>`).join('');
-      }
-    }
-    return controls+`<div class="ticker" id="ticker">${cards||'<div class="tick empty"><div class="val">No banner data yet</div></div>'}</div>`;
-  }
+
   function renderLeagueOverview(){
-    const data=teamStandings('ALL').slice().sort((a,b)=>a.team.localeCompare(b.team,undefined,{sensitivity:'base'}));
-    contentEl.innerHTML=`<div class="panel"><h2>League Overview</h2><div class="note">Click a franchise for a quick league summary.</div><div id="overviewTeams" style="margin-top:18px"></div></div>`;
+    const data=teamStandings('ALL');
+    const allMons=teamPokemonStats('ALL');
+    contentEl.innerHTML=`<div class="league-overview-wrap">
+      <div class="league-overview-head">
+        <div><div class="league-overview-kicker">Season standings</div><h2>League Overview</h2><div class="note">The table, distilled. Click a franchise for the full team summary.</div></div>
+        <div class="league-overview-count">${data.length} franchise${data.length===1?'':'s'}</div>
+      </div>
+      <div id="overviewTeams"></div>
+    </div>`;
     const el=document.getElementById('overviewTeams');
     if(!data.length){el.innerHTML='<div class="empty-state">No team data yet.</div>';return;}
-    el.innerHTML=`<div class="team-card-grid">${data.map(t=>{const mons=Object.values(teamPokemonStats('ALL')[t.team]||{}).sort((a,b)=>b.appearances-a.appearances||b.dealt-a.dealt); const top=mons[0]?.species; const logo=teamLogo(t.team); const sprite=top?`<div class="team-card-top-wrap">${spriteImg(top,'team-card-top-sprite')}</div>`:''; return `<div class="team-card" data-team-card="${escapeHtml(t.team)}"><div class="team-card-head"><div class="team-card-copy">${logo?`<img class="team-logo" src="${escapeHtml(logo)}" alt="" style="display:none">`:''}<div class="team-card-name">${escapeHtml(t.team)}</div><div class="team-card-sub">${t.wins}-${t.losses}</div></div>${sprite}</div></div>`}).join('')}</div>`;
-    el.querySelectorAll('[data-team-card]').forEach(card=>card.addEventListener('click',()=>openTeamOverview(card.dataset.teamCard)));
-  }
-  function openTeamOverview(team){
-    lockPopupScroll();
-    const data=teamStandings('ALL'); const t=data.find(x=>x.team===team); if(!t)return;
-    const i=data.indexOf(t); const mons=Object.values(teamPokemonStats('ALL')[team]||{}).sort((a,b)=>b.appearances-a.appearances||b.dealt-a.dealt).slice(0,5);
-    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">League Position</div><h3>${i+1}${i===0?'st':i===1?'nd':i===2?'rd':'th'} — ${escapeHtml(team)}</h3></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Games</span><strong>${t.games}</strong></div><div><span>Differential</span><strong>${t.kills-t.deaths>0?'+':''}${t.kills-t.deaths}</strong></div></div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.appearances} games · ${m.kills} K · ${m.assists||0} A · ${m.deaths} D</div></div>`)}</div>`).join('')||'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
-    document.getElementById('teamOverviewClose').addEventListener('click',closeAudit); document.getElementById('teamOverviewOverlay').addEventListener('click',e=>{if(e.target.id==='teamOverviewOverlay')closeAudit();});
+
+    el.innerHTML=`<div class="league-overview-grid">${data.map((t,index)=>{
+      const mons=Object.values(allMons[t.team]||{}).sort((a,b)=>b.appearances-a.appearances||b.dealt-a.dealt);
+      const top=mons[0];
+      const ordinal=index===0?'1st':index===1?'2nd':index===2?'3rd':`${index+1}th`;
+      const rankTone=index===0?'gold':index===1?'silver':index===2?'bronze':'';
+      return `<div class="league-card ${rankTone}" data-team-card="${escapeHtml(t.team)}" tabindex="0" role="button" aria-label="Open ${escapeHtml(t.team)} league summary">
+        <div class="league-card-glow"></div>
+        <div class="league-card-main">
+          <div class="league-card-top">
+            <div class="league-rank">${index+1}</div>
+            <div class="league-card-identity">
+              <div class="league-position">${ordinal} place</div>
+              <div class="league-team-name">${escapeHtml(t.team)}</div>
+              <div class="league-record">${t.wins}–${t.losses}</div>
+            </div>
+            ${top?`<div class="league-card-sprite">${spriteImg(top.species,'league-card-sprite')}</div>`:''}
+          </div>
+          <div class="league-card-bottom">
+            <div class="league-feature">
+              <span class="league-feature-label">Signature pick</span>
+              <span class="league-feature-name">${top?escapeHtml(top.species):'No Pokémon data'}</span>
+            </div>
+            <span class="league-open-hint">View team <span aria-hidden="true">→</span></span>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+
+    el.querySelectorAll('[data-team-card]').forEach(card=>{
+      const open=()=>openTeamOverview(card.dataset.teamCard);
+      card.addEventListener('click',open);
+      card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+    });
   }
   function renderProcess(){
     const count = Object.keys(STATE.replays).length;
@@ -2898,10 +3059,11 @@ td{border-color:var(--sbl-card-border) !important;}
     for(const e of events){ const k=String(e.turn||0); (byTurn[k] ||= []).push(e); }
     const root=document.createElement('div');
     root.innerHTML=`<div class="pokemon-overlay" id="luckPokemonModal"><div class="pokemon-modal" role="dialog" aria-modal="true" aria-label="Luck summary for ${escapeHtml(species)}"><div class="pokemon-modal-head"><div style="display:flex;align-items:center;gap:10px;">${spriteImg(species,'sprite-xl')}<div><strong>${escapeHtml(species)}</strong><div class="note">Luck summary · ${score>=0?'+':''}${score.toFixed(2)} luck</div></div></div><button class="ghost small" id="luckPokemonClose" type="button">Close ✕</button></div><div class="pokemon-modal-body"><div class="profile-grid"><div><span>Lucky events</span><strong>${events.filter(e=>e.score>0).length}</strong></div><div><span>Unlucky events</span><strong>${events.filter(e=>e.score<0).length}</strong></div><div><span>Games</span><strong>${rows.length}</strong></div><div><span>Net luck</span><strong>${score>=0?'+':''}${score.toFixed(2)}</strong></div></div><div class="section-divider"></div><h3 class="mini-heading">What turns did ${escapeHtml(species)} get lucky?</h3>${Object.keys(byTurn).sort((a,b)=>Number(a)-Number(b)).map(turn=>`<div style="margin:0 0 12px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;"><strong>Turn ${escapeHtml(turn)}</strong>${byTurn[turn].map(e=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-top:7px;">${e.score>=0?'🍀':'💀'}<div><strong>${escapeHtml(e.type.replace(/-/g,' '))}</strong> <span class="note">${e.score>=0?'+':''}${Number(e.score).toFixed(2)}</span><div class="note">${escapeHtml(e.detail)} · ${escapeHtml(e.team)} vs ${escapeHtml(e.opponent)} · <a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(e.replayId)}" target="_blank" rel="noopener">Replay</a></div></div></div>`).join('')}</div>`).join('') || '<div class="empty-state">No turn-by-turn luck events are stored yet. Reprocess the replays with the latest parser.</div>'}</div></div></div>`;
-    document.body.appendChild(root.firstElementChild); document.body.style.overflow='hidden';
+    document.body.appendChild(root.firstElementChild); document.body.style.overflow='hidden'; hideStatsNav();
     const modal=document.getElementById('luckPokemonModal');
-    document.getElementById('luckPokemonClose').addEventListener('click',()=>{modal.remove();document.body.style.overflow='';});
-    modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();document.body.style.overflow='';}});
+    const closeLuck=()=>{modal.remove();document.body.style.overflow='';showStatsNav();};
+    document.getElementById('luckPokemonClose').addEventListener('click',closeLuck);
+    modal.addEventListener('click',e=>{if(e.target===modal)closeLuck();});
   }
 
   function renderLuckiestTeam(){
@@ -3592,8 +3754,15 @@ td{border-color:var(--sbl-card-border) !important;}
   pokemonObserver.observe(document.body,{childList:true,subtree:true});
 
   (async function init(){
-    const ok = await initAdminAuth();
-    if(!ok) return;
+    // Stats is a protected page: direct URL access requires a login.
+    if(IS_ADMIN_PAGE){
+      const ok = await initAdminAuth();
+      if(!ok) return;
+    } else {
+      const app = document.getElementById('app');
+      if(app) app.style.display = '';
+    }
+
     await loadState();
 
     // Render the active tab immediately after the shared state is available.
@@ -3729,34 +3898,6 @@ td{border-color:var(--sbl-card-border) !important;}
 })();
 </script>
 
-<script>
-(function(){
-  const nav = document.getElementById('pageNav');
-  if(!nav) return;
-  let ticking = false;
-  function updateNav(){
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-
-    // Keep the nav visible at the top and automatically reveal it as the
-    // user approaches the top. The moment the page is scrolled away from
-    // the top, hide it without requiring another interaction.
-    if(y <= 140){
-      nav.classList.remove('nav-hidden');
-    } else {
-      nav.classList.add('nav-hidden');
-    }
-    ticking = false;
-  }
-  window.addEventListener('scroll', function(){
-    if(!ticking){ ticking = true; requestAnimationFrame(updateNav); }
-  }, {passive:true});
-  nav.addEventListener('mouseenter', function(){ nav.classList.remove('nav-hidden'); });
-  document.addEventListener('mousemove', function(e){
-    if(e.clientY <= 12) nav.classList.remove('nav-hidden');
-  }, {passive:true});
-  nav.classList.remove('nav-hidden');
-})();
-</script>
 <script id="sitewide-sprite-fix">
 (function(){
   const BASE='https://play.pokemonshowdown.com/sprites/';
