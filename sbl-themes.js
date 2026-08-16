@@ -6,11 +6,14 @@
   const THEMES=[    // Black / Gray
     {id:'monochrome', name:'Monochrome', bg:'#0b0b0d', panel:'#17171a', panelAlt:'#222226', border:'#38383d', text:'#f1f1f3', textDim:'#a7a7ad', accent:'#d4d4d8', accentText:'#18181b'},
     {id:'slate', name:'Slate', bg:'#0b0f14', panel:'#151b23', panelAlt:'#1e2630', border:'#303b49', text:'#edf2f7', textDim:'#9ba9b8', accent:'#94a3b8', accentText:'#10151d'},
+    {id:'midnight2', name:'Midnight II', bg:'#060810', panel:'#0c1220', panelAlt:'#131b2c', border:'#263653', text:'#e9f0ff', textDim:'#8290aa', accent:'#718cff', accentText:'#080f20'},
     {id:'onyx', name:'Onyx', bg:'#08090b', panel:'#111318', panelAlt:'#191c22', border:'#2b3038', text:'#f1f3f6', textDim:'#9ca3af', accent:'#8b949e', accentText:'#0b0d10'},
     {id:'charcoal', name:'Charcoal', bg:'#0c0d10', panel:'#16181d', panelAlt:'#20232a', border:'#343944', text:'#eef0f4', textDim:'#9aa2ad', accent:'#a8b0bc', accentText:'#101217'},
     {id:'graphite', name:'Graphite', bg:'#0c0d0f', panel:'#17181b', panelAlt:'#212327', border:'#35373d', text:'#eef0f2', textDim:'#9ba0a8', accent:'#a3a9b3', accentText:'#131417'},
+    {id:'graphite2', name:'Graphite II', bg:'#101114', panel:'#1b1d21', panelAlt:'#272a30', border:'#3b3f48', text:'#f3f4f6', textDim:'#a3a7b0', accent:'#b0b5bf', accentText:'#15171b'},
     {id:'smoke', name:'Smoke', bg:'#121416', panel:'#1c1f22', panelAlt:'#282c30', border:'#3d4248', text:'#f2f4f5', textDim:'#aeb5bb', accent:'#c0c5ca', accentText:'#17191b'},
     {id:'silver', name:'Silver', bg:'#111317', panel:'#1c2026', panelAlt:'#282d35', border:'#414750', text:'#f4f6f8', textDim:'#aeb7c1', accent:'#c5cbd2', accentText:'#15181c'},
+    {id:'steel2', name:'Steel II', bg:'#0b1015', panel:'#151d25', panelAlt:'#202b35', border:'#364957', text:'#edf5fb', textDim:'#91a8b8', accent:'#82a9c1', accentText:'#0d1b24'},
     {id:'pearl', name:'Pearl', bg:'#151517', panel:'#222225', panelAlt:'#303034', border:'#47474d', text:'#f7f7f8', textDim:'#b4b4bc', accent:'#d2d2d8', accentText:'#17171a'},
     // Brown / Bronze
     {id:'coffee', name:'Coffee', bg:'#110c09', panel:'#211610', panelAlt:'#2e1e15', border:'#50382a', text:'#f9f1e8', textDim:'#c4a995', accent:'#d6a77a', accentText:'#2e1708'},
@@ -53,12 +56,15 @@
     {id:'neon', name:'Neon', bg:'#07110b', panel:'#0d2114', panelAlt:'#12341c', border:'#1d572c', text:'#edfff2', textDim:'#8fc79d', accent:'#a3ff12', accentText:'#142b04'},
     // Teal / Cyan
     {id:'cyan', name:'Cyan', bg:'#051519', panel:'#0a2129', panelAlt:'#0f2c35', border:'#1c4a57', text:'#eafcff', textDim:'#8bc2cf', accent:'#22d3ee', accentText:'#032a30'},
+    {id:'cyan2', name:'Cyan II', bg:'#061218', panel:'#0b202a', panelAlt:'#12313d', border:'#1f5367', text:'#e6fbff', textDim:'#6cc7dd', accent:'#4fd9ef', accentText:'#05232e'},
     {id:'deepsea', name:'Deep Sea', bg:'#050f14', panel:'#0a1a22', panelAlt:'#102932', border:'#1d4a59', text:'#e5faff', textDim:'#6fa5b5', accent:'#48c8df', accentText:'#05202a'},
     {id:'teal', name:'Teal', bg:'#071614', panel:'#0d2220', panelAlt:'#122d2a', border:'#1f4a44', text:'#eafffa', textDim:'#8fc7bb', accent:'#5eead4', accentText:'#062521'},
     {id:'aqua', name:'Aqua', bg:'#041315', panel:'#082127', panelAlt:'#0d3038', border:'#1b5661', text:'#e9feff', textDim:'#8dc8ce', accent:'#2dd4bf', accentText:'#032522'},
+    {id:'aqua2', name:'Aqua II', bg:'#061316', panel:'#0c2429', panelAlt:'#12373d', border:'#21636c', text:'#e5ffff', textDim:'#70cdd2', accent:'#54e2e8', accentText:'#052329'},
     {id:'tropical', name:'Tropical', bg:'#061610', panel:'#0d281d', panelAlt:'#143a28', border:'#266044', text:'#effff6', textDim:'#8fcbb0', accent:'#34d399', accentText:'#052b1c'},
     {id:'arctic', name:'Arctic', bg:'#081319', panel:'#0e2029', panelAlt:'#15303c', border:'#27505f', text:'#eefcff', textDim:'#91bac5', accent:'#67e8f9', accentText:'#06252e'},
     {id:'frost', name:'Frost', bg:'#081419', panel:'#101f27', panelAlt:'#183138', border:'#2c4f5c', text:'#e9f8fc', textDim:'#8fbdc8', accent:'#7dd8ea', accentText:'#062229'},
+    {id:'frost2', name:'Frost II', bg:'#091318', panel:'#12232c', panelAlt:'#1d3440', border:'#365968', text:'#edfaff', textDim:'#9dc4d2', accent:'#8de2f2', accentText:'#0b2029'},
     {id:'aurora', name:'Aurora', bg:'#08120f', panel:'#10201b', panelAlt:'#19352a', border:'#2c5b45', text:'#e9fff4', textDim:'#82c9a3', accent:'#79f2b0', accentText:'#09251a'},
     // Blue
     {id:'sky', name:'Sky Blue', bg:'#071426', panel:'#0d2038', panelAlt:'#142b47', border:'#2b4c70', text:'#eef6ff', textDim:'#9db4cc', accent:'#60a5fa', accentText:'#0b1a33'},
@@ -72,6 +78,7 @@
     {id:'violet', name:'Violet', bg:'#171224', panel:'#241b38', panelAlt:'#302448', border:'#51406f', text:'#f7f2ff', textDim:'#b9aecf', accent:'#a78bfa', accentText:'#1e1033'},
     {id:'lavender', name:'Lavender', bg:'#110f1c', panel:'#1d1930', panelAlt:'#292342', border:'#453b67', text:'#f6f1ff', textDim:'#b9add3', accent:'#c4b5fd', accentText:'#21153d'},
     {id:'plum', name:'Plum', bg:'#120817', panel:'#200d29', panelAlt:'#2c1238', border:'#4c245d', text:'#faefff', textDim:'#c6a6d4', accent:'#c084fc', accentText:'#260a33'},
+    {id:'plum2', name:'Deep Plum', bg:'#130817', panel:'#200e25', panelAlt:'#32143a', border:'#57205f', text:'#fae9ff', textDim:'#c18acb', accent:'#d36bea', accentText:'#210a27'},
     {id:'heather', name:'Heather', bg:'#100d17', panel:'#1b1625', panelAlt:'#292139', border:'#493b5f', text:'#f3eefb', textDim:'#aa9cba', accent:'#b69bdf', accentText:'#171021'},
     {id:'amethyst', name:'Amethyst', bg:'#110a18', panel:'#1c1028', panelAlt:'#2b1940', border:'#4c2d6b', text:'#f5edff', textDim:'#b59bd8', accent:'#b27aff', accentText:'#190d2b'},
     {id:'orchid', name:'Orchid', bg:'#16091a', panel:'#251027', panelAlt:'#38183d', border:'#61276a', text:'#ffeefe', textDim:'#d69bd9', accent:'#e68aff', accentText:'#260b2c'},
@@ -83,6 +90,17 @@
     // Additional palettes
     {id:'obsidian', name:'Obsidian', bg:'#050608', panel:'#0e1116', panelAlt:'#171b22', border:'#2a313d', text:'#f3f6fa', textDim:'#929dab', accent:'#7dd3fc', accentText:'#07131b'},
     {id:'carbon', name:'Carbon', bg:'#090a0c', panel:'#14171b', panelAlt:'#20242a', border:'#343a43', text:'#f0f2f5', textDim:'#a1a8b2', accent:'#c4b5fd', accentText:'#171225'},
+    {id:'cocoa', name:'Cocoa', bg:'#120b08', panel:'#21140f', panelAlt:'#302018', border:'#51362a', text:'#fff3e8', textDim:'#c7a68f', accent:'#e0a16b', accentText:'#2b1508'},
+    {id:'sand', name:'Sand', bg:'#15110c', panel:'#241d14', panelAlt:'#332a1d', border:'#554734', text:'#fbf3e3', textDim:'#c4b394', accent:'#e7c27d', accentText:'#2a1b09'},
+    {id:'bronze', name:'Bronze', bg:'#130d08', panel:'#24170d', panelAlt:'#342312', border:'#5c4122', text:'#fff1dc', textDim:'#c9a77b', accent:'#d9a441', accentText:'#2b1905'},
+    {id:'rust', name:'Rust', bg:'#160907', panel:'#28130e', panelAlt:'#3a1d16', border:'#673327', text:'#fff0e8', textDim:'#d09b86', accent:'#e76f51', accentText:'#2b0c07'},
+    {id:'wine', name:'Wine', bg:'#13070d', panel:'#240e18', panelAlt:'#351522', border:'#5b2539', text:'#ffedf3', textDim:'#d19aaa', accent:'#d94f70', accentText:'#300813'},
+    {id:'mauve', name:'Mauve', bg:'#140c13', panel:'#251522', panelAlt:'#362032', border:'#5a3852', text:'#faeef7', textDim:'#c5a4bb', accent:'#d08abf', accentText:'#291326'},
+    {id:'raspberry', name:'Raspberry', bg:'#17070f', panel:'#290d1a', panelAlt:'#3b1425', border:'#66233f', text:'#ffebf2', textDim:'#d889a7', accent:'#ec4c8a', accentText:'#310616'},
+    {id:'apricot', name:'Apricot', bg:'#180d08', panel:'#29170e', panelAlt:'#3a2115', border:'#65402a', text:'#fff1e5', textDim:'#d6a789', accent:'#ff9f68', accentText:'#321408'},
+    {id:'cantaloupe', name:'Cantaloupe', bg:'#170d08', panel:'#2a1710', panelAlt:'#3b2217', border:'#68402d', text:'#fff3e9', textDim:'#d9aa8e', accent:'#ffb07c', accentText:'#32150a'},
+    {id:'gold', name:'Gold', bg:'#151006', panel:'#261b09', panelAlt:'#38270f', border:'#60471b', text:'#fff5d8', textDim:'#d2b66b', accent:'#f5c542', accentText:'#2b1c04'},
+    {id:'honey', name:'Honey', bg:'#171008', panel:'#291b0b', panelAlt:'#3b2810', border:'#674b1d', text:'#fff4dc', textDim:'#d6b56f', accent:'#eab308', accentText:'#2a1b03'},
     {id:'canary', name:'Canary', bg:'#151405', panel:'#25240a', panelAlt:'#363411', border:'#55521b', text:'#fbfbdc', textDim:'#c8c77a', accent:'#fde047', accentText:'#302f03'},
     {id:'green', name:'Classic Green', bg:'#071309', panel:'#0d2113', panelAlt:'#14301b', border:'#23502d', text:'#edfff0', textDim:'#8fbd9b', accent:'#4ade80', accentText:'#052b12'},
     {id:'moss', name:'Moss', bg:'#101306', panel:'#1e250c', panelAlt:'#2e3512', border:'#4b5520', text:'#f4f8df', textDim:'#b5bd7e', accent:'#a8b84a', accentText:'#202505'},
@@ -95,10 +113,12 @@
     {id:'glacier', name:'Glacier', bg:'#07131a', panel:'#0f222c', panelAlt:'#183542', border:'#2b5668', text:'#edfaff', textDim:'#8fb9c9', accent:'#7dd3fc', accentText:'#062333'},
     {id:'steel', name:'Steel', bg:'#0a1015', panel:'#151e26', panelAlt:'#202c35', border:'#374955', text:'#edf5f9', textDim:'#91a5b2', accent:'#9cc4d4', accentText:'#0d1d24'},
     {id:'sapphire', name:'Sapphire', bg:'#060c18', panel:'#0d1830', panelAlt:'#142548', border:'#254777', text:'#eaf1ff', textDim:'#7e9bd0', accent:'#3b82f6', accentText:'#07152d'},
+    {id:'denim2', name:'Deep Denim', bg:'#08111b', panel:'#101f2f', panelAlt:'#192e44', border:'#2b4d6d', text:'#eaf4ff', textDim:'#82a3c0', accent:'#4f9bdc', accentText:'#081d30'},
     {id:'marine', name:'Marine', bg:'#061018', panel:'#0b1c28', panelAlt:'#123044', border:'#20526b', text:'#e8faff', textDim:'#6fb0c7', accent:'#38bdf8', accentText:'#062238'},
     {id:'steelblue', name:'Steel Blue', bg:'#0a1118', panel:'#141e29', panelAlt:'#1e2c3b', border:'#34495f', text:'#edf5ff', textDim:'#91a7bc', accent:'#7aa7c7', accentText:'#0b1c29'},
     {id:'dusk', name:'Dusk', bg:'#0d0d18', panel:'#17172a', panelAlt:'#23233d', border:'#3a3a61', text:'#f0efff', textDim:'#a5a2c4', accent:'#a78bfa', accentText:'#17102c'},
     {id:'midnight', name:'Midnight', bg:'#050713', panel:'#0b1021', panelAlt:'#131a32', border:'#263454', text:'#eaf0ff', textDim:'#7f8baa', accent:'#818cf8', accentText:'#0b1028'},
+    {id:'violet2', name:'Electric Violet', bg:'#12091b', panel:'#1f1030', panelAlt:'#2d1645', border:'#4e2770', text:'#f9efff', textDim:'#c19bd4', accent:'#c084fc', accentText:'#210c31'},
     {id:'grape', name:'Grape', bg:'#120817', panel:'#21102a', panelAlt:'#31183e', border:'#542866', text:'#f9edff', textDim:'#bd9bc9', accent:'#a855f7', accentText:'#210b32'},
     {id:'electric', name:'Electric Purple', bg:'#10091a', panel:'#1b0f2d', panelAlt:'#2a1743', border:'#4b2b6d', text:'#f8efff', textDim:'#c2a1da', accent:'#d946ef', accentText:'#2d0a33'},
     {id:'nebula', name:'Nebula', bg:'#0b0816', panel:'#151026', panelAlt:'#21183a', border:'#3a2d5d', text:'#f1edff', textDim:'#a79bc7', accent:'#8b5cf6', accentText:'#160c2c'},
@@ -114,22 +134,38 @@
     {id:'firefly', name:'Firefly', bg:'#07100d', panel:'#0e1c16', panelAlt:'#173027', border:'#2a4d40', text:'#eafff4', textDim:'#83b7a1', accent:'#a3e635', accentText:'#162803'},
     {id:'copperblue', name:'Copper Blue', bg:'#0b1015', panel:'#172027', panelAlt:'#25333b', border:'#40515a', text:'#eef7fa', textDim:'#93aab2', accent:'#f59e0b', accentText:'#2c1703'},
        // Light presets
-       // Light presets
-    {id:'ivory', name:'Ivory', bg:'#e4e0d7', panel:'#eeeae2', panelAlt:'#e0dbd0', border:'#c8c0b1', text:'#353129', textDim:'#777064', accent:'#a87838', accentText:'#241806'},
-    {id:'paper', name:'Paper', bg:'#e5e4df', panel:'#efefeb', panelAlt:'#e2e1dc', border:'#c9c7bf', text:'#35342f', textDim:'#74726b', accent:'#756344', accentText:'#20190e'},
-    {id:'cloud', name:'Cloud', bg:'#dfe5eb', panel:'#e9eef2', panelAlt:'#dce2e8', border:'#bec8d2', text:'#2d3742', textDim:'#6e7b88', accent:'#4773bd', accentText:'#08182f'},
-    {id:'snow', name:'Snow', bg:'#e2e8ec', panel:'#edf1f4', panelAlt:'#dfe5e9', border:'#c1cbd4', text:'#2c3740', textDim:'#707c85', accent:'#3284ae', accentText:'#052238'},
-    {id:'linen', name:'Linen', bg:'#e4ddd3', panel:'#eee9e2', panelAlt:'#dfd7cb', border:'#c9bbaa', text:'#373027', textDim:'#786d60', accent:'#a36436', accentText:'#241105'},
-    {id:'cream', name:'Cream', bg:'#e7e1d1', panel:'#f0ebdf', panelAlt:'#e1dac6', border:'#c9bb8f', text:'#37331f', textDim:'#766d4c', accent:'#ad8315', accentText:'#241900'},
-    {id:'porcelain', name:'Porcelain', bg:'#e1e5e8', panel:'#ebeff2', panelAlt:'#dde2e6', border:'#bec7cf', text:'#303840', textDim:'#707a83', accent:'#4677bb', accentText:'#091b36'},
-    {id:'mist', name:'Mist', bg:'#e2e3e5', panel:'#ececed', panelAlt:'#dedfe1', border:'#c1c4c8', text:'#34363a', textDim:'#72757a', accent:'#687b91', accentText:'#111a25'},
-    {id:'dove', name:'Dove', bg:'#e3e1e3', panel:'#edebed', panelAlt:'#dedcdf', border:'#c2bec4', text:'#37343a', textDim:'#757179', accent:'#826d8d', accentText:'#211526'},
-    {id:'canvas', name:'Canvas', bg:'#e3ddd2', panel:'#eee9e1', panelAlt:'#ded6c7', border:'#c7b99f', text:'#363127', textDim:'#766d5d', accent:'#8e6e39', accentText:'#241805'},
-    {id:'frostwhite', name:'Frost', bg:'#dce7eb', panel:'#eaf0f2', panelAlt:'#d5e0e4', border:'#b7c9cf', text:'#2c393e', textDim:'#667b81', accent:'#29909b', accentText:'#052326'},
-    {id:'cotton', name:'Cotton', bg:'#e4e4e4', panel:'#ededed', panelAlt:'#dddddd', border:'#c5c5c5', text:'#353535', textDim:'#707070', accent:'#698894', accentText:'#0d1c23'},
-    {id:'almond', name:'Almond', bg:'#e4ddd5', panel:'#eee9e3', panelAlt:'#ddd2c4', border:'#c5b49f', text:'#383027', textDim:'#786a59', accent:'#a66b42', accentText:'#250f04'},
-    {id:'marble', name:'Marble', bg:'#e2e2e2', panel:'#ececec', panelAlt:'#dcdcdc', border:'#c2c2c2', text:'#353535', textDim:'#707070', accent:'#818181', accentText:'#151515'},
-    // Special
+     {id:'ivory', name:'Ivory', bg:'#e4e0d7', panel:'#eeeae2', panelAlt:'#e0dbd0', border:'#c8c0b1', text:'#353129', textDim:'#777064', accent:'#a87838', accentText:'#241806'},
+     {id:'paper', name:'Paper', bg:'#e5e4df', panel:'#efefeb', panelAlt:'#e2e1dc', border:'#c9c7bf', text:'#35342f', textDim:'#74726b', accent:'#756344', accentText:'#20190e'},
+     {id:'cloud', name:'Cloud', bg:'#dfe5eb', panel:'#e9eef2', panelAlt:'#dce2e8', border:'#bec8d2', text:'#2d3742', textDim:'#6e7b88', accent:'#4773bd', accentText:'#08182f'},
+     {id:'snow', name:'Snow', bg:'#e2e8ec', panel:'#edf1f4', panelAlt:'#dfe5e9', border:'#c1cbd4', text:'#2c3740', textDim:'#707c85', accent:'#3284ae', accentText:'#052238'},
+     {id:'linen', name:'Linen', bg:'#e4ddd3', panel:'#eee9e2', panelAlt:'#dfd7cb', border:'#c9bbaa', text:'#373027', textDim:'#786d60', accent:'#a36436', accentText:'#241105'},
+     {id:'cream', name:'Cream', bg:'#e7e1d1', panel:'#f0ebdf', panelAlt:'#e1dac6', border:'#c9bb8f', text:'#37331f', textDim:'#766d4c', accent:'#ad8315', accentText:'#241900'},
+     {id:'porcelain', name:'Porcelain', bg:'#e1e5e8', panel:'#ebeff2', panelAlt:'#dde2e6', border:'#bec7cf', text:'#303840', textDim:'#707a83', accent:'#4677bb', accentText:'#091b36'},
+     {id:'mist', name:'Mist', bg:'#e2e3e5', panel:'#ececed', panelAlt:'#dedfe1', border:'#c1c4c8', text:'#34363a', textDim:'#72757a', accent:'#687b91', accentText:'#111a25'},
+     {id:'dove', name:'Dove', bg:'#e3e1e3', panel:'#edebed', panelAlt:'#dedcdf', border:'#c2bec4', text:'#37343a', textDim:'#757179', accent:'#826d8d', accentText:'#211526'},
+     {id:'canvas', name:'Canvas', bg:'#e3ddd2', panel:'#eee9e1', panelAlt:'#ded6c7', border:'#c7b99f', text:'#363127', textDim:'#766d5d', accent:'#8e6e39', accentText:'#241805'},
+     {id:'frostwhite', name:'Frost', bg:'#dce7eb', panel:'#eaf0f2', panelAlt:'#d5e0e4', border:'#b7c9cf', text:'#2c393e', textDim:'#667b81', accent:'#29909b', accentText:'#052326'},
+     {id:'cotton', name:'Cotton', bg:'#e4e4e4', panel:'#ededed', panelAlt:'#dddddd', border:'#c5c5c5', text:'#353535', textDim:'#707070', accent:'#698894', accentText:'#0d1c23'},
+     {id:'almond', name:'Almond', bg:'#e4ddd5', panel:'#eee9e3', panelAlt:'#ddd2c4', border:'#c5b49f', text:'#383027', textDim:'#786a59', accent:'#a66b42', accentText:'#250f04'},
+     {id:'marble', name:'Marble', bg:'#e2e2e2', panel:'#ececec', panelAlt:'#dcdcdc', border:'#c2c2c2', text:'#353535', textDim:'#707070', accent:'#818181', accentText:'#151515'},
+
+     // 15 new light themes
+     {id:'rosepaper', name:'Rose Paper', bg:'#eee5e8', panel:'#f7eef1', panelAlt:'#e7d9df', border:'#d5c0c9', text:'#3d3036', textDim:'#7d6973', accent:'#b86b87', accentText:'#fff7fa'},
+     {id:'pearlblue', name:'Pearl Blue', bg:'#e4ebf1', panel:'#f0f5f8', panelAlt:'#dce5ec', border:'#c4d1db', text:'#2d3943', textDim:'#6c7b86', accent:'#4f86b3', accentText:'#f8fcff'},
+     {id:'sage', name:'Sage', bg:'#e3e9e0', panel:'#eef3eb', panelAlt:'#d9e2d5', border:'#becbb8', text:'#303a2d', textDim:'#6e7b69', accent:'#6d8f62', accentText:'#f8fff5'},
+     {id:'pistachio', name:'Pistachio', bg:'#e8ebdc', panel:'#f1f4e8', panelAlt:'#dfe4d0', border:'#c8d0ae', text:'#343827', textDim:'#72785e', accent:'#82934a', accentText:'#fbfff1'},
+     {id:'butter', name:'Butter', bg:'#f0ecd8', panel:'#f7f3e3', panelAlt:'#e8e1c5', border:'#d5c99f', text:'#3b3828', textDim:'#797253', accent:'#b3912f', accentText:'#fffdf3'},
+     {id:'lemonade', name:'Lemonade', bg:'#f0efd9', panel:'#f8f7e9', panelAlt:'#e8e7c9', border:'#d2d0a7', text:'#3b3b29', textDim:'#777751', accent:'#9a972d', accentText:'#fffef2'},
+     {id:'peachcream', name:'Peach Cream', bg:'#f0e3da', panel:'#f8eee8', panelAlt:'#ead8cc', border:'#d8bfae', text:'#3e332d', textDim:'#7d6a5e', accent:'#c47f5a', accentText:'#fff9f5'},
+     {id:'apricotlight', name:'Apricot Light', bg:'#f1e2d7', panel:'#f8ece4', panelAlt:'#ead7c9', border:'#d7b9a5', text:'#3d312b', textDim:'#7c695d', accent:'#c97a4b', accentText:'#fff9f5'},
+     {id:'lilac', name:'Lilac', bg:'#e9e4ee', panel:'#f3eef6', panelAlt:'#e1d9e8', border:'#cbbfd4', text:'#37313d', textDim:'#756b7e', accent:'#8870a8', accentText:'#fffaff'},
+     {id:'periwinklelight', name:'Periwinkle Light', bg:'#e5e8f2', panel:'#f0f2f8', panelAlt:'#dce1ee', border:'#c2c9dc', text:'#303746', textDim:'#6d7688', accent:'#6477ad', accentText:'#fbfcff'},
+     {id:'skywash', name:'Sky Wash', bg:'#e1ebf0', panel:'#eef5f8', panelAlt:'#d7e4ea', border:'#bcd0da', text:'#2e3940', textDim:'#687883', accent:'#4e91ad', accentText:'#f7fdff'},
+     {id:'mintcream', name:'Mint Cream', bg:'#e0ece7', panel:'#edf6f2', panelAlt:'#d4e4de', border:'#b9d0c7', text:'#2c3b35', textDim:'#65776f', accent:'#4e927d', accentText:'#f7fffc'},
+     {id:'tealwash', name:'Teal Wash', bg:'#dfeae9', panel:'#ecf4f3', panelAlt:'#d4e2e1', border:'#b7cdcb', text:'#2d3a39', textDim:'#657674', accent:'#478d8a', accentText:'#f7fffe'},
+     {id:'lavenderrose', name:'Lavender Rose', bg:'#ece4eb', panel:'#f6edf5', panelAlt:'#e4d8e3', border:'#d0bdce', text:'#3a3139', textDim:'#766b74', accent:'#a16d96', accentText:'#fff9fe'},
+     {id:'bluegraylight', name:'Blue Gray Light', bg:'#e4e7ea', panel:'#eff1f3', panelAlt:'#dce0e4', border:'#c3c9cf', text:'#30363b', textDim:'#6d747a', accent:'#687f95', accentText:'#fbfdff'},
+// Special
     {id:'amber', name:'Amber', bg:'#0e1218', panel:'#161c26', panelAlt:'#1c2432', border:'#2a3444', text:'#e8edf5', textDim:'#8996a8', accent:'#ffb454', accentText:'#1a1206'},
     {id:'sunset', name:'Sunset', bg:'#180a08', panel:'#29130e', panelAlt:'#3a1b12', border:'#623622', text:'#fff3e8', textDim:'#d3aa8d', accent:'#fb923c', accentText:'#3a1605'},
     {id:'khaki', name:'Khaki', bg:'#121209', panel:'#211f12', panelAlt:'#302e19', border:'#4e4b29', text:'#f2f0d9', textDim:'#b6b287', accent:'#c3bd68', accentText:'#1c1c0d'}
@@ -175,18 +211,6 @@
     r.setProperty('--sbl-page-bg',t.bg);
     r.setProperty('--sbl-text',t.text);
     r.setProperty('--sbl-muted',t.textDim||t.text);
-
-    // Mark light themes so components that need special light-mode treatment
-    // (notably Pokémon type badges) can soften themselves without affecting
-    // the darker presets.
-    const hexToRgb = (hex)=>{
-      const h=(hex||'').replace('#','');
-      if(h.length!==6) return null;
-      return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
-    };
-    const rgb=hexToRgb(t.bg);
-    const isLight=!!rgb && ((rgb[0]*299 + rgb[1]*587 + rgb[2]*114)/1000) >= 160;
-    document.documentElement.dataset.sblThemeLight=isLight?'1':'0';
     document.documentElement.dataset.sblTheme=id;
   }
 
@@ -422,17 +446,6 @@
       .type-badge,.type-pill,[class^="type-"],[class*=" type-"]{
         color:#fff !important;
       }
-
-      /* Light themes: Pokémon type colours are deliberately softened so
-         bright type fills don't overpower the lighter UI. The actual type
-         colours are retained, but saturation/brightness are reduced slightly. */
-      html[data-sbl-theme-light="1"] .type-badge,
-      html[data-sbl-theme-light="1"] .type-pill,
-      html[data-sbl-theme-light="1"] [class^="type-"],
-      html[data-sbl-theme-light="1"] [class*=" type-"]{
-        filter:saturate(.62) brightness(1.08);
-        box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
-      }
     `;
   }
 
@@ -441,4 +454,4 @@
     if(e.key===THEME_KEY||e.key===CUSTOM_KEY) apply();
   });
   window.SBLApplyGlobalTheme=apply;
-})();
+})()
