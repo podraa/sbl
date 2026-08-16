@@ -460,7 +460,7 @@
   .conference-sub{font-size:11px;color:var(--text-dim);margin-top:3px;}
   .conference-count{font:700 12px var(--mono);color:var(--text-dim);}
   .standings-ladder{display:flex;flex-direction:column;}
-  .standings-row{display:grid;grid-template-columns:38px minmax(0,1fr) 62px 62px 76px 76px;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border);background:var(--panel);transition:background .12s,transform .12s;}
+  .standings-row{display:grid;grid-template-columns:38px minmax(0,1fr) 62px 62px 76px;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border);background:var(--panel);transition:background .12s,transform .12s;}
   .standings-row:last-child{border-bottom:0;}
   .standings-row:hover{background:var(--panel-alt);}
   .standings-clickable{cursor:pointer;}
@@ -483,7 +483,7 @@
   /* finals-qualified ladder rows (top 6 per conference) */
   .standings-row.finals-bound{background:linear-gradient(90deg,rgba(94,234,212,.09),transparent 60%);}
   .standings-row.finals-bound .standings-rank::after{content:'';}
-  .finals-chip{display:inline-block;margin-left:8px;font:800 9px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--accent,var(--teal));border:1px solid var(--accent,var(--teal));border-radius:20px;padding:1px 7px;vertical-align:middle;}
+  .finals-chip{display:inline-block;margin-left:6px;font:800 7px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--accent,var(--teal));border:1px solid var(--accent,var(--teal));border-radius:14px;padding:1px 5px;vertical-align:middle;line-height:1.1;}
 
   /* franchise overview modal tabs (Season Summary / Qualification) */
   .modal-tabs{display:flex; gap:4px; margin:14px 0 4px; border-bottom:1px solid var(--border);}
@@ -741,7 +741,40 @@ button{touch-action:manipulation;}
 .standings-record{margin-top:4px;font-size:10.5px;}
 .standings-stat{font-size:13px;padding-left:8px;border-left:1px solid rgba(255,255,255,.055);}
 .standings-stat-label{font-size:8px;letter-spacing:.08em;margin-bottom:4px;}
-.finals-chip{margin-left:7px;padding:3px 7px;font-size:8px;background:color-mix(in srgb,var(--amber) 18%,transparent);border-color:color-mix(in srgb,var(--amber) 48%,transparent);}
+.finals-chip{margin-left:24px;padding:1px 4px;font-size:6px;line-height:1.1;border-radius:3px;background:color-mix(in srgb,var(--amber) 14%,transparent);border-color:color-mix(in srgb,var(--amber) 38%,transparent);}
+
+/* Status chip: qualification state shown inline next to the team name. */
+.status-chip{display:inline-block;font-size:8px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:20px;margin-left:7px;vertical-align:middle;border:1px solid var(--border);background:var(--panel-alt);color:var(--text-dim);}
+.status-chip.clinched{background:color-mix(in srgb,var(--amber) 20%,transparent);border-color:color-mix(in srgb,var(--amber) 48%,transparent);color:var(--text);}
+.status-chip.in{background:color-mix(in srgb,var(--teal) 20%,transparent);border-color:color-mix(in srgb,var(--teal) 46%,transparent);color:var(--text);}
+.status-chip.alive{background:transparent;border-color:var(--border);color:var(--text-dim);}
+.status-chip.eliminated{background:color-mix(in srgb,var(--red) 16%,transparent);border-color:color-mix(in srgb,var(--red) 38%,transparent);color:var(--text-dim);}
+
+/* Recent form: last 4 results as small W/L pips under the record line. */
+.standings-form{display:flex;gap:4px;margin-top:7px;align-items:center;}
+.form-pip{
+  width:17px;height:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;
+  font:800 8px var(--mono);color:var(--text-dim);flex:0 0 auto;
+  background:rgba(255,255,255,.025);border:1px solid var(--border);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.form-pip.win{
+  background:color-mix(in srgb,var(--amber) 24%,var(--panel));
+  border:1px solid color-mix(in srgb,var(--amber) 65%,var(--border));
+  color:var(--amber);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--amber) 12%,transparent);
+}
+.form-pip.loss{
+  background:color-mix(in srgb,var(--red) 22%,var(--panel));
+  border:1px solid color-mix(in srgb,var(--red) 62%,var(--border));
+  color:var(--red);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--red) 11%,transparent);
+}
+.form-pip.win:hover,
+.form-pip.loss:hover{
+  filter:brightness(1.18);
+}
+
 
 /* ===== Fixture redesign: compact matchup cards ===== */
 .fixture-weeks{max-width:1080px;gap:12px;margin-top:14px;}
@@ -776,12 +809,181 @@ button{touch-action:manipulation;}
   .fixture-matches{grid-template-columns:1fr;}
 }
 @media(max-width:680px){
-  .conference-standings{gap:14px}.conference-heading{padding:15px 14px}.standings-ladder{padding:6px}.standings-row{grid-template-columns:34px minmax(0,1fr) 58px 58px;gap:8px;padding:11px 10px}.standings-stat:nth-last-child(-n+2){display:none}.standings-rank{width:29px;height:29px;font-size:13px}.standings-team-name{font-size:13px}
+  .conference-standings{gap:14px}.conference-heading{padding:15px 14px}.standings-ladder{padding:6px}.standings-row{grid-template-columns:34px minmax(0,1fr) 50px 50px 44px;gap:8px;padding:11px 10px}.standings-stat:nth-last-child(-n+2){display:none}.standings-rank{width:29px;height:29px;font-size:13px}.standings-team-name{font-size:13px}
   .fixture-match{grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr);grid-template-rows:minmax(50px,1fr) 24px auto;min-height:82px}.fixture-team{padding:14px 9px!important;font-size:12px}.fixture-vs{font-size:9px}.fixture-played .fixture-vs::before{font-size:15px}.fixture-status{font-size:12px;white-space:normal;text-align:center;line-height:1.25}
 }
 @media(max-width:420px){
-  .conference-title{font-size:16px}.standings-record{font-size:10px}.standings-row{grid-template-columns:31px minmax(0,1fr) 52px 52px}.standings-stat-label{font-size:7px}.fixture-matches{gap:9px}.fixture-match{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);min-height:78px}.fixture-team{font-size:11.5px}.fixture-team:first-child{padding-left:8px!important}.fixture-team:nth-child(3){padding-right:8px!important}
+  .conference-title{font-size:16px}.standings-record{font-size:10px}.standings-row{grid-template-columns:31px minmax(0,1fr) 52px 52px}.standings-stat:nth-last-child(-n+3){display:none}.standings-stat-label{font-size:7px}.fixture-matches{gap:9px}.fixture-match{grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);min-height:78px}.fixture-team{font-size:11.5px}.fixture-team:first-child{padding-left:8px!important}.fixture-team:nth-child(3){padding-right:8px!important}
 }
+</style>
+<style id="readability-stat-overrides">
+.standings-record,.standings-stat,.standings-stat-label{font-size:15px}.standings-stat-label{font-size:10px;font-weight:800}.standings-stat{font-weight:700}.standings-pct{font-size:16px}.gf-diff{font-size:25px}.dealt,.taken,.kills{font-size:15px}
+@media(max-width:700px){.standings-record{font-size:14px}.standings-stat{font-size:14px}.standings-pct{font-size:15px}.standings-stat-label{font-size:9px}.gf-diff{font-size:21px}.dealt,.taken,.kills{font-size:14px}}
+</style>
+<style id="remove-clinch-results-gb">
+.status-chip{display:none!important}
+
+</style>
+<style id="sbl-theme-final-overrides">
+/* Final site-wide theme surface and text pass */
+:root{
+  --sbl-card-bg:var(--panel);
+  --sbl-card-alt:var(--panel-alt);
+  --sbl-card-border:var(--border);
+  --sbl-page-bg:var(--bg);
+  --sbl-text:var(--text);
+  --sbl-muted:var(--text-dim);
+}
+
+html,body{background:var(--sbl-page-bg) !important;color:var(--sbl-text);}
+
+/* Major overview/team surfaces */
+.team-card,
+.overview-card,
+.franchise-card,
+.commissioner-budget-card,
+.pokemon-card,
+.hero,
+.myteam-hero,
+.myteam-card,
+.myteam-panel,
+.next-battle-card,
+.myteam-budget,
+.myteam-summary,
+.myteam-mon-card,
+.recent-battle-row,
+.fixture-match,
+.conference-block,
+.conference-heading,
+.roster-card,
+.roster-team,
+.free-agent-card,
+.fa-card,
+.team-analysis-card,
+.switch-card,
+.switch-card-detail,
+.damage-calc-card,
+.damage-calc-side,
+.trade-col,
+.trade-filter-panel,
+#proposePanel,
+#tradeSummary{
+  background:var(--sbl-card-bg) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text);
+}
+
+.team-card:hover,
+.overview-card:hover,
+.franchise-card:hover,
+.pokemon-card:hover,
+.free-agent-card:hover,
+.standings-row:hover{
+  background:var(--sbl-card-alt) !important;
+}
+
+/* Team cards previously had a hard-coded dark gradient. */
+.team-card{background:var(--sbl-card-bg) !important;}
+
+/* Secondary surfaces */
+.mon,
+.mon-pill,
+.pick-card,
+.pick-card.checked,
+.chip,
+.badge,
+.speed-pin-chip,
+.myteam-mon-stat,
+.selected-chip{
+  background:var(--sbl-card-alt);
+  border-color:var(--sbl-card-border);
+}
+
+/* Inputs and controls */
+input,textarea,select{
+  background:var(--sbl-card-alt) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text) !important;
+}
+
+/* Theme-aware headings and ordinary text. */
+.panel h1,.panel h2,.panel h3,.panel h4,
+.card h1,.card h2,.card h3,.card h4,
+.team-card-name,.team-card-sub,
+.team-name,.team-record,.death-cause-title,
+.franchise-name,.franchise-sub,
+.standings-team-name,.pokemon-name,.pick-card-name,
+.section-title,.page-title,.card-title{
+  color:var(--sbl-text) !important;
+}
+
+/* Table headings */
+th{color:var(--sbl-text) !important;border-color:var(--sbl-card-border) !important;}
+td{border-color:var(--sbl-card-border) !important;}
+
+/* Positive results follow theme accent. */
+.kills,.kill,.kill-count,.stat-kills,.stat-win,.stat-wins,
+.win-count,.wins,.record-win,.fixture-result,.fixture-summary,
+.myteam-summary-result,.result-win,.win-text,
+.fixture-match.fixture-played .fixture-status{
+  color:var(--teal) !important;
+}
+
+/* Losses use the theme-aware negative variable. */
+.loss,.losses,.loss-count,.stat-loss,.stat-losses,.loss-text,
+.record-loss,.result-loss,.form-pip.loss{
+  color:var(--red) !important;
+}
+
+/* Fixture cards */
+.fixture-team{color:var(--sbl-text) !important;}
+.fixture-team.fixture-winner{color:var(--teal) !important;}
+.fixture-status{
+  background:var(--sbl-card-alt) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-muted) !important;
+}
+
+/* Ladder: never hide teams below the cutoff. */
+.standings-row{
+  opacity:1 !important;
+  visibility:visible !important;
+  filter:none !important;
+  background:var(--sbl-card-bg) !important;
+  color:var(--sbl-text) !important;
+}
+
+/* Modals/popouts */
+.modal,.modal-card,.profile-modal,.summary-modal,.overview-modal,
+.prep-detail-dialog,.prep-opponent-popout{
+  background:var(--sbl-card-bg) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text);
+}
+
+/* Keep Pokémon type badges readable; their white text is intentional. */
+.type-badge,[class^="type-"],[class*=" type-"]{color:#fff !important;}
+</style>
+<style id="sbl-finals-theme-fix">
+/* Theme-aware finals highlight: top six in each conference. */
+.standings-row.finals-bound{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 22%,var(--panel)) 0%,color-mix(in srgb,var(--amber) 9%,var(--panel)) 52%,var(--panel) 100%) !important;
+  border-color:color-mix(in srgb,var(--amber) 48%,var(--border)) !important;
+  box-shadow:inset 4px 0 0 var(--amber),0 3px 12px color-mix(in srgb,var(--amber) 10%,transparent) !important;
+}
+.standings-row.finals-bound:hover{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 28%,var(--panel)) 0%,color-mix(in srgb,var(--amber) 13%,var(--panel)) 52%,var(--panel-alt) 100%) !important;
+  border-color:color-mix(in srgb,var(--amber) 65%,var(--border)) !important;
+}
+.standings-row.finals-bound .standings-rank{
+  background:color-mix(in srgb,var(--amber) 18%,var(--panel-alt)) !important;
+  border-color:color-mix(in srgb,var(--amber) 52%,var(--border)) !important;
+  color:var(--text) !important;
+}
+.finals-chip{background:color-mix(in srgb,var(--amber) 18%,var(--panel-alt)) !important;color:var(--text) !important;border-color:color-mix(in srgb,var(--amber) 55%,var(--border)) !important;}
+.luck-explanation{margin:14px 0 16px;padding:12px 16px;border-radius:12px;background:var(--panel-alt);border:1px solid var(--border);box-shadow:0 4px 14px color-mix(in srgb,var(--amber) 7%,transparent);}
+.luck-explanation-title{font-weight:800;font-size:13px;color:var(--text);margin-bottom:5px;}
+.luck-explanation-body{font-size:11px;line-height:1.55;color:var(--text-dim);}
 </style>
 </head>
 <body data-admin="false">
@@ -799,7 +1001,7 @@ button{touch-action:manipulation;}
   <a href="stats.html" data-page="stats.html">Stats</a>
   <a href="season.html" data-page="season.html">Season</a>
   <a href="rosters.html" data-page="rosters.html">Rosters</a>
-  <a href="team-analysis.html" data-page="team-analysis.html">Match Prep</a>
+  <a href="team-analysis.html" data-page="team-analysis.html">Team Analysis</a>
   <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
   <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
 </nav>
@@ -1830,6 +2032,16 @@ button{touch-action:manipulation;}
     const key=Object.keys(rosters).find(k=>sameRosterTeam(k,team));
     return key ? rosterEntries(rosters[key]) : [];
   }
+  function currentRosterTeamForPokemon(species){
+    const target=normName(species);
+    if(!target) return '';
+    const rosters=STATE.settings?.rosters||{};
+    for(const team of Object.keys(rosters)){
+      const mons=rosterEntries(rosters[team]);
+      if(mons.some(mon=>normName(canonicalRosterSpecies(mon))===target)) return team;
+    }
+    return '';
+  }
   function rosterMonName(mon){
     if(typeof mon==='string') return mon.trim();
     if(mon && typeof mon==='object') return String(mon.name ?? mon.species ?? mon.pokemon ?? '').trim();
@@ -2387,6 +2599,54 @@ button{touch-action:manipulation;}
     return `${statusHtml}${cutlineHtml}${remainingHtml}`;
   }
 
+  // Compact version of the qualificationPathHtml logic above, for the small
+  // status chip shown inline on each standings row (Clinched / In / Alive /
+  // Eliminated) rather than the full prose explanation shown in the modal.
+  function qualificationStatus(team){
+    const conf = conferenceOf(team);
+    if(!conf) return null;
+    const groups = conferenceGroups();
+    const list = conf === 'a' ? groups.one : groups.two;
+    const idx = list.findIndex(x => x.team === team);
+    if(idx === -1) return null;
+    const t = list[idx];
+    const cutIdx = Math.min(5, list.length - 1);
+    const cutTeam = list[cutIdx];
+    const gamesLeft = conferenceRemainingFixtures(team).length;
+    const qualified = idx < 6;
+    if(qualified){
+      const bubble = list[6];
+      if(!bubble) return {cls:'clinched', label:'Clinched'};
+      const bubbleGamesLeft = conferenceRemainingFixtures(bubble.team).length;
+      const bubbleMaxWins = bubble.wins + bubbleGamesLeft;
+      if(t.wins >= bubbleMaxWins) return {cls:'clinched', label:'Clinched'};
+      return {cls:'in', label:'In'};
+    } else {
+      const maxPossibleWins = t.wins + gamesLeft;
+      const eliminated = cutTeam ? maxPossibleWins <= cutTeam.wins : false;
+      if(eliminated) return {cls:'eliminated', label:'Eliminated'};
+      return {cls:'alive', label:'Alive'};
+    }
+  }
+
+  // Most recent `n` played fixture results for a franchise, in chronological
+  // (oldest-first) order — used to render the W/L form pills on Standings.
+  function teamRecentForm(team, n=4){
+    const fixture = STATE.settings?.fixture;
+    const rounds = Array.isArray(fixture?.rounds) ? fixture.rounds : [];
+    const out = [];
+    for(const round of rounds){
+      for(const match of (round.matches || [])){
+        if(groupKey(match.home) !== groupKey(team) && groupKey(match.away) !== groupKey(team)) continue;
+        const res = findFixtureResult(round.week, match.home, match.away);
+        if(!res.played || !res.winner) continue;
+        out.push({week: round.week, win: groupKey(res.winner) === groupKey(team)});
+      }
+    }
+    return out.slice(-n);
+  }
+
+
   function openTeamOverview(team){
     const data=teamStandings('ALL'); const t=data.find(x=>x.team===team); if(!t)return;
     const i=data.indexOf(t); // overall league rank (0-based)
@@ -2725,7 +2985,9 @@ button{touch-action:manipulation;}
         const species=String(l.species||mk.split('|')[1]||'').trim();
         if(!species) continue;
         const side=mk.split('|')[0];
-        const team=teamFor(r.players?.[side]);
+        const replayTeam=teamFor(r.players?.[side]);
+        const currentTeam=currentRosterTeamForPokemon(species);
+        const team=currentTeam || replayTeam;
         const key=normName(species);
         if(!out[key]) out[key]={species,team,teams:new Set(),games:0,crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0};
         const p=out[key];
@@ -2774,7 +3036,8 @@ button{touch-action:manipulation;}
         const events=Array.isArray(l.luckEvents)?l.luckEvents:[];
         if(!events.length) continue;
         const side=mk.split('|')[0];
-        rows.push({replayId:r.id,turnEvents:events,team:teamFor(r.players?.[side]),opponent:teamFor(r.players?.[side==='p1'?'p2':'p1']),uploadtime:Number(r.uploadtime||0)});
+        const currentTeam=currentRosterTeamForPokemon(sp);
+        rows.push({replayId:r.id,turnEvents:events,team:currentTeam || teamFor(r.players?.[side]),opponent:teamFor(r.players?.[side==='p1'?'p2':'p1']),uploadtime:Number(r.uploadtime||0)});
       }
     }
     rows.sort((a,b)=>b.uploadtime-a.uploadtime);
@@ -2793,7 +3056,7 @@ button{touch-action:manipulation;}
   function renderLuckiestTeam(){
     contentEl.innerHTML=`<div class="panel">
       <h2>🍀 Luckiest</h2>
-      <div class="note" style="margin-bottom:14px;">Luck is weighted by how unlikely each event was. Move misses use the move's actual accuracy, status dodges use the probability of the status roll failing, crits use the move's crit stage, and low-accuracy hits use the move's actual hit chance. 1-turn sleep is lucky; longer sleep and freeze are increasingly unlucky.</div>
+      <div class="luck-explanation"><div class="luck-explanation-title">How luck is scored</div><div class="luck-explanation-body">Luck is weighted by how unlikely each event was. Move misses use the move's actual accuracy, status dodges use the probability of the status roll failing, crits use the move's crit stage, and low-accuracy hits use the move's actual hit chance. One-turn sleep is lucky; longer sleep and freeze are increasingly unlucky.</div></div>
       <div class="row" style="align-items:flex-end;gap:12px;"><div><label>View</label><select id="luckView"><option value="team">Team</option><option value="pokemon">Pokemon</option><option value="game">Luckiest Game</option></select></div><div><label>Scope</label>${weekSelectorHtml('luckWeek')}</div></div>
       <div id="luckTable"></div>
     </div>`;
@@ -2808,7 +3071,7 @@ button{touch-action:manipulation;}
       }
       const pokemon=view==='pokemon';
       const rows=pokemon?luckPokemonData(scopeSel.value):luckTeamData(scopeSel.value);
-      document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>${pokemon?'Pokemon':'Team'}</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status Dodges</th><th class="num">Full Paras</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${pokemon?`<span class="pokemon-click luck-pokemon-row" role="button" tabindex="0" data-luck-pokemon="${escapeHtml(r.species)}" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;">${spriteImg(r.species,'sprite')}<strong>${escapeHtml(r.species)}</strong></span><div class="note">${escapeHtml(r.team||'')}</div>`:`<strong>${escapeHtml(r.team)}</strong><div class="note">${r.games} game${r.games===1?'':'s'}</div>`}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodgeLuck.toFixed(2)}</td><td class="num">${r.fullParalysis}</td><td class="num">${r.sleepTurns} turns <span class="note">(${r.sleepDurationLuck>=0?'+':''}${r.sleepDurationLuck.toFixed(1)})</span></td><td class="num">${r.freezeTurns} turns <span class="note">(${r.freezeDurationLuck>=0?'+':''}${r.freezeDurationLuck.toFixed(1)})</span></td></tr>`).join('')}</tbody></table></div>`;
+      document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>${pokemon?'Pokemon':'Team'}</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status Dodges</th><th class="num">Full Paras</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${pokemon?`<span class="luck-pokemon-row" role="button" tabindex="0" data-luck-pokemon="${escapeHtml(r.species)}" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;">${spriteImg(r.species,'sprite')}<strong>${escapeHtml(r.species)}</strong></span><div class="note">${escapeHtml(r.team||'')}</div>`:`<strong>${escapeHtml(r.team)}</strong><div class="note">${r.games} game${r.games===1?'':'s'}</div>`}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodgeLuck.toFixed(2)}</td><td class="num">${r.fullParalysis}</td><td class="num">${r.sleepTurns} turns <span class="note">(${r.sleepDurationLuck>=0?'+':''}${r.sleepDurationLuck.toFixed(1)})</span></td><td class="num">${r.freezeTurns} turns <span class="note">(${r.freezeDurationLuck>=0?'+':''}${r.freezeDurationLuck.toFixed(1)})</span></td></tr>`).join('')}</tbody></table></div>`;
       if(pokemon){ document.querySelectorAll('[data-luck-pokemon]').forEach(el=>{el.addEventListener('click',()=>openLuckPokemonSummary(el.dataset.luckPokemon,scopeSel.value)); el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openLuckPokemonSummary(el.dataset.luckPokemon,scopeSel.value);}});}); }
     }
     scopeSel.addEventListener('change',draw);
@@ -3164,14 +3427,20 @@ button{touch-action:manipulation;}
           const pct=x.games ? (100*x.wins/x.games).toFixed(1)+'%' : '—';
           const diff=Number(x.diff||0);
           const finalsBound = isConference && i<6;
+          const form = teamRecentForm(x.team,4);
+          const formHtml = form.length ? `<div class="standings-form">${form.map(f=>`<span class="form-pip ${f.win?'win':'loss'}">${f.win?'W':'L'}</span>`).join('')}</div>` : '';
+          const status = isConference ? qualificationStatus(x.team) : null;
+          const statusChip = status ? `<span class="status-chip ${status.cls}">${escapeHtml(status.label)}</span>` : '';
           return `<div class="standings-row standings-clickable ${i===0?'top1':i===1?'top2':''} ${finalsBound?'finals-bound':''}" data-standings-team="${escapeHtml(x.team)}" role="button" tabindex="0" title="View ${escapeHtml(x.team)}'s route to qualification">
             <div class="standings-rank">${i+1}</div>
             <div class="standings-team">
-              <div class="standings-team-name">${escapeHtml(x.team)}${finalsBound?'<span class="finals-chip">Finals</span>':''}</div>
+              <div class="standings-team-name">${escapeHtml(x.team)}${finalsBound?'<span class="finals-chip">Finals</span>':''}${statusChip}</div>
               <div class="standings-record">${x.wins}-${x.losses} record · ${x.games} game${x.games===1?'':'s'}</div>
+              ${formHtml}
             </div>
             <div class="standings-stat"><span class="standings-stat-label">W-L</span>${x.wins}-${x.losses}</div>
             <div class="standings-stat standings-pct"><span class="standings-stat-label">Win %</span>${pct}</div>
+
             <div class="standings-stat"><span class="standings-stat-label">Diff</span><span class="${diff>=0?'kills':'taken'}">${diff>0?'+':''}${diff}</span></div>
             <div class="standings-stat"><span class="standings-stat-label">Damage</span>${x.dealt.toFixed(1)}</div>
           </div>`;

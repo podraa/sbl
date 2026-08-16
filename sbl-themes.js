@@ -44,7 +44,7 @@
     {id:'honeycomb', name:'Honeycomb', bg:'#171008', panel:'#291c0c', panelAlt:'#3b2911', border:'#654b20', text:'#fff4dc', textDim:'#d8b46b', accent:'#f2c14e', accentText:'#251704'},
     {id:'marigold', name:'Marigold', bg:'#171006', panel:'#281c09', panelAlt:'#3a2910', border:'#67491b', text:'#fff4d8', textDim:'#e2bd68', accent:'#f5c84b', accentText:'#281804'},
     {id:'mustard', name:'Mustard', bg:'#151106', panel:'#251c09', panelAlt:'#362a10', border:'#5b481c', text:'#f9f0d5', textDim:'#cdb46a', accent:'#d8b94c', accentText:'#241905'},
-    // Green
+       // Green
     {id:'emerald', name:'Emerald', bg:'#071410', panel:'#0d2119', panelAlt:'#122c22', border:'#1f4a37', text:'#eafff3', textDim:'#8fc7a8', accent:'#4ade80', accentText:'#052e12'},
     {id:'lime', name:'Lime', bg:'#101507', panel:'#1b240b', panelAlt:'#26330f', border:'#43541c', text:'#f5ffe8', textDim:'#b4c58c', accent:'#a3e635', accentText:'#1e2d05'},
     {id:'citrus', name:'Citrus', bg:'#111406', panel:'#202408', panelAlt:'#30360e', border:'#4d5718', text:'#f3fbd9', textDim:'#aebe62', accent:'#d4e34f', accentText:'#172006'},
@@ -133,21 +133,22 @@
     {id:'deepteal', name:'Deep Teal', bg:'#061111', panel:'#0c1d1c', panelAlt:'#122c2a', border:'#1e4a46', text:'#e8fffc', textDim:'#83bbb5', accent:'#14b8a6', accentText:'#04221f'},
     {id:'firefly', name:'Firefly', bg:'#07100d', panel:'#0e1c16', panelAlt:'#173027', border:'#2a4d40', text:'#eafff4', textDim:'#83b7a1', accent:'#a3e635', accentText:'#162803'},
     {id:'copperblue', name:'Copper Blue', bg:'#0b1015', panel:'#172027', panelAlt:'#25333b', border:'#40515a', text:'#eef7fa', textDim:'#93aab2', accent:'#f59e0b', accentText:'#2c1703'},
-    // Light presets
-    {id:'ivory', name:'Ivory', bg:'#faf7ef', panel:'#ffffff', panelAlt:'#f1ead8', border:'#e0d5b8', text:'#2b2416', textDim:'#8a7f63', accent:'#c9974c', accentText:'#2b1c04'},
-    {id:'paper', name:'Paper', bg:'#faf9f6', panel:'#ffffff', panelAlt:'#f0ede6', border:'#ddd7c9', text:'#2a2721', textDim:'#8a8477', accent:'#8c7853', accentText:'#241c0f'},
-    {id:'cloud', name:'Cloud', bg:'#f5f7fb', panel:'#ffffff', panelAlt:'#eaeef6', border:'#d4dbe8', text:'#1e2733', textDim:'#78859a', accent:'#5b8def', accentText:'#0a1c3a'},
-    {id:'snow', name:'Snow', bg:'#f8fafc', panel:'#ffffff', panelAlt:'#eef2f6', border:'#dde4ec', text:'#182430', textDim:'#7c8a9a', accent:'#3fa9e8', accentText:'#062338'},
-    {id:'linen', name:'Linen', bg:'#faf6ef', panel:'#ffffff', panelAlt:'#f0e8d8', border:'#ddd0b4', text:'#2c2416', textDim:'#8c8065', accent:'#c07a3e', accentText:'#2c1305'},
-    {id:'cream', name:'Cream', bg:'#fdf9ec', panel:'#ffffff', panelAlt:'#f5edcf', border:'#e6d8a3', text:'#2c2810', textDim:'#8f8555', accent:'#d4a017', accentText:'#2c2004'},
-    {id:'porcelain', name:'Porcelain', bg:'#f6f8fa', panel:'#ffffff', panelAlt:'#e9edf2', border:'#d3dae2', text:'#1c2733', textDim:'#75828f', accent:'#4f8ff7', accentText:'#0a1e3f'},
-    {id:'mist', name:'Mist', bg:'#f5f6f7', panel:'#ffffff', panelAlt:'#e9ebee', border:'#d2d6db', text:'#22262b', textDim:'#7a828b', accent:'#7a90a8', accentText:'#131c26'},
-    {id:'dove', name:'Dove', bg:'#f6f5f6', panel:'#ffffff', panelAlt:'#eae8ea', border:'#d5d2d5', text:'#26232a', textDim:'#847f88', accent:'#9b8aa8', accentText:'#241a2c'},
-    {id:'canvas', name:'Canvas', bg:'#f7f4ec', panel:'#ffffff', panelAlt:'#ece5d3', border:'#d9cfae', text:'#2a2618', textDim:'#8a8267', accent:'#a8823f', accentText:'#2a1c05'},
-    {id:'frostwhite', name:'Frost', bg:'#f3f8fa', panel:'#ffffff', panelAlt:'#e3eef2', border:'#c9dde3', text:'#152329', textDim:'#6d8a92', accent:'#38b6c4', accentText:'#052528'},
-    {id:'cotton', name:'Cotton', bg:'#fafafa', panel:'#ffffff', panelAlt:'#efefef', border:'#dcdcdc', text:'#242424', textDim:'#828282', accent:'#87a9b8', accentText:'#0f2028'},
-    {id:'almond', name:'Almond', bg:'#faf5ee', panel:'#ffffff', panelAlt:'#f0e3d2', border:'#dcc6a6', text:'#2e2214', textDim:'#928066', accent:'#c17f4b', accentText:'#2c1305'},
-    {id:'marble', name:'Marble', bg:'#f6f6f6', panel:'#ffffff', panelAlt:'#e8e8e8', border:'#d2d2d2', text:'#222222', textDim:'#7c7c7c', accent:'#9a9a9a', accentText:'#171717'},
+       // Light presets
+       // Light presets
+    {id:'ivory', name:'Ivory', bg:'#e4e0d7', panel:'#eeeae2', panelAlt:'#e0dbd0', border:'#c8c0b1', text:'#353129', textDim:'#777064', accent:'#a87838', accentText:'#241806'},
+    {id:'paper', name:'Paper', bg:'#e5e4df', panel:'#efefeb', panelAlt:'#e2e1dc', border:'#c9c7bf', text:'#35342f', textDim:'#74726b', accent:'#756344', accentText:'#20190e'},
+    {id:'cloud', name:'Cloud', bg:'#dfe5eb', panel:'#e9eef2', panelAlt:'#dce2e8', border:'#bec8d2', text:'#2d3742', textDim:'#6e7b88', accent:'#4773bd', accentText:'#08182f'},
+    {id:'snow', name:'Snow', bg:'#e2e8ec', panel:'#edf1f4', panelAlt:'#dfe5e9', border:'#c1cbd4', text:'#2c3740', textDim:'#707c85', accent:'#3284ae', accentText:'#052238'},
+    {id:'linen', name:'Linen', bg:'#e4ddd3', panel:'#eee9e2', panelAlt:'#dfd7cb', border:'#c9bbaa', text:'#373027', textDim:'#786d60', accent:'#a36436', accentText:'#241105'},
+    {id:'cream', name:'Cream', bg:'#e7e1d1', panel:'#f0ebdf', panelAlt:'#e1dac6', border:'#c9bb8f', text:'#37331f', textDim:'#766d4c', accent:'#ad8315', accentText:'#241900'},
+    {id:'porcelain', name:'Porcelain', bg:'#e1e5e8', panel:'#ebeff2', panelAlt:'#dde2e6', border:'#bec7cf', text:'#303840', textDim:'#707a83', accent:'#4677bb', accentText:'#091b36'},
+    {id:'mist', name:'Mist', bg:'#e2e3e5', panel:'#ececed', panelAlt:'#dedfe1', border:'#c1c4c8', text:'#34363a', textDim:'#72757a', accent:'#687b91', accentText:'#111a25'},
+    {id:'dove', name:'Dove', bg:'#e3e1e3', panel:'#edebed', panelAlt:'#dedcdf', border:'#c2bec4', text:'#37343a', textDim:'#757179', accent:'#826d8d', accentText:'#211526'},
+    {id:'canvas', name:'Canvas', bg:'#e3ddd2', panel:'#eee9e1', panelAlt:'#ded6c7', border:'#c7b99f', text:'#363127', textDim:'#766d5d', accent:'#8e6e39', accentText:'#241805'},
+    {id:'frostwhite', name:'Frost', bg:'#dce7eb', panel:'#eaf0f2', panelAlt:'#d5e0e4', border:'#b7c9cf', text:'#2c393e', textDim:'#667b81', accent:'#29909b', accentText:'#052326'},
+    {id:'cotton', name:'Cotton', bg:'#e4e4e4', panel:'#ededed', panelAlt:'#dddddd', border:'#c5c5c5', text:'#353535', textDim:'#707070', accent:'#698894', accentText:'#0d1c23'},
+    {id:'almond', name:'Almond', bg:'#e4ddd5', panel:'#eee9e3', panelAlt:'#ddd2c4', border:'#c5b49f', text:'#383027', textDim:'#786a59', accent:'#a66b42', accentText:'#250f04'},
+    {id:'marble', name:'Marble', bg:'#e2e2e2', panel:'#ececec', panelAlt:'#dcdcdc', border:'#c2c2c2', text:'#353535', textDim:'#707070', accent:'#818181', accentText:'#151515'},
     // Special
     {id:'amber', name:'Amber', bg:'#0e1218', panel:'#161c26', panelAlt:'#1c2432', border:'#2a3444', text:'#e8edf5', textDim:'#8996a8', accent:'#ffb454', accentText:'#1a1206'},
     {id:'sunset', name:'Sunset', bg:'#180a08', panel:'#29130e', panelAlt:'#3a1b12', border:'#623622', text:'#fff3e8', textDim:'#d3aa8d', accent:'#fb923c', accentText:'#3a1605'},
@@ -174,17 +175,267 @@
     return THEMES.find(t=>t.id===id)||THEMES[0];
   }
   function apply(){
-    const id=read(THEME_KEY,'amber'); const t=themeFor(id); const r=document.documentElement.style;
+    const id=read(THEME_KEY,'amber');
+    const t=themeFor(id);
+    const r=document.documentElement.style;
     const map={bg:'bg',panel:'panel',panelAlt:'panel-alt',border:'border',text:'text',textDim:'text-dim',accent:'amber',accentText:'amber-text'};
     Object.keys(map).forEach(k=>{if(t[k]) r.setProperty('--'+map[k],t[k])});
-    r.setProperty('--teal',TEAL); r.setProperty('--red',RED); r.setProperty('--sbl-theme-accent',t.accent||TEAL);
-    // Compatibility aliases used by some pages' CSS.
+    const accent=t.accent||TEAL;
+    const accentText=t.accentText||t.text;
+    r.setProperty('--teal',accent);
+    r.setProperty('--red',`color-mix(in srgb, #ef4444 72%, ${accent})`);
+    r.setProperty('--sbl-theme-accent',accent);
+    r.setProperty('--accent',accent);
+    r.setProperty('--accent-text',accentText);
     r.setProperty('--panel2',t.panelAlt||t.panel);
     r.setProperty('--dim',t.textDim||t.text);
-    r.setProperty('--accent',t.accent||TEAL);
+    r.setProperty('--sbl-card-bg',t.panel||t.bg);
+    r.setProperty('--sbl-card-alt',t.panelAlt||t.panel||t.bg);
+    r.setProperty('--sbl-card-border',t.border||accent);
+    r.setProperty('--sbl-page-bg',t.bg);
+    r.setProperty('--sbl-text',t.text);
+    r.setProperty('--sbl-muted',t.textDim||t.text);
     document.documentElement.dataset.sblTheme=id;
   }
+
+  function applyGlobalThemeStyle(){
+    const styleId='sbl-global-theme-polish';
+    let style=document.getElementById(styleId);
+    if(!style){
+      style=document.createElement('style');
+      style.id=styleId;
+      document.head.appendChild(style);
+    }
+
+    style.textContent=`
+      /* =========================================
+         GLOBAL THEME SURFACES
+         ========================================= */
+
+      html,body{
+        background-color:var(--sbl-page-bg) !important;
+        color:var(--sbl-text) !important;
+      }
+
+      /* Common cards/panels across every page */
+      .panel,.card,.set-card,.statbox,.notice,
+      .roster-toolbar,.ticker,.speed-matrix-wrap,
+      .team-card,.overview-card,.franchise-card,
+      .record-card,.next-battle-card,.myteam-budget,
+      .myteam-stat-card,.feedback-card,.roster-card,
+      .trade-card,.budget-card,.pokemon-card,
+      .mon-card,.speed-detail-card,.scout-nature-card,
+      .answer-card,.coverage-card,.franchise-card-head,
+      .conference-block,.conference-heading{
+        background-color:var(--sbl-card-bg) !important;
+        background-image:none !important;
+        border-color:var(--sbl-card-border) !important;
+        color:var(--sbl-text);
+      }
+
+      /* Secondary cards / controls */
+      .mon,.mon-pill,.pick-card,.chip,.badge,
+      .speed-pin-chip,.selected-chip,.prep-mode-tabs,
+      .prep-mode-tab,.prep-week-pill,.prep-week-moves,
+      .prep-usage-grid>div,.trade-col,
+      .free-agent-card,.fa-card{
+        background-color:var(--sbl-card-alt) !important;
+        border-color:var(--sbl-card-border) !important;
+        color:var(--sbl-text);
+      }
+
+      input,textarea,select{
+        background-color:var(--sbl-card-alt) !important;
+        border-color:var(--sbl-card-border) !important;
+        color:var(--sbl-text) !important;
+      }
+
+      /* =========================================
+         HEADINGS / TEXT CONTRAST
+         ========================================= */
+
+      .panel h1,.panel h2,.panel h3,.panel h4,.panel h5,.panel h6,
+      .card h1,.card h2,.card h3,.card h4,.card h5,.card h6,
+      .team-card-name,.overview-card .team-name,
+      .franchise-card h1,.franchise-card h2,.franchise-card h3,
+      .franchise-card h4,.franchise-header h1,.franchise-header h2,
+      .section-title,.page-title,.card-title,.panel-title{
+        color:var(--sbl-text) !important;
+      }
+
+      /* Existing pages had hard-coded white headings. */
+      .death-cause-title,.stats-title,.overview-title,
+      .team-overview-title,.fixture-title{
+        color:var(--sbl-text) !important;
+      }
+
+      .note,.muted,.sub,.meta,.stat-label,
+      .team-card-sub,.team-record,.fixture-v,.fixture-status{
+        color:var(--sbl-muted) !important;
+      }
+
+      /* =========================================
+         TEAM OVERVIEW / TEAM CARDS
+         ========================================= */
+
+      .team-card{
+        background:var(--sbl-card-bg) !important;
+        background-image:none !important;
+        border:1px solid var(--sbl-card-border) !important;
+        color:var(--sbl-text) !important;
+      }
+
+      .team-card:hover{
+        background:var(--sbl-card-alt) !important;
+        background-image:none !important;
+        border-color:var(--amber) !important;
+      }
+
+      .team-card-name,.team-card-sub,
+      .overview-card .team-name,.overview-card .team-record{
+        color:var(--sbl-text) !important;
+      }
+
+      /* =========================================
+         FIXTURES / RESULTS / POSITIVE STATS
+         ========================================= */
+
+      .fixture-match{
+        background:var(--sbl-card-bg) !important;
+        background-image:none !important;
+        border-color:var(--sbl-card-border) !important;
+        color:var(--sbl-text) !important;
+      }
+
+      .fixture-match:hover{
+        background:var(--sbl-card-alt) !important;
+        border-color:var(--sbl-card-border) !important;
+      }
+
+      .fixture-team{color:var(--sbl-text) !important;}
+      .fixture-team.fixture-winner{
+        color:var(--teal) !important;
+        background:color-mix(in srgb,var(--teal) 10%,var(--sbl-card-bg)) !important;
+      }
+
+      .fixture-status{
+        background:var(--sbl-card-alt) !important;
+        color:var(--sbl-muted) !important;
+        border-color:var(--sbl-card-border) !important;
+      }
+
+      .fixture-result,.fixture-summary,.myteam-summary-result,
+      .kills,.kill,.kill-count,.stat-kills,.stat-win,.stat-wins,
+      .win-count,.wins,.record-win,.result-win,.win-text{
+        color:var(--teal) !important;
+      }
+
+      /* =========================================
+         LADDER: NEVER HIDE LOWER TEAMS
+         ========================================= */
+
+      .standings-row{
+        opacity:1 !important;
+        visibility:visible !important;
+        filter:none !important;
+        background:var(--sbl-card-bg) !important;
+        background-image:none !important;
+        border-color:var(--sbl-card-border) !important;
+        color:var(--sbl-text) !important;
+      }
+
+      .standings-row:hover{
+        background:var(--sbl-card-alt) !important;
+      }
+
+      /* =========================================
+         DARK SURFACES LEFT BY PAGE-SPECIFIC CSS
+         ========================================= */
+
+      #proposePanel,
+      #proposePanel .trade-col,
+      #tradeViewBody .trade-col,
+      #tradeSummary,
+      .trade-filter-panel{
+        background:var(--sbl-card-bg) !important;
+        background-image:none !important;
+        border-color:var(--sbl-card-border) !important;
+        color:var(--sbl-text) !important;
+      }
+
+      #proposePanel select,
+      #proposePanel .fa-search-wrap input{
+        background:var(--sbl-card-alt) !important;
+        border-color:var(--sbl-card-border) !important;
+        color:var(--sbl-text) !important;
+      }
+
+      #proposePanel .pick-card,
+      #tradeViewBody .pick-card{
+        background:var(--sbl-card-alt) !important;
+        border-color:var(--sbl-card-border) !important;
+      }
+
+      #proposePanel .pick-card:hover,
+      #tradeViewBody .pick-card:hover{
+        background:var(--sbl-card-bg) !important;
+        border-color:var(--amber) !important;
+      }
+
+      #proposePanel .pick-card .sprite,
+      #proposePanel .selected-chip .sprite,
+      #tradeViewBody .mon-pill .sprite{
+        background:var(--sbl-card-bg) !important;
+        border-color:var(--sbl-card-border) !important;
+      }
+
+      /* Admin status cards */
+      .status-pill.approved,.status-pill.accepted{
+        background:color-mix(in srgb,var(--teal) 12%,var(--sbl-card-bg)) !important;
+        border-color:color-mix(in srgb,var(--teal) 45%,var(--sbl-card-border)) !important;
+        color:var(--teal) !important;
+      }
+
+      /* =========================================
+         MODALS / POPOUTS
+         ========================================= */
+
+      .modal-card,.profile-modal,.summary-modal,
+      .overview-modal,.scout-popup-card,.prep-detail-dialog,
+      .damage-calc-card{
+        background:var(--sbl-card-bg) !important;
+        background-image:none !important;
+        border-color:var(--sbl-card-border) !important;
+        color:var(--sbl-text) !important;
+      }
+
+      /* =========================================
+         GENERIC BORDERS / BUTTONS
+         ========================================= */
+
+      hr{border-color:var(--sbl-card-border) !important;}
+
+      button.ghost,button:not(.primary){
+        background:var(--sbl-card-bg);
+        border-color:var(--sbl-card-border);
+        color:var(--sbl-text);
+      }
+
+      button.ghost:hover,button:not(.primary):hover{
+        background:var(--sbl-card-alt);
+      }
+
+      /* Preserve intentionally white text inside type badges and
+         other coloured Pokémon type labels. */
+      .type-badge,.type-pill,[class^="type-"],[class*=" type-"]{
+        color:#fff !important;
+      }
+    `;
+  }
+
   apply();
-  window.addEventListener('storage',e=>{if(e.key===THEME_KEY||e.key===CUSTOM_KEY) apply()});
+  window.addEventListener('storage',e=>{
+    if(e.key===THEME_KEY||e.key===CUSTOM_KEY) apply();
+  });
   window.SBLApplyGlobalTheme=apply;
 })();

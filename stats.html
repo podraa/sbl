@@ -284,9 +284,35 @@
   .banner-controls select{width:100%;}
   .team-logo{width:58px;height:58px;object-fit:contain;border-radius:12px;background:var(--panel-alt);border:1px solid var(--border);padding:5px;}
   .team-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
-  .team-card{background:linear-gradient(145deg,var(--panel-alt),#11151c);border:1px solid var(--border);border-radius:14px;padding:18px 20px;cursor:pointer;transition:transform .14s,border-color .14s,box-shadow .14s;min-height:120px;}
-  .team-card:hover{transform:translateY(-3px);border-color:var(--amber);box-shadow:0 14px 36px rgba(0,0,0,.28);}
-  .team-card-head{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;min-height:82px;}
+  .team-card{
+    background:linear-gradient(145deg,color-mix(in srgb,var(--panel-alt) 72%,var(--panel)),var(--panel)) !important;
+    border:1px solid color-mix(in srgb,var(--border) 78%,var(--accent) 22%);
+    border-radius:16px;
+    padding:18px 20px;
+    cursor:pointer;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease;
+    min-height:138px;
+    box-shadow:0 7px 18px rgba(0,0,0,.10),0 1px 2px rgba(0,0,0,.08);
+    position:relative;
+    overflow:hidden;
+  }
+  .team-card::before{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 7%,transparent),transparent 48%);
+  }
+  .team-card:hover{
+    transform:translateY(-4px);
+    border-color:color-mix(in srgb,var(--accent) 58%,var(--border));
+    background:linear-gradient(145deg,color-mix(in srgb,var(--panel-alt) 86%,var(--accent) 14%),var(--panel)) !important;
+    box-shadow:0 14px 30px rgba(0,0,0,.14),0 4px 8px rgba(0,0,0,.08);
+  }
+  .team-card-head{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;min-height:82px;position:relative;z-index:1;}
+  .team-card-copy{position:relative;z-index:1;}
+  .team-card-name{letter-spacing:-.01em;}
+  .team-card-sub{display:inline-flex;align-items:center;justify-content:center;min-width:58px;padding:5px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 10%,var(--panel-alt));border:1px solid color-mix(in srgb,var(--accent) 25%,var(--border));font-weight:800 !important;}
+  .team-card-top-wrap{position:relative;z-index:1;padding:5px 12px 0;border-radius:14px;}
+  .team-card-top-sprite{filter:drop-shadow(0 5px 5px rgba(0,0,0,.16));transition:transform .18s ease,filter .18s ease;}
+  .team-card:hover .team-card-top-sprite{transform:translateY(-2px) scale(1.03);filter:drop-shadow(0 8px 7px rgba(0,0,0,.18));}
   .team-card-copy{flex:none;width:100%;text-align:center;min-width:0;}
   .team-card-name{font-weight:800;font-size:clamp(19px,1.7vw,25px);line-height:1.15;overflow-wrap:anywhere;}
   .team-card-sub{font-size:clamp(15px,1.2vw,18px);font-family:var(--mono);color:var(--text);margin-top:8px;}
@@ -706,6 +732,169 @@ td{border-color:var(--border)}
 a{color:var(--amber)}
 </style>
 <script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
+<style id="sbl-theme-final-overrides">
+/* Final site-wide theme surface and text pass */
+:root{
+  --sbl-card-bg:var(--panel);
+  --sbl-card-alt:var(--panel-alt);
+  --sbl-card-border:var(--border);
+  --sbl-page-bg:var(--bg);
+  --sbl-text:var(--text);
+  --sbl-muted:var(--text-dim);
+}
+
+html,body{background:var(--sbl-page-bg) !important;color:var(--sbl-text);}
+
+/* Major overview/team surfaces */
+.team-card,
+.overview-card,
+.franchise-card,
+.commissioner-budget-card,
+.pokemon-card,
+.hero,
+.myteam-hero,
+.myteam-card,
+.myteam-panel,
+.next-battle-card,
+.myteam-budget,
+.myteam-summary,
+.myteam-mon-card,
+.recent-battle-row,
+.fixture-match,
+.conference-block,
+.conference-heading,
+.roster-card,
+.roster-team,
+.free-agent-card,
+.fa-card,
+.team-analysis-card,
+.switch-card,
+.switch-card-detail,
+.damage-calc-card,
+.damage-calc-side,
+.trade-col,
+.trade-filter-panel,
+#proposePanel,
+#tradeSummary{
+  background:var(--sbl-card-bg) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text);
+}
+
+.team-card:hover,
+.overview-card:hover,
+.franchise-card:hover,
+.pokemon-card:hover,
+.free-agent-card:hover,
+.standings-row:hover{
+  background:var(--sbl-card-alt) !important;
+}
+
+/* Team overview cards keep a layered, theme-aware surface while retaining depth. */
+.team-card{
+  background:linear-gradient(145deg,color-mix(in srgb,var(--panel-alt) 72%,var(--panel)),var(--panel)) !important;
+  box-shadow:0 7px 18px rgba(0,0,0,.10),0 1px 2px rgba(0,0,0,.08) !important;
+}
+
+/* Secondary surfaces */
+.mon,
+.mon-pill,
+.pick-card,
+.pick-card.checked,
+.chip,
+.badge,
+.speed-pin-chip,
+.myteam-mon-stat,
+.selected-chip{
+  background:var(--sbl-card-alt);
+  border-color:var(--sbl-card-border);
+}
+
+/* Inputs and controls */
+input,textarea,select{
+  background:var(--sbl-card-alt) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text) !important;
+}
+
+/* Theme-aware headings and ordinary text. */
+.panel h1,.panel h2,.panel h3,.panel h4,
+.card h1,.card h2,.card h3,.card h4,
+.team-card-name,.team-card-sub,
+.team-name,.team-record,.death-cause-title,
+.franchise-name,.franchise-sub,
+.standings-team-name,.pokemon-name,.pick-card-name,
+.section-title,.page-title,.card-title{
+  color:var(--sbl-text) !important;
+}
+
+/* Table headings */
+th{color:var(--sbl-text) !important;border-color:var(--sbl-card-border) !important;}
+td{border-color:var(--sbl-card-border) !important;}
+
+/* Positive results follow theme accent. */
+.kills,.kill,.kill-count,.stat-kills,.stat-win,.stat-wins,
+.win-count,.wins,.record-win,.fixture-result,.fixture-summary,
+.myteam-summary-result,.result-win,.win-text,
+.fixture-match.fixture-played .fixture-status{
+  color:var(--teal) !important;
+}
+
+/* Losses use the theme-aware negative variable. */
+.loss,.losses,.loss-count,.stat-loss,.stat-losses,.loss-text,
+.record-loss,.result-loss,.form-pip.loss{
+  color:var(--red) !important;
+}
+
+/* Fixture cards */
+.fixture-team{color:var(--sbl-text) !important;}
+.fixture-team.fixture-winner{color:var(--teal) !important;}
+.fixture-status{
+  background:var(--sbl-card-alt) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-muted) !important;
+}
+
+/* Ladder: never hide teams below the cutoff. */
+.standings-row{
+  opacity:1 !important;
+  visibility:visible !important;
+  filter:none !important;
+  background:var(--sbl-card-bg) !important;
+  color:var(--sbl-text) !important;
+}
+
+/* Modals/popouts */
+.modal,.modal-card,.profile-modal,.summary-modal,.overview-modal,
+.prep-detail-dialog,.prep-opponent-popout{
+  background:var(--sbl-card-bg) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text);
+}
+
+/* Keep Pokémon type badges readable; their white text is intentional. */
+.type-badge,[class^="type-"],[class*=" type-"]{color:#fff !important;}
+</style>\n<style id="sbl-finals-theme-fix">
+/* Theme-aware finals highlight: top six in each conference. */
+.standings-row.finals-bound{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 22%,var(--panel)) 0%,color-mix(in srgb,var(--amber) 9%,var(--panel)) 52%,var(--panel) 100%) !important;
+  border-color:color-mix(in srgb,var(--amber) 48%,var(--border)) !important;
+  box-shadow:inset 4px 0 0 var(--amber),0 3px 12px color-mix(in srgb,var(--amber) 10%,transparent) !important;
+}
+.standings-row.finals-bound:hover{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 28%,var(--panel)) 0%,color-mix(in srgb,var(--amber) 13%,var(--panel)) 52%,var(--panel-alt) 100%) !important;
+  border-color:color-mix(in srgb,var(--amber) 65%,var(--border)) !important;
+}
+.standings-row.finals-bound .standings-rank{
+  background:color-mix(in srgb,var(--amber) 18%,var(--panel-alt)) !important;
+  border-color:color-mix(in srgb,var(--amber) 52%,var(--border)) !important;
+  color:var(--text) !important;
+}
+.finals-chip{background:color-mix(in srgb,var(--amber) 18%,var(--panel-alt)) !important;color:var(--text) !important;border-color:color-mix(in srgb,var(--amber) 55%,var(--border)) !important;}
+.luck-explanation{margin:14px 0 16px;padding:12px 16px;border-radius:12px;background:var(--panel-alt);border:1px solid var(--border);box-shadow:0 4px 14px color-mix(in srgb,var(--amber) 7%,transparent);}
+.luck-explanation-title{font-weight:800;font-size:13px;color:var(--text);margin-bottom:5px;}
+.luck-explanation-body{font-size:11px;line-height:1.55;color:var(--text-dim);}
+</style>
 </head>
 <body data-admin="false">
 <style>
@@ -1794,6 +1983,16 @@ a{color:var(--amber)}
     const key=Object.keys(rosters).find(k=>sameRosterTeam(k,team));
     return key ? rosterEntries(rosters[key]) : [];
   }
+  function currentRosterTeamForPokemon(species){
+    const target=normName(species);
+    if(!target) return '';
+    const rosters=STATE.settings?.rosters||{};
+    for(const team of Object.keys(rosters)){
+      const mons=rosterEntries(rosters[team]);
+      if(mons.some(mon=>normName(canonicalRosterSpecies(mon))===target)) return team;
+    }
+    return '';
+  }
   function rosterMonName(mon){
     if(typeof mon==='string') return mon.trim();
     if(mon && typeof mon==='object') return String(mon.name ?? mon.species ?? mon.pokemon ?? '').trim();
@@ -2637,7 +2836,9 @@ a{color:var(--amber)}
         const species=String(l.species||mk.split('|')[1]||'').trim();
         if(!species) continue;
         const side=mk.split('|')[0];
-        const team=teamFor(r.players?.[side]);
+        const replayTeam=teamFor(r.players?.[side]);
+        const currentTeam=currentRosterTeamForPokemon(species);
+        const team=currentTeam || replayTeam;
         const key=normName(species);
         if(!out[key]) out[key]={species,team,teams:new Set(),games:0,crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0};
         const p=out[key];
@@ -2686,7 +2887,8 @@ a{color:var(--amber)}
         const events=Array.isArray(l.luckEvents)?l.luckEvents:[];
         if(!events.length) continue;
         const side=mk.split('|')[0];
-        rows.push({replayId:r.id,turnEvents:events,team:teamFor(r.players?.[side]),opponent:teamFor(r.players?.[side==='p1'?'p2':'p1']),uploadtime:Number(r.uploadtime||0)});
+        const currentTeam=currentRosterTeamForPokemon(sp);
+        rows.push({replayId:r.id,turnEvents:events,team:currentTeam || teamFor(r.players?.[side]),opponent:teamFor(r.players?.[side==='p1'?'p2':'p1']),uploadtime:Number(r.uploadtime||0)});
       }
     }
     rows.sort((a,b)=>b.uploadtime-a.uploadtime);
@@ -2705,7 +2907,7 @@ a{color:var(--amber)}
   function renderLuckiestTeam(){
     contentEl.innerHTML=`<div class="panel">
       <h2>🍀 Luckiest</h2>
-      <div class="note" style="margin-bottom:14px;">Luck is weighted by how unlikely each event was. Move misses use the move's actual accuracy, status dodges use the probability of the status roll failing, crits use the move's crit stage, and low-accuracy hits use the move's actual hit chance. 1-turn sleep is lucky; longer sleep and freeze are increasingly unlucky.</div>
+      <div class="luck-explanation"><div class="luck-explanation-title">How luck is scored</div><div class="luck-explanation-body">Luck is weighted by how unlikely each event was. Move misses use the move's actual accuracy, status dodges use the probability of the status roll failing, crits use the move's crit stage, and low-accuracy hits use the move's actual hit chance. One-turn sleep is lucky; longer sleep and freeze are increasingly unlucky.</div></div>
       <div class="row" style="align-items:flex-end;gap:12px;"><div><label>View</label><select id="luckView"><option value="team">Team</option><option value="pokemon">Pokemon</option><option value="game">Luckiest Game</option></select></div><div><label>Scope</label>${weekSelectorHtml('luckWeek')}</div></div>
       <div id="luckTable"></div>
     </div>`;
@@ -2720,7 +2922,7 @@ a{color:var(--amber)}
       }
       const pokemon=view==='pokemon';
       const rows=pokemon?luckPokemonData(scopeSel.value):luckTeamData(scopeSel.value);
-      document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>${pokemon?'Pokemon':'Team'}</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status Dodges</th><th class="num">Full Paras</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${pokemon?`<span class="pokemon-click luck-pokemon-row" role="button" tabindex="0" data-luck-pokemon="${escapeHtml(r.species)}" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;">${spriteImg(r.species,'sprite')}<strong>${escapeHtml(r.species)}</strong></span><div class="note">${escapeHtml(r.team||'')}</div>`:`<strong>${escapeHtml(r.team)}</strong><div class="note">${r.games} game${r.games===1?'':'s'}</div>`}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodgeLuck.toFixed(2)}</td><td class="num">${r.fullParalysis}</td><td class="num">${r.sleepTurns} turns <span class="note">(${r.sleepDurationLuck>=0?'+':''}${r.sleepDurationLuck.toFixed(1)})</span></td><td class="num">${r.freezeTurns} turns <span class="note">(${r.freezeDurationLuck>=0?'+':''}${r.freezeDurationLuck.toFixed(1)})</span></td></tr>`).join('')}</tbody></table></div>`;
+      document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>${pokemon?'Pokemon':'Team'}</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status Dodges</th><th class="num">Full Paras</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${pokemon?`<span class="luck-pokemon-row" role="button" tabindex="0" data-luck-pokemon="${escapeHtml(r.species)}" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;">${spriteImg(r.species,'sprite')}<strong>${escapeHtml(r.species)}</strong></span><div class="note">${escapeHtml(r.team||'')}</div>`:`<strong>${escapeHtml(r.team)}</strong><div class="note">${r.games} game${r.games===1?'':'s'}</div>`}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodgeLuck.toFixed(2)}</td><td class="num">${r.fullParalysis}</td><td class="num">${r.sleepTurns} turns <span class="note">(${r.sleepDurationLuck>=0?'+':''}${r.sleepDurationLuck.toFixed(1)})</span></td><td class="num">${r.freezeTurns} turns <span class="note">(${r.freezeDurationLuck>=0?'+':''}${r.freezeDurationLuck.toFixed(1)})</span></td></tr>`).join('')}</tbody></table></div>`;
       if(pokemon){ document.querySelectorAll('[data-luck-pokemon]').forEach(el=>{el.addEventListener('click',()=>openLuckPokemonSummary(el.dataset.luckPokemon,scopeSel.value)); el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openLuckPokemonSummary(el.dataset.luckPokemon,scopeSel.value);}});}); }
     }
     scopeSel.addEventListener('change',draw);
@@ -3393,11 +3595,18 @@ a{color:var(--amber)}
     const ok = await initAdminAuth();
     if(!ok) return;
     await loadState();
-    renderTicker();
+
+    // Render the active tab immediately after the shared state is available.
+    // The banner/ticker is auxiliary UI and must never be able to prevent the
+    // League Overview from rendering on the initial page load.
     render();
-    await loadPokemonTypes();
-    renderTicker();
-    render();
+    try{ renderTicker(); }catch(e){ console.warn('Banner render failed:', e); }
+
+    // Pokémon typing is enhancement data; do not block the initial dashboard.
+    loadPokemonTypes().then(()=>{
+      try{ render(); }catch(e){ console.warn('Post-type render failed:', e); }
+      try{ renderTicker(); }catch(e){ console.warn('Post-type banner render failed:', e); }
+    });
     // Public dashboard polls the shared database every 10 seconds. This keeps the
     // viewer page read-only while still making new replay data appear automatically.
     if(!IS_ADMIN_PAGE){
