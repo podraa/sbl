@@ -1146,11 +1146,11 @@ function render(){
   $('main').innerHTML=`
     <div class="toolbar">
       <div class="toolbar-wide"><label>Search by name</label><input type="text" id="searchName" value="${esc(filterName)}" placeholder="e.g. Landorus, Cinderace…" autocomplete="off"></div>
-      <div><label>Points</label><select class="filter-select" id="filterPoints"><option value="">Any points</option>${pointValues.map(p=>`<option value="${p}" ${filterPoints===String(p)?'selected':''}>${p} pts</option>`).join('')}</select></div>
+      <div><label>Points</label><select class="filter-select" id="filterPoints"><option value=""> </option>${pointValues.map(p=>`<option value="${p}" ${filterPoints===String(p)?'selected':''}>${p} pts</option>`).join('')}</select></div>
       <div><label>Availability</label><div class="avail-toggle"><button class="avail-btn ${filterAvail==='all'?'active':''}" data-avail="all">All</button><button class="avail-btn ${filterAvail==='available'?'active':''}" data-avail="available">Available</button><button class="avail-btn ${filterAvail==='taken'?'active':''}" data-avail="taken">Taken</button></div></div>
       <div class="toolbar-wide"><label>Move</label><input type="text" id="filterMove" value="${esc(filterMove)}" placeholder="e.g. Earthquake, Knock Off…" autocomplete="off"></div>
       <div class="toolbar-wide"><label>Ability</label><input type="text" id="filterAbility" value="${esc(filterAbility)}" placeholder="e.g. Intimidate, Levitate…" autocomplete="off"></div>
-      <div><label>Base stat</label><select class="filter-select" id="filterStat"><option value="">Any stat</option>${[['hp','HP'],['atk','Attack'],['def','Defense'],['spa','Sp. Atk'],['spd','Sp. Def'],['spe','Speed']].map(([v,n])=>`<option value="${v}" ${filterStat===v?'selected':''}>${n}</option>`).join('')}</select></div>
+      <div><label>Base stat</label><select class="filter-select" id="filterStat"><option value=""> </option>${[['hp','HP'],['atk','Attack'],['def','Defense'],['spa','Sp. Atk'],['spd','Sp. Def'],['spe','Speed']].map(([v,n])=>`<option value="${v}" ${filterStat===v?'selected':''}>${n}</option>`).join('')}</select></div>
       <div><label>Minimum</label><input type="number" id="filterStatMin" min="1" max="255" value="${esc(filterStatMin)}" placeholder="e.g. 120"></div>
     </div>
     <div class="type-filter-wrap"><label>Filter by type</label><div class="type-chips">${ALL_TYPES.map(t=>`<span class="type-chip type-${t}${filterTypes.has(t)?' active':''}" data-type="${t}">${t}</span>`).join('')}</div></div>
