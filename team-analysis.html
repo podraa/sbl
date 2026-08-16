@@ -298,9 +298,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 .dc-move-slot{display:flex;flex-direction:column;gap:6px;min-width:0}
 .dc-move-slot-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px}
 .dc-move-slot-head>span{font-size:11px;font-weight:750;color:var(--text-dim)}
-.dc-crit-btn{padding:4px 8px;min-height:28px;border-radius:7px;font-size:10px;font-weight:850;color:var(--text-dim);background:var(--panel);border-color:var(--border)}
-.dc-crit-btn:hover{border-color:var(--amber);color:var(--text)}
-.dc-crit-btn.active{background:var(--amber);border-color:var(--amber);color:var(--amber-text,#171224)}
+.dc-crit-btn,.dc-z-btn,.dc-max-btn{padding:4px 8px;min-height:28px;border-radius:7px;font-size:10px;font-weight:850;color:var(--text-dim);background:var(--panel);border-color:var(--border)}
+.dc-crit-btn:hover,.dc-z-btn:hover,.dc-max-btn:hover{border-color:var(--amber);color:var(--text)}
+.dc-crit-btn.active,.dc-z-btn.active,.dc-max-btn.active{background:var(--amber);border-color:var(--amber);color:var(--amber-text,#171224)}
+.dc-move-slot-extra{display:flex;gap:8px}
+.dc-move-extra-field{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--text-dim);flex:1;min-width:0}
+.dc-move-extra-field select{padding:6px 8px;font-size:11px}
 .dc-calc-nav button{position:relative;z-index:2}
 .dc-calc-nav button:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 .dc-calc-section-hidden{display:none!important}
@@ -1366,7 +1369,7 @@ const STATE_ID='__dashboard_state__';
   }
 
 const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let STATE={profileUserId:'',replays:{},teamMap:{},settings:{caseInsensitiveNames:true,rosters:{}},profileTeam:'',compareOpponent:'',comparePokemon:'',setPokemon:'',prepSection:'overview',prepSwitchAtkItem:'',prepSwitchDefItem:'',prepSwitchAtkEVs:{hp:0,atk:0,def:0,spa:0,spd:0,spe:0}};
+let STATE={profileUserId:'',replays:{},teamMap:{},settings:{caseInsensitiveNames:true,rosters:{}},profileTeam:'',compareOpponent:'',comparePokemon:'',setPokemon:'',prepSection:'overview',prepSwitchAtkItem:'',prepSwitchDefItem:'',prepSwitchWeather:'',prepSwitchTerrain:'',prepSwitchAtkEVs:{hp:0,atk:0,def:0,spa:0,spd:0,spe:0}};
 const $=id=>document.getElementById(id);
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function norm(s){
@@ -1427,6 +1430,27 @@ function sprite(s,cls='sprite'){
   return `<img class="${cls}" src="https://play.pokemonshowdown.com/sprites/gen5/${id}.png" alt="${esc(species)}" data-sprite-species="${esc(species)}" loading="eager">`;
 }
 function allRows(){return Object.values(STATE.replays)}
+// Resolve a team's next unplayed fixture opponent. Shared by Match Prep's
+// default-opponent logic and the standalone Damage Calculator, so the
+// calculator can default to "who am I actually playing next" too.
+function nextScheduledOpponent(team){
+  const rounds=Array.isArray(STATE.settings?.fixture?.rounds) ? STATE.settings.fixture.rounds : [];
+  const key=v=>teamKey(v);
+  const target=key(team);
+  const played=(week,home,away)=>Object.values(STATE.replays||{}).some(r=>{
+    if(!r || String(r.week||'Unassigned')!==String(week) || !r.players) return false;
+    const a=key(teamFor(r.players.p1)), b=key(teamFor(r.players.p2));
+    return (a===key(home)&&b===key(away)) || (a===key(away)&&b===key(home));
+  });
+  for(const round of rounds){
+    for(const match of (round.matches||[])){
+      if(key(match.home)!==target && key(match.away)!==target) continue;
+      if(played(round.week,match.home,match.away)) continue;
+      return key(match.home)===target ? match.away : match.home;
+    }
+  }
+  return '';
+}
 function rowsForTeam(team){return allRows().filter(r=>sameTeam(teamFor(r.players?.p1),team)||sameTeam(teamFor(r.players?.p2),team))}
 function sideForTeam(r,team){if(sameTeam(teamFor(r.players?.p1),team))return 'p1';if(sameTeam(teamFor(r.players?.p2),team))return 'p2';return null}
 function monsForSide(r,side){const out={};for(const m of Object.values(r.mons||{})){if(String(m?.side||'').toLowerCase()===side && m.species){const species=canonicalSpecies(m.species);out[norm(species)]={...m,species}}}for(const sp of (r.teamRoster?.[side]||[])){const k=norm(sp);if(!out[k])out[k]={species:sp,appearances:0,kills:0,deaths:0,damageDealt:0,damageTaken:0,moves:{}}}return Object.values(out)}
@@ -2350,7 +2374,12 @@ async function renderMatchPrep(yourTeam, selectedOpponent){
   const switchRows=defaultMove ? `<div id="switchResults"><div class="empty">Calculating switch-in ranges…</div></div>` : '<div id="switchResults" class="empty">No observed move is available for this Pokémon yet.</div>';
   const switchAtkItem=STATE.prepSwitchAtkItem||'';
   const switchDefItem=STATE.prepSwitchDefItem||'';
-  const switchSection=`<section id="prepSwitchAnalyser" class="panel prep-selectable-section" data-prep-section="switch"><div class="switch-analyser-head"><div><h2>Switch-In Analyser</h2><p class="panel-desc">Choose the attacker, damaging move, and switch-in defender. Use the toggle to reverse the roles.</p></div><button type="button" id="prepSwitchRoleToggle" class="switch-role-toggle" aria-pressed="false">↔ Swap attacker / defender</button></div><p class="panel-desc">Choose an opposing Pokémon and one of its damaging learnset moves. Set the opposing attacker EVs and each switch-in Pokémon's defensive EVs individually.</p><div class="prep-switch-controls"><div><label>Opponent Pokémon</label><select id="prepSwitchMon">${opp.map(m=>`<option value="${esc(m.species)}" ${m.species===switchMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select></div><div><label>Damaging Move</label><select id="prepSwitchMove"><option value="">Loading learnset…</option></select></div></div><div class="prep-item-controls"><div><label>Opponent Item</label>${switchItemSelect('prepSwitchAtkItem',switchAtkItem,'offensive')}</div><div><label>Switch-In Item</label>${switchItemSelect('prepSwitchDefItem',switchDefItem,'defensive')}</div><div><label>Opponent EVs</label><button type="button" id="prepSwitchAtkEVs" class="damage-calc-primary">Set EVs</button></div><div><label>Defensive EVs</label><button type="button" id="prepSwitchAllDefEVs" class="prep-all-evs-btn">Set All EVs</button></div></div>${switchRows}</section>`;
+  const switchWeather=STATE.prepSwitchWeather||'';
+  const switchTerrain=STATE.prepSwitchTerrain||'';
+  const switchWeatherOptions=[['','Clear'],['Rain','Rain'],['Sun','Sun'],['Sand','Sand'],['Snow','Snow'],['Hail','Hail'],['Strong Winds','Strong Winds'],['Heavy Rain','Heavy Rain'],['Harsh Sunshine','Harsh Sunshine']];
+  const switchTerrainOptions=[['','None'],['Electric','Electric'],['Grassy','Grassy'],['Misty','Misty'],['Psychic','Psychic']];
+  const switchFieldSelect=(id,value,options)=>`<select id="${id}">${options.map(([v,label])=>`<option value="${esc(v)}" ${v===value?'selected':''}>${esc(label)}</option>`).join('')}</select>`;
+  const switchSection=`<section id="prepSwitchAnalyser" class="panel prep-selectable-section" data-prep-section="switch"><div class="switch-analyser-head"><div><h2>Switch-In Analyser</h2><p class="panel-desc">Choose the attacker, damaging move, and switch-in defender. Use the toggle to reverse the roles.</p></div><button type="button" id="prepSwitchRoleToggle" class="switch-role-toggle" aria-pressed="false">↔ Swap attacker / defender</button></div><p class="panel-desc">Choose an attacking Pokémon and one of its damaging learnset moves. Set the attacker EVs and each switch-in Pokémon's defensive EVs individually. Weather and terrain only affect moves they actually influence.</p><div class="prep-switch-controls"><div><label>Attacker Pokémon</label><select id="prepSwitchMon">${opp.map(m=>`<option value="${esc(m.species)}" ${m.species===switchMon?.species?'selected':''}>${esc(displaySpecies(m))}</option>`).join('')}</select></div><div><label>Damaging Move</label><select id="prepSwitchMove"><option value="">Loading learnset…</option></select></div></div><div class="prep-item-controls"><div><label>Attacker Item</label>${switchItemSelect('prepSwitchAtkItem',switchAtkItem,'offensive')}</div><div><label>Switch-In Item</label>${switchItemSelect('prepSwitchDefItem',switchDefItem,'defensive')}</div><div><label>Attacker EVs</label><button type="button" id="prepSwitchAtkEVs" class="damage-calc-primary">Set EVs</button></div><div><label>Defensive EVs</label><button type="button" id="prepSwitchAllDefEVs" class="prep-all-evs-btn">Set All EVs</button></div></div><div class="prep-item-controls"><div><label>Weather</label>${switchFieldSelect('prepSwitchWeather',switchWeather,switchWeatherOptions)}</div><div><label>Terrain</label>${switchFieldSelect('prepSwitchTerrain',switchTerrain,switchTerrainOptions)}</div></div>${switchRows}</section>`;
 
   const latestMatchesSection=matchHistoryForTeam(opponent,false).replace('<section class="panel">','<section id="prepLatestMatches" class="panel prep-selectable-section" data-prep-section="matches">');
   return `<section class="panel"><div class="prep-hero"><div><h2>Match Prep</h2><p class="panel-desc" style="margin:0">Prepare <strong>${esc(yourTeam)}</strong> for a match against <strong>${esc(opponent)}</strong>. Match usage, scouting, recent replays and battle tools are combined here.</p></div><div class="prep-hero-controls"><div><label>Your Team</label><select id="prepYourTeam">${names.map(n=>`<option value="${esc(n)}" ${sameTeam(n,yourTeam)?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div><label>Opponent</label><select id="prepOpponent">${names.filter(n=>!sameTeam(n,yourTeam)).map(n=>`<option value="${esc(n)}" ${sameTeam(n,opponent)?'selected':''}>${esc(n)}</option>`).join('')}</select></div><div class="prep-side-swap"><span class="prep-side-swap-label">Matchup sides</span><button type="button" id="prepGlobalRoleToggle" aria-pressed="false">↔ Swap Your Team / Opponent</button></div></div></div></section>
@@ -2536,6 +2565,12 @@ $('prepYourTeam')?.addEventListener('change',async e=>{
     });
     $('prepSwitchDefItem')?.addEventListener('change',async e=>{
       STATE.prepSwitchDefItem=e.target.value;await renderSwitchResults();
+    });
+    $('prepSwitchWeather')?.addEventListener('change',async e=>{
+      STATE.prepSwitchWeather=e.target.value;await renderSwitchResults();
+    });
+    $('prepSwitchTerrain')?.addEventListener('change',async e=>{
+      STATE.prepSwitchTerrain=e.target.value;await renderSwitchResults();
     });
     $('prepSwitchAtkEVs')?.addEventListener('click',e=>{e.preventDefault();openSwitchAtkEvModal();});
     document.addEventListener('click',e=>{const btn=e.target.closest?.('#prepSwitchAllDefEVs');if(!btn)return;e.preventDefault();e.stopPropagation();openSwitchAllDefEvModal();},{capture:true});
@@ -2811,13 +2846,36 @@ requestAnimationFrame(()=>host.classList.add('open'));
         const attackerRoster=rosterForTeam(STATE.prepOpponent).find(x=>norm(rosterMonName(x))===norm(mon));
         const attackerData=await fetchPokemonData(mon);
         const attackerAbility=abilityName(attackerRoster?.ability??attackerRoster?.abilities) || ((attackerData?.abilities||[]).length===1 ? attackerData.abilities[0] : '');
+        // Multi-hit moves need an explicit hit count passed to the calc engine,
+        // or the engine only computes a single hit. Loaded Dice guarantees the
+        // near-maximum hit count in-game, so assume the top of the range when
+        // it's held; otherwise assume a representative mid-range hit count.
+        const moveKey=v=>String(v??'').toLowerCase().replace(/[^a-z0-9]/g,'');
+        const moveDataRaw=gen.moves.get(move);
+        const multihit=moveDataRaw?.multihit;
+        const hasLoadedDice=String(atkItem||'').toLowerCase()==='loaded dice';
+        let switchHits;
+        if(Array.isArray(multihit)) switchHits=hasLoadedDice?multihit[1]:Math.round((multihit[0]+multihit[1])/2);
+        else if(typeof multihit==='number') switchHits=multihit;
+        const ALWAYS_CRIT_MOVES=['surgingstrikes','wickedblow'];
+        const forceCrit=ALWAYS_CRIT_MOVES.includes(moveKey(move));
+        // Meteor Beam and Electro Shot raise the user's Sp. Atk on the same
+        // turn they hit (unlike other charge moves), matching Showdown.
+        const CHARGE_MOVE_BOOSTS={'meteorbeam':{spa:1},'electroshot':{spa:1}};
+        const chargeBoost=CHARGE_MOVE_BOOSTS[moveKey(move)];
+        const switchWeatherVal=STATE.prepSwitchWeather||'';
+        const switchTerrainVal=STATE.prepSwitchTerrain||'';
+        const switchFieldOptions={};
+        if(switchWeatherVal) switchFieldOptions.weather=switchWeatherVal;
+        if(switchTerrainVal) switchFieldOptions.terrain=switchTerrainVal;
+        const switchField=typeof C.Field==='function' && (switchWeatherVal||switchTerrainVal) ? new C.Field(switchFieldOptions) : undefined;
+        const mv=new C.Move(gen,move,{isCrit:forceCrit||undefined,hits:switchHits});
         for(const target of await franchiseMons(STATE.prepYourTeam)){
           try{
             const defTypes=typeMapForSpecies[target.species]||await fetchTypes(target.species);
             const targetRoster=rosterForTeam(STATE.prepYourTeam).find(x=>norm(rosterMonName(x))===norm(target.species));
             const targetData=await fetchPokemonData(target.species);
             const defenderAbility=abilityName(targetRoster?.ability??targetRoster?.abilities) || ((targetData?.abilities||[]).length===1 ? targetData.abilities[0] : '');
-            const mv=new C.Move(gen,move);
             const moveType=String(mv.type?.name||mv.type||'');
             const normAbility=v=>String(v??'').toLowerCase().replace(/[^a-z0-9]/g,'');
             const atkAb=normAbility(attackerAbility), defAb=normAbility(defenderAbility);
@@ -2842,10 +2900,10 @@ requestAnimationFrame(()=>host.classList.add('open'));
               rows.push({target,min:0,max:0,pctMin:0,pctMax:0,ko:null,immune:true,ability:defenderAbility,desc:''});
               continue;
             }
-            const atk=new C.Pokemon(gen,switchCalcSpecies(mon),{level:100,item:atkItem||undefined,ability:attackerAbility||undefined,evs:STATE.prepSwitchAtkEVs||{hp:0,atk:0,def:0,spa:0,spd:0,spe:0}});
+            const atk=new C.Pokemon(gen,switchCalcSpecies(mon),{level:100,item:atkItem||undefined,ability:attackerAbility||undefined,evs:STATE.prepSwitchAtkEVs||{hp:0,atk:0,def:0,spa:0,spd:0,spe:0},boosts:chargeBoost||undefined});
             const evs=(STATE.prepSwitchEVsByMon||{})[target.species]||{hp:0,atk:0,def:0,spa:0,spd:0,spe:0};
             const def=new C.Pokemon(gen,switchCalcSpecies(target.species),{level:100,item:STATE.prepSwitchDefItem||undefined,ability:defenderAbility||undefined,evs});
-            const res=C.calculate(gen,atk,def,mv);
+            const res=switchField?C.calculate(gen,atk,def,mv,switchField):C.calculate(gen,atk,def,mv);
             const dmg=Array.isArray(res.damage)?res.damage:[res.damage];
             let numericDmg=dmg.map(Number).filter(Number.isFinite);
             if(!numericDmg.length) throw new Error('No numeric damage result was returned for this move.');
@@ -3190,6 +3248,7 @@ window.__dashboardGetTeams = function(){
     .sort((a,b)=>String(a).localeCompare(String(b)));
 };
 window.__dashboardProfileTeam = function(){ return typeof STATE!=='undefined' ? (STATE.profileTeam||'') : ''; };
+window.__dashboardNextOpponent = function(team){ try{ return nextScheduledOpponent(team||STATE.profileTeam)||''; }catch(e){ return ''; } };
 window.__dashboardGetRosterNames = function(team){
   const raw=rosterForTeam(team);
   const arr=Array.isArray(raw)?raw:[];
@@ -3359,8 +3418,26 @@ load();
   window.__showdownCalcChoices=async function(){
     if(cache) return cache;
     if(loading) return loading;
-    loading=Promise.all([getList('item'),getList('move'),getList('ability')]).then(([items,moves,abilities])=>{
+    loading=Promise.all([getList('move'),getList('ability')]).then(async([moves,abilities])=>{
       const sort=a=>a.sort((x,y)=>x.name.localeCompare(y.name,undefined,{sensitivity:'base'}));
+      // Pull items from the calc engine's own Gen 9 battle data instead of
+      // PokeAPI's full item catalog. PokeAPI lists every item in the games
+      // (mail, apricorns, Bob's Food Tin, TMs, etc) which just clutters the
+      // dropdown with things that never affect a damage calculation. The
+      // calc engine's item data only contains items with an actual in-battle
+      // effect, which is exactly what's useful here.
+      let items=[];
+      try{
+        const engine=typeof window.getCalcEngine==='function' ? await window.getCalcEngine() : null;
+        const gen=engine?.Generations?.get(9);
+        const genItems=gen?.items;
+        if(genItems){
+          items=[...genItems]
+            .filter(it=>it && it.name && it.exists!==false && !it.isNonstandard)
+            .map(it=>({id:it.id||it.name,name:it.name}));
+        }
+      }catch(err){ console.warn('Falling back to PokeAPI item list',err); }
+      if(!items.length) items=await getList('item');
       cache={items:sort(items),moves:sort(moves),abilities:sort(abilities)};
       return cache;
     }).catch(err=>{
@@ -3527,7 +3604,8 @@ load();
     host.id='damageCalcModal';host.className='damage-calc-modal';host.style.display='flex';host.style.visibility='hidden';host.style.opacity='0';
     const userFranchise=(typeof window.__dashboardProfileTeam==='function' ? window.__dashboardProfileTeam() : '');
     const atkTeam=preset.attackerTeam||getSaved(saved,'dcAtkTeam',userFranchise||teams[0]||'');
-    const defTeam=preset.defenderTeam||getSaved(saved,'dcDefTeam',teams.find(t=>!dcSameTeam(t,atkTeam))||teams[0]||'');
+    const scheduledOpponent=typeof window.__dashboardNextOpponent==='function' ? (window.__dashboardNextOpponent(atkTeam)||'') : '';
+    const defTeam=preset.defenderTeam||getSaved(saved,'dcDefTeam',(scheduledOpponent&&teams.some(t=>dcSameTeam(t,scheduledOpponent))?teams.find(t=>dcSameTeam(t,scheduledOpponent)):'')||teams.find(t=>!dcSameTeam(t,atkTeam))||teams[0]||'');
     const atkMon=preset.attacker||getSaved(saved,'dcAtk','');
     const defMon=preset.defender||getSaved(saved,'dcDef','');
     host.innerHTML=`<div class="damage-calc-card" role="dialog" aria-modal="true" aria-label="Damage Calculator">
@@ -3651,7 +3729,7 @@ load();
           </div>
         </section>
       </div>\n      <section id="dcConditionsSection" class="damage-calc-side" style="margin-top:12px"><div class="damage-calc-form">
-        <div class="wide dc-move-group"><span class="dc-field-group-label">Moves</span><div class="dc-move-grid"><div class="dc-move-slot"><div class="dc-move-slot-head"><span>Move 1</span><button type="button" class="dc-crit-btn" data-move="1" aria-pressed="false">Crit</button></div><select id="dcMove1"><option value="">Select a move</option></select></div><div class="dc-move-slot"><div class="dc-move-slot-head"><span>Move 2</span><button type="button" class="dc-crit-btn" data-move="2" aria-pressed="false">Crit</button></div><select id="dcMove2"><option value="">Select a move</option></select></div><div class="dc-move-slot"><div class="dc-move-slot-head"><span>Move 3</span><button type="button" class="dc-crit-btn" data-move="3" aria-pressed="false">Crit</button></div><select id="dcMove3"><option value="">Select a move</option></select></div><div class="dc-move-slot"><div class="dc-move-slot-head"><span>Move 4</span><button type="button" class="dc-crit-btn" data-move="4" aria-pressed="false">Crit</button></div><select id="dcMove4"><option value="">Select a move</option></select></div></div></div>
+        <div class="wide dc-move-group"><span class="dc-field-group-label">Moves</span><div class="dc-move-grid">${[1,2,3,4].map(slot=>`<div class="dc-move-slot"><div class="dc-move-slot-head"><span>Move ${slot}</span><button type="button" class="dc-crit-btn" data-move="${slot}" aria-pressed="false">Crit</button><button type="button" class="dc-z-btn" data-move="${slot}" aria-pressed="false" title="Use as a Z-Move">Z</button><button type="button" class="dc-max-btn" data-move="${slot}" aria-pressed="false" title="Use as a Max Move">Max</button></div><select id="dcMove${slot}"><option value="">Select a move</option></select><div class="dc-move-slot-extra"><label class="dc-move-extra-field">Category<select id="dcCategory${slot}"><option value="">Auto</option><option value="Physical">Physical</option><option value="Special">Special</option></select></label><label class="dc-move-extra-field">Hits<select id="dcHits${slot}"><option value="">Auto</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></label></div></div>`).join('')}</div></div>
         <div class="wide dc-field-group"><span class="dc-field-group-label">Weather</span><input type="hidden" id="dcWeather" value=""><div class="dc-toggle-row dc-weather-row"><button type="button" class="dc-condition-toggle active" data-input="dcWeather" data-value="">Clear</button><button type="button" class="dc-condition-toggle" data-input="dcWeather" data-value="Rain">Rain</button><button type="button" class="dc-condition-toggle" data-input="dcWeather" data-value="Sun">Sun</button><button type="button" class="dc-condition-toggle" data-input="dcWeather" data-value="Sand">Sand</button><button type="button" class="dc-condition-toggle" data-input="dcWeather" data-value="Snow">Snow</button><button type="button" class="dc-condition-toggle" data-input="dcWeather" data-value="Hail">Hail</button><button type="button" class="dc-condition-toggle" data-input="dcWeather" data-value="Strong Winds">Strong Winds</button><button type="button" class="dc-condition-toggle" data-input="dcWeather" data-value="Heavy Rain">Heavy Rain</button><button type="button" class="dc-condition-toggle" data-input="dcWeather" data-value="Harsh Sunshine">Harsh Sunshine</button></div></div>
         <div class="wide dc-field-group"><span class="dc-field-group-label">Terrain</span><input type="hidden" id="dcTerrain" value=""><div class="dc-toggle-row dc-terrain-row"><button type="button" class="dc-condition-toggle active" data-input="dcTerrain" data-value="">None</button><button type="button" class="dc-condition-toggle" data-input="dcTerrain" data-value="Electric">Electric</button><button type="button" class="dc-condition-toggle" data-input="dcTerrain" data-value="Grassy">Grassy</button><button type="button" class="dc-condition-toggle" data-input="dcTerrain" data-value="Misty">Misty</button><button type="button" class="dc-condition-toggle" data-input="dcTerrain" data-value="Psychic">Psychic</button></div></div>
         <div class="wide dc-field-group"><span class="dc-field-group-label">Defender screens</span><div class="dc-toggle-row dc-screen-row"><label class="dc-screen-toggle"><input id="dcReflect" type="checkbox"> Reflect</label><label class="dc-screen-toggle"><input id="dcLightScreen" type="checkbox"> Light Screen</label><label class="dc-screen-toggle"><input id="dcAuroraVeil" type="checkbox"> Aurora Veil</label></div></div>
@@ -3882,6 +3960,16 @@ load();
       btn.classList.toggle('active',!active);
       saveCalcState(host);
     }));
+    // Z-Move and Max Move are mutually exclusive per slot.
+    host.querySelectorAll('.dc-z-btn,.dc-max-btn').forEach(btn=>btn.addEventListener('click',()=>{
+      const active=btn.getAttribute('aria-pressed')==='true';
+      const slot=btn.dataset.move;
+      const other=btn.classList.contains('dc-z-btn') ? host.querySelector(`.dc-max-btn[data-move="${slot}"]`) : host.querySelector(`.dc-z-btn[data-move="${slot}"]`);
+      if(!active && other){ other.setAttribute('aria-pressed','false'); other.classList.remove('active'); }
+      btn.setAttribute('aria-pressed',String(!active));
+      btn.classList.toggle('active',!active);
+      saveCalcState(host);
+    }));
     ['dcWeather','dcTerrain'].forEach(syncConditionButtons);
     host.querySelectorAll('.dc-apply-set').forEach(btn=>btn.addEventListener('click',()=>{
       const side=btn.dataset.side;
@@ -3932,10 +4020,20 @@ load();
         ? names.map(n=>`<option value="${escOpt(n)}" ${dcSameTeam(n,preferred||'')?'selected':''}>${escOpt(n)}</option>`).join('')
         : '<option value="">No published roster Pokémon</option>';
     };
-    host.querySelector('#dcAtkTeam').addEventListener('change',()=>{host.querySelector('#dcAtkAbility')?.removeAttribute('data-manual-selection');syncMons('dcAtkTeam','dcAtk');appliedImportedSets.atk=null;host.querySelector('#dcAtkSet').value='';fillPokemonAbilities('dcAtkAbility',host.querySelector('#dcAtk')?.value);saveCalcState(host);scheduleDamageCalculation();});
-    host.querySelector('#dcDefTeam').addEventListener('change',()=>{host.querySelector('#dcDefAbility')?.removeAttribute('data-manual-selection');syncMons('dcDefTeam','dcDef');appliedImportedSets.def=null;host.querySelector('#dcDefSet').value='';fillPokemonAbilities('dcDefAbility',host.querySelector('#dcDef')?.value);saveCalcState(host);scheduleDamageCalculation();});
-    host.querySelector('#dcAtk').addEventListener('change',()=>{host.querySelector('#dcAtkAbility')?.removeAttribute('data-manual-selection');appliedImportedSets.atk=null;const sel=host.querySelector('#dcAtkSet');if(sel)sel.value='';fillPokemonAbilities('dcAtkAbility',host.querySelector('#dcAtk')?.value);saveCalcState(host);scheduleDamageCalculation();});
-    host.querySelector('#dcDef').addEventListener('change',()=>{host.querySelector('#dcDefAbility')?.removeAttribute('data-manual-selection');appliedImportedSets.def=null;const sel=host.querySelector('#dcDefSet');if(sel)sel.value='';fillPokemonAbilities('dcDefAbility',host.querySelector('#dcDef')?.value);saveCalcState(host);scheduleDamageCalculation();});
+    // Carrying over item/nature/status/EVs from the previously selected
+    // Pokémon onto a newly picked one is exactly the "did I forget to change
+    // this" confusion the calculator should avoid. Clear those fields (but
+    // keep level, which usually stays constant) whenever the species changes.
+    const resetSideFields=prefix=>{
+      const itemEl=host.querySelector('#'+prefix+'Item'); if(itemEl) itemEl.value='';
+      const natureEl=host.querySelector('#'+prefix+'Nature'); if(natureEl){ natureEl.value=''; natureEl.dispatchEvent(new Event('change')); }
+      const statusEl=host.querySelector('#'+prefix+'Status'); if(statusEl) statusEl.value='';
+      ['Hp','Atk','Def','Spa','Spd','Spe'].forEach(stat=>{const ev=host.querySelector('#'+prefix+'Ev'+stat); if(ev) ev.value='';});
+    };
+    host.querySelector('#dcAtkTeam').addEventListener('change',()=>{host.querySelector('#dcAtkAbility')?.removeAttribute('data-manual-selection');syncMons('dcAtkTeam','dcAtk');appliedImportedSets.atk=null;host.querySelector('#dcAtkSet').value='';resetSideFields('dcAtk');fillPokemonAbilities('dcAtkAbility',host.querySelector('#dcAtk')?.value);saveCalcState(host);scheduleDamageCalculation();});
+    host.querySelector('#dcDefTeam').addEventListener('change',()=>{host.querySelector('#dcDefAbility')?.removeAttribute('data-manual-selection');syncMons('dcDefTeam','dcDef');appliedImportedSets.def=null;host.querySelector('#dcDefSet').value='';resetSideFields('dcDef');fillPokemonAbilities('dcDefAbility',host.querySelector('#dcDef')?.value);saveCalcState(host);scheduleDamageCalculation();});
+    host.querySelector('#dcAtk').addEventListener('change',()=>{host.querySelector('#dcAtkAbility')?.removeAttribute('data-manual-selection');appliedImportedSets.atk=null;const sel=host.querySelector('#dcAtkSet');if(sel)sel.value='';resetSideFields('dcAtk');fillPokemonAbilities('dcAtkAbility',host.querySelector('#dcAtk')?.value);saveCalcState(host);scheduleDamageCalculation();});
+    host.querySelector('#dcDef').addEventListener('change',()=>{host.querySelector('#dcDefAbility')?.removeAttribute('data-manual-selection');appliedImportedSets.def=null;const sel=host.querySelector('#dcDefSet');if(sel)sel.value='';resetSideFields('dcDef');fillPokemonAbilities('dcDefAbility',host.querySelector('#dcDef')?.value);saveCalcState(host);scheduleDamageCalculation();});
 
     host.querySelector('#dcAtkAbility')?.addEventListener('change',()=>{host.querySelector('#dcAtkAbility')?.setAttribute('data-manual-selection','true');saveCalcState(host);scheduleDamageCalculation(0);});
     host.querySelector('#dcDefAbility')?.addEventListener('change',()=>{host.querySelector('#dcDefAbility')?.setAttribute('data-manual-selection','true');saveCalcState(host);scheduleDamageCalculation(0);});
@@ -3994,7 +4092,11 @@ load();
       const selectedMoves=moveSlots.map(slot=>({
         slot,
         name:(host.querySelector('#dcMove'+slot)?.value||'').trim(),
-        crit:host.querySelector(`.dc-crit-btn[data-move="${slot}"]`)?.getAttribute('aria-pressed')==='true'
+        crit:host.querySelector(`.dc-crit-btn[data-move="${slot}"]`)?.getAttribute('aria-pressed')==='true',
+        useZ:host.querySelector(`.dc-z-btn[data-move="${slot}"]`)?.getAttribute('aria-pressed')==='true',
+        useMax:host.querySelector(`.dc-max-btn[data-move="${slot}"]`)?.getAttribute('aria-pressed')==='true',
+        category:(host.querySelector('#dcCategory'+slot)?.value||'').trim(),
+        hits:(host.querySelector('#dcHits'+slot)?.value||'').trim()
       })).filter(x=>x.name);
       if(!atkName||!defName||!selectedMoves.length){
         result.innerHTML='<div class="dc-results-heading">Results</div><div class="muted">Select an attacker, defender, and at least one move.</div>';
@@ -4024,12 +4126,34 @@ load();
         // IIFE and is intentionally not part of the damage-calculator scope.
         const defenderMaxHp=Number(defender.maxHP)||Number(defender.maxhp)||Number(defender.hp)||
           Number(defender.stats?.hp)||Number(defender.rawStats?.hp)||0;
+        const moveKey=v=>String(v??'').toLowerCase().replace(/[^a-z0-9]/g,'');
+        const ALWAYS_CRIT_MOVES=['surgingstrikes','wickedblow'];
+        // Meteor Beam and Electro Shot raise the user's Sp. Atk on the same
+        // turn they hit (unlike other charge moves), matching Showdown.
+        const CHARGE_MOVE_BOOSTS={'meteorbeam':{spa:1},'electroshot':{spa:1}};
+        const atkItemName=host.querySelector('#dcAtkItem')?.value.trim()||'';
+        const atkBaseOptions={level:Number(host.querySelector('#dcAtkLevel')?.value)||100,item:atkItemName||undefined,ability:host.querySelector('#dcAtkAbility')?.value.trim()||undefined,nature:host.querySelector('#dcAtkNature')?.value.trim()||undefined,status:host.querySelector('#dcAtkStatus')?.value.trim()||undefined,evs:readEVs('dcAtkEv'),ivs:atkSet?.ivs||undefined,teraType:atkSet?.teraType||undefined};
         const rows=[];
         for(const entry of selectedMoves){
           if(requestId!==dcCalcRequest)return;
           try{
-            const move=new C.Move(gen,entry.name,{isCrit:entry.crit});
-            const res=field ? C.calculate(gen,attacker,defender,move,field) : C.calculate(gen,attacker,defender,move);
+            const key=moveKey(entry.name);
+            const chargeBoost=CHARGE_MOVE_BOOSTS[key];
+            // Each move gets its own attacker instance so a charge-move stat
+            // boost (Meteor Beam / Electro Shot) never bleeds into other slots.
+            const entryAttacker=chargeBoost ? new C.Pokemon(gen,atkName,{...atkBaseOptions,boosts:chargeBoost}) : attacker;
+            const moveDataRaw=gen.moves.get(entry.name);
+            const multihit=moveDataRaw?.multihit;
+            const hasLoadedDice=atkItemName.toLowerCase()==='loaded dice';
+            let hits;
+            if(entry.hits) hits=Number(entry.hits);
+            else if(Array.isArray(multihit)) hits=hasLoadedDice?multihit[1]:Math.round((multihit[0]+multihit[1])/2);
+            else if(typeof multihit==='number') hits=multihit;
+            const isCrit=entry.crit||ALWAYS_CRIT_MOVES.includes(key);
+            const moveOptions={isCrit,hits,useZ:entry.useZ||undefined,useMax:entry.useMax||undefined};
+            if(entry.category) moveOptions.overrides={category:entry.category};
+            const move=new C.Move(gen,entry.name,moveOptions);
+            const res=field ? C.calculate(gen,entryAttacker,defender,move,field) : C.calculate(gen,entryAttacker,defender,move);
             let ko='';
             try{ko=res.kochance().text||'';}catch(e){}
             const rolls=(Array.isArray(res.damage)?res.damage:[res.damage]).map(Number).filter(Number.isFinite);
@@ -4044,7 +4168,8 @@ load();
                 koChance=rolls.length?koRolls/rolls.length*100:null;
               }
             }
-            const critLabel=entry.crit?'Critical hit':'';
+            const extraLabels=[isCrit?'Critical hit':'',entry.useZ?'Z-Move':'',entry.useMax?'Max Move':'',hits&&hits>1?`${hits} hits`:''].filter(Boolean);
+            const critLabel=extraLabels.join(' · ');
             const chanceLabel=koChance===null?'KO chance unavailable':`${koChance.toFixed(1)}% chance to KO`;
             rows.push(`<article class="dc-result-move"><div class="dc-result-move-head"><div><strong>${escCalc(entry.name)}</strong>${critLabel?`<span class="dc-result-meta">${escCalc(critLabel)}</span>`:''}</div><span class="dc-result-percent">${escCalc(pctText)}</span></div><div class="dc-result-detail">${ko?escCalc(ko):'No KO information'}</div><div class="dc-result-footer"><span class="dc-result-ko">${escCalc(chanceLabel)}</span></div></article>`);
           }catch(moveErr){
@@ -4060,7 +4185,7 @@ load();
     };
 
     // Recalculate automatically whenever anything relevant changes.
-    const autoCalcIds=['dcAtkTeam','dcAtk','dcAtkLevel','dcAtkItem','dcAtkAbility','dcAtkNature','dcAtkStatus','dcDefTeam','dcDef','dcDefLevel','dcDefItem','dcDefAbility','dcDefNature','dcDefStatus','dcMove1','dcMove2','dcMove3','dcMove4','dcWeather','dcTerrain','dcReflect','dcLightScreen','dcAuroraVeil','dcAtkEvHp','dcAtkEvAtk','dcAtkEvDef','dcAtkEvSpa','dcAtkEvSpd','dcAtkEvSpe','dcDefEvHp','dcDefEvAtk','dcDefEvDef','dcDefEvSpa','dcDefEvSpd','dcDefEvSpe'];
+    const autoCalcIds=['dcAtkTeam','dcAtk','dcAtkLevel','dcAtkItem','dcAtkAbility','dcAtkNature','dcAtkStatus','dcDefTeam','dcDef','dcDefLevel','dcDefItem','dcDefAbility','dcDefNature','dcDefStatus','dcMove1','dcMove2','dcMove3','dcMove4','dcCategory1','dcCategory2','dcCategory3','dcCategory4','dcHits1','dcHits2','dcHits3','dcHits4','dcWeather','dcTerrain','dcReflect','dcLightScreen','dcAuroraVeil','dcAtkEvHp','dcAtkEvAtk','dcAtkEvDef','dcAtkEvSpa','dcAtkEvSpd','dcAtkEvSpe','dcDefEvHp','dcDefEvAtk','dcDefEvDef','dcDefEvSpa','dcDefEvSpd','dcDefEvSpe'];
     autoCalcIds.forEach(id=>{
       const el=host.querySelector('#'+id);
       if(!el)return;
