@@ -278,6 +278,279 @@ a{color:var(--amber)}
 </style>
 
 <script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
+<style id="sbl-theme-final-overrides">
+/* Final site-wide theme surface and text pass */
+:root{
+  --sbl-card-bg:var(--panel);
+  --sbl-card-alt:var(--panel-alt);
+  --sbl-card-border:var(--border);
+  --sbl-page-bg:var(--bg);
+  --sbl-text:var(--text);
+  --sbl-muted:var(--text-dim);
+}
+
+html,body{background:var(--sbl-page-bg) !important;color:var(--sbl-text);}
+
+/* Major overview/team surfaces */
+.team-card,
+.overview-card,
+.franchise-card,
+.commissioner-budget-card,
+.pokemon-card,
+.hero,
+.myteam-hero,
+.myteam-card,
+.myteam-panel,
+.next-battle-card,
+.myteam-budget,
+.myteam-summary,
+.myteam-mon-card,
+.recent-battle-row,
+.fixture-match,
+.conference-block,
+.conference-heading,
+.roster-card,
+.roster-team,
+.free-agent-card,
+.fa-card,
+.team-analysis-card,
+.switch-card,
+.switch-card-detail,
+.damage-calc-card,
+.damage-calc-side,
+.trade-col,
+.trade-filter-panel,
+#proposePanel,
+#tradeSummary{
+  background:var(--sbl-card-bg) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text);
+}
+
+.team-card:hover,
+.overview-card:hover,
+.franchise-card:hover,
+.pokemon-card:hover,
+.free-agent-card:hover,
+.standings-row:hover{
+  background:var(--sbl-card-alt) !important;
+}
+
+/* Team cards previously had a hard-coded dark gradient. */
+.team-card{background:var(--sbl-card-bg) !important;}
+
+/* Secondary surfaces */
+.mon,
+.mon-pill,
+.pick-card,
+.pick-card.checked,
+.chip,
+.badge,
+.speed-pin-chip,
+.myteam-mon-stat,
+.selected-chip{
+  background:var(--sbl-card-alt);
+  border-color:var(--sbl-card-border);
+}
+
+/* Inputs and controls */
+input,textarea,select{
+  background:var(--sbl-card-alt) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text) !important;
+}
+
+/* Theme-aware headings and ordinary text. */
+.panel h1,.panel h2,.panel h3,.panel h4,
+.card h1,.card h2,.card h3,.card h4,
+.team-card-name,.team-card-sub,
+.team-name,.team-record,.death-cause-title,
+.franchise-name,.franchise-sub,
+.standings-team-name,.pokemon-name,.pick-card-name,
+.section-title,.page-title,.card-title{
+  color:var(--sbl-text) !important;
+}
+
+/* Table headings */
+th{color:var(--sbl-text) !important;border-color:var(--sbl-card-border) !important;}
+td{border-color:var(--sbl-card-border) !important;}
+
+/* Positive results follow theme accent. */
+.kills,.kill,.kill-count,.stat-kills,.stat-win,.stat-wins,
+.win-count,.wins,.record-win,.fixture-result,.fixture-summary,
+.myteam-summary-result,.result-win,.win-text,
+.fixture-match.fixture-played .fixture-status{
+  color:var(--teal) !important;
+}
+
+/* Losses use the theme-aware negative variable. */
+.loss,.losses,.loss-count,.stat-loss,.stat-losses,.loss-text,
+.record-loss,.result-loss,.form-pip.loss{
+  color:var(--red) !important;
+}
+
+/* Fixture cards */
+.fixture-team{color:var(--sbl-text) !important;}
+.fixture-team.fixture-winner{color:var(--teal) !important;}
+.fixture-status{
+  background:var(--sbl-card-alt) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-muted) !important;
+}
+
+/* Ladder: never hide teams below the cutoff. */
+.standings-row{
+  opacity:1 !important;
+  visibility:visible !important;
+  filter:none !important;
+  background:var(--sbl-card-bg) !important;
+  color:var(--sbl-text) !important;
+}
+
+/* Modals/popouts */
+.modal,.modal-card,.profile-modal,.summary-modal,.overview-modal,
+.prep-detail-dialog,.prep-opponent-popout{
+  background:var(--sbl-card-bg) !important;
+  border-color:var(--sbl-card-border) !important;
+  color:var(--sbl-text);
+}
+
+/* Keep Pokémon type badges readable; their white text is intentional. */
+.type-badge,[class^="type-"],[class*=" type-"]{color:#fff !important;}
+</style>
+
+<style id="sbl-final-theme-ui-fix">
+/* Final site-wide theme normalization.  All surfaces and semantic text use
+   the active theme variables; fixed type colors remain intentionally untouched. */
+html,body{background:var(--bg)!important;color:var(--text)!important}
+
+/* Common surfaces */
+.panel,.card,.set-card,.statbox,.notice,.team-card,.overview-card,
+.franchise-card,.pokemon-card,.roster-card,.free-agent-card,.fa-card,
+.team-analysis-card,.prep-opponent-card,.prep-switch-card,.switch-card-detail,
+.speed-detail-card,.speed-matrix-wrap,.damage-calc-card,.damage-calc-side,
+.damage-calc-grid,.myteam-card,.myteam-panel,.next-battle-card,
+.budget-card,.replay-summary-box,.modalbox,.modal-card,.pokemon-modal,
+.pokemon-profile,.conference-block,.fixture-match,.fixture-week,
+.trade-col,.selected-chip,#tradeSummary,#proposePanel,
+.showdown-import-card,.showdown-saved-item{
+  color:var(--text);
+  background-color:var(--panel);
+  border-color:var(--border);
+}
+
+/* Secondary surfaces */
+.mon,.mon-pill,.pick-card,.chip,.badge,.speed-pin-chip,
+.meta-box,.profile-record-tab,.profile-grid>div,.speed-detail-card,
+.dc-move-group,.dc-result-move,.dc-result-damage,.showdown-import-text,
+.showdown-saved-actions button{
+  color:var(--text);
+  background-color:var(--panel-alt);
+  border-color:var(--border);
+}
+
+/* Headings and ordinary labels must contrast on every theme. */
+h1,h2,h3,h4,h5,h6,
+.panel h1,.panel h2,.panel h3,.panel h4,
+.card h1,.card h2,.card h3,.card h4,
+.team-card-name,.franchise-card-title,.pokemon-name,
+.pokemon-modal-head strong,.pokemon-profile h2,.pokemon-profile h3,
+.speed-matrix th,.speed-matrix tbody th,
+.damage-calc-card h2,.damage-calc-card h3{
+  color:var(--text)!important;
+}
+
+.note,.small,.muted,.sub,.meta,.stat-label,
+.speed-condition-title,.speed-detail-card label,
+.switch-card-detail,.switch-card-evs,.dc-results-subheading,
+.dc-auto-status,.prep-card-section>span{
+  color:var(--text-dim)!important;
+}
+
+/* Inputs */
+input,textarea,select{
+  background:var(--panel-alt)!important;
+  color:var(--text)!important;
+  border-color:var(--border)!important;
+}
+
+/* Team overview / roster cards: never retain a dark-only gradient. */
+.team-card,.overview-card,.franchise-card,.pokemon-card,.roster-card,
+.free-agent-card,.team-analysis-card,.prep-opponent-card{
+  background:var(--panel)!important;
+}
+
+/* Pokémon profile modal header must follow the active theme. */
+.pokemon-modal-head{
+  background:color-mix(in srgb,var(--panel) 96%,transparent)!important;
+  color:var(--text)!important;
+  border-bottom-color:var(--border)!important;
+}
+
+/* Switch-in analyser: the raw-damage detail belongs to the same card. */
+#switchResults .switch-card-detail,
+.prep-switch-card .switch-card-detail{
+  background:transparent!important;
+  color:var(--text-dim)!important;
+  border-color:transparent!important;
+}
+
+/* Speed matrix: softer, theme-derived status cells. */
+.speed-cell{background:var(--panel)!important;border-color:var(--border)!important;color:var(--text)!important}
+.speed-cell.speed-faster{
+  background:color-mix(in srgb,var(--teal) 12%,var(--panel))!important;
+  border-color:color-mix(in srgb,var(--teal) 42%,var(--border))!important;
+  color:var(--teal)!important;
+}
+.speed-cell.speed-slower{
+  background:color-mix(in srgb,var(--red) 10%,var(--panel))!important;
+  border-color:color-mix(in srgb,var(--red) 38%,var(--border))!important;
+  color:var(--red)!important;
+}
+.speed-cell.speed-tie{
+  background:color-mix(in srgb,var(--amber) 10%,var(--panel))!important;
+  border-color:color-mix(in srgb,var(--amber) 38%,var(--border))!important;
+  color:var(--amber)!important;
+}
+
+/* Roster budget */
+.budget-value.good{color:var(--teal)!important}
+.budget-value.negative{color:var(--red)!important}
+
+/* Positive / negative semantic values */
+.kills,.kill,.kill-count,.stat-kills,.win-count,.wins,
+.result-win,.win-text,.fixture-result,.fixture-summary,
+.myteam-summary-result,.fixture-match.fixture-played .fixture-status{
+  color:var(--teal)!important;
+}
+.loss,.loss-count,.result-loss,.loss-text,.record-loss{color:var(--red)!important}
+
+/* Cards and rows on light themes need visible separation without glare. */
+.fixture-match,.standings-row,.speed-cell,.team-card,.overview-card{
+  box-shadow:0 1px 3px rgba(30,35,40,.055);
+}
+
+/* Keep the navigation itself theme-aware. */
+.page-nav,.page-nav a,.page-nav select{
+  background:var(--panel)!important;color:var(--text)!important;border-color:var(--border)!important;
+}
+.page-nav a.active{background:var(--panel-alt)!important;color:var(--amber)!important}
+
+/* Do not override Pokémon type badge text/backgrounds. */
+.type-badge,[class^="type-"],[class*=" type-"]{color:inherit}
+</style>
+
+<style id="season-nav-final-override">
+/* Season-style navigation — final override */
+body{padding-top:58px !important;}
+.page-nav{position:fixed !important;top:0 !important;left:0 !important;right:0 !important;width:100% !important;height:58px !important;margin:0 !important;padding:9px 16px !important;box-sizing:border-box !important;display:flex !important;align-items:center !important;justify-content:center !important;gap:4px !important;flex-wrap:wrap !important;background:var(--panel,#fff) !important;border-bottom:1px solid var(--border,#ddd) !important;box-shadow:0 6px 18px rgba(0,0,0,.18) !important;transform:translateY(0) !important;transition:transform .22s ease,box-shadow .22s ease !important;z-index:1000 !important;}
+.page-nav.nav-hidden{transform:translateY(-100%) !important;box-shadow:none !important;}
+.page-nav a{display:inline-flex !important;align-items:center !important;justify-content:center !important;flex:0 0 auto !important;padding:8px 13px !important;min-height:0 !important;border-radius:8px !important;border:1px solid transparent !important;background:transparent !important;color:var(--text,#222) !important;text-decoration:none !important;font-size:12px !important;font-weight:700 !important;white-space:nowrap !important;transition:background .15s,border-color .15s,color .15s !important;}
+.page-nav a:hover{background:var(--panel-alt,#f4f4f4) !important;border-color:var(--border,#ddd) !important;color:var(--text,#222) !important;}
+.page-nav a.active{background:var(--panel-alt,#f4f4f4) !important;border-color:var(--border,#ddd) !important;color:var(--amber,var(--accent,#c98b2e)) !important;}
+.nav-hover-zone{position:fixed !important;top:0 !important;left:0 !important;right:0 !important;height:9px !important;z-index:1001 !important;}
+@media(max-width:700px){body{padding-top:52px !important}.page-nav{height:52px !important;padding:7px 10px !important;justify-content:flex-start !important;overflow-x:auto !important;flex-wrap:nowrap !important}.page-nav a{flex:0 0 auto !important}.nav-hover-zone{height:8px !important}}
+</style>
 </head>
 <body>
 <nav class="page-nav" id="pageNav" aria-label="Site navigation">
@@ -950,6 +1223,25 @@ function render(){
   }
   function start(){scan(document); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(scan))).observe(document.documentElement,{subtree:true,childList:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
+})();
+</script>
+<script id="season-nav-final-js">
+(function(){
+  const nav=document.getElementById('pageNav');
+  if(!nav) return;
+  const links=[...nav.querySelectorAll('a[data-page]')];
+  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
+  links.forEach(a=>a.classList.toggle('active',(a.dataset.page||'').toLowerCase()===current));
+  function updateNav(){
+    nav.classList.toggle('nav-hidden',window.scrollY>140);
+  }
+  let ticking=false;
+  window.addEventListener('scroll',function(){
+    if(!ticking){ticking=true;requestAnimationFrame(function(){updateNav();ticking=false;});}
+  },{passive:true});
+  nav.addEventListener('mouseenter',()=>nav.classList.remove('nav-hidden'));
+  document.addEventListener('mousemove',e=>{if(e.clientY<=12) nav.classList.remove('nav-hidden');},{passive:true});
+  updateNav();
 })();
 </script>
 </body></html>
