@@ -176,6 +176,12 @@
   .pokemon-sub{color:var(--text-dim);font-size:11px;margin-top:2px;}
 
   .theme-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:8px;}
+.theme-category-row{display:flex;align-items:center;gap:9px;margin-top:12px;margin-bottom:2px;}
+.theme-category-row label{font-size:11px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;}
+.theme-category-row select{min-width:180px;padding:8px 30px 8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--panel-alt);color:var(--text);font:inherit;font-size:12px;cursor:pointer;}
+.theme-category-row select:focus{outline:2px solid var(--amber);outline-offset:1px;}
+@media(max-width:520px){.theme-category-row{align-items:flex-start;flex-direction:column}.theme-category-row select{width:100%;}}
+
   .theme-swatch{display:flex; flex-direction:column; gap:8px; background:var(--panel-alt); border:1px solid var(--border); border-radius:10px; padding:10px; cursor:pointer; font-family:var(--sans); font-size:12px; color:var(--text); text-align:left;}
   .theme-swatch:hover{border-color:var(--text-dim);}
   .theme-swatch.active{border-color:var(--theme-accent,var(--amber)); box-shadow:0 0 0 1px var(--theme-accent,var(--amber));}
@@ -2455,7 +2461,7 @@ body{padding-top:58px !important}
   // ---------- Account tab ----------
 
   const THEME_FAMILIES = [
-    ['Black / Gray',['monochrome','slate','midnight2','onyx','charcoal','graphite','graphite2','smoke','silver','steel','steel2','pearl','obsidian','carbon','ink','platinum','coolgray','warmgray']],
+    ['Black / Grey',['monochrome','slate','midnight2','onyx','charcoal','graphite','graphite2','smoke','silver','steel','steel2','pearl','obsidian','carbon','ink','platinum','coolgray','warmgray']],
     ['Brown / Bronze',['coffee','cocoa','espresso','mahogany','taupe','sand','bronze','copper','rust','terracotta','mocha','parchment','copperblue']],
     ['Red',['ruby','crimson','scarlet','cherry','wine','ember']],
     ['Pink / Rose',['rose','blush','berry','magenta','fuchsia','mauve','raspberry']],
@@ -2465,22 +2471,44 @@ body{padding-top:58px !important}
     ['Teal / Cyan',['cyan','cyan2','deepsea','teal','aqua','aqua2','lagoon','turquoise','tropical','arctic','ice','frost','frost2','aurora','glacier','northern','deepteal']],
     ['Blue',['sky','azure','cobalt','navy','denim','sapphire','royal','ocean','denim2','marine','steelblue','smokyblue']],
     ['Purple',['violet','lavender','plum','plum2','heather','amethyst','orchid','indigo','iris','periwinkle','cyberpunk','dusk','midnight','violet2','grape','electric','nebula']],
-    ['Light Themes',['ivory','paper','cloud','snow','linen','cream','porcelain','mist','dove','canvas','frostwhite','cotton','almond','marble']],
+    ['Light Themes',[]],
     ['Special',[]]
-  ];  function renderThemeOptions(currentThemeId){
-    const used=new Set();
-    let html='';
-    for(const [label,ids] of THEME_FAMILIES){
-      const list=ids.length ? THEMES.filter(t=>ids.includes(t.id)) : THEMES.filter(t=>!used.has(t.id));
-      if(!list.length) continue;
-      list.forEach(t=>used.add(t.id));
-      html += `<div class="theme-family-label">${escapeHtml(label)}</div>`;
-      html += list.map(t=>`<button type="button" class="theme-swatch${t.id===currentThemeId?' active':''}" data-theme="${t.id}" style="--theme-accent:${t.accent}">
-        <div class="preview" style="background:${t.bg}"><span style="background:${t.panel}"></span><span style="background:${t.accent}"></span></div>
-        <div class="label-row"><span>${escapeHtml(t.name)}</span><span class="check">✓</span></div>
-      </button>`).join('');
+  ];
+
+  let themeFamilyFilter = 'All Themes';
+
+  function isLightTheme(t){
+    if(t?.category === 'light') return true;
+    const rgb = String(t?.bg||'').replace('#','').match(/.{2}/g)||[];
+    if(rgb.length!==3) return false;
+    const lum=(parseInt(rgb[0],16)*299 + parseInt(rgb[1],16)*587 + parseInt(rgb[2],16)*114)/1000;
+    return lum >= 160;
+  }
+
+  function themeFamilyList(label){
+    if(label==='All Themes') return THEMES.slice();
+    if(label==='Light Themes') return THEMES.filter(t=>isLightTheme(t));
+
+    const family = THEME_FAMILIES.find(([name])=>name===label);
+    if(family && family[1].length) return THEMES.filter(t=>family[1].includes(t.id));
+
+    if(label==='Special'){
+      const assigned=new Set();
+      THEME_FAMILIES.forEach(([name,ids])=>{
+        if(name!=='Light Themes' && name!=='Special') ids.forEach(id=>assigned.add(id));
+      });
+      return THEMES.filter(t=>!assigned.has(t.id) && !isLightTheme(t));
     }
-    return html;
+    return [];
+  }
+
+  function renderThemeOptions(currentThemeId, filter=themeFamilyFilter){
+    const list=themeFamilyList(filter);
+    if(!list.length) return '<div class="theme-family-label">No themes in this category</div>';
+    return list.map(t=>`<button type="button" class="theme-swatch${t.id===currentThemeId?' active':''}" data-theme="${t.id}" style="--theme-accent:${t.accent}">
+      <div class="preview" style="background:${t.bg}"><span style="background:${t.panel}"></span><span style="background:${t.accent}"></span></div>
+      <div class="label-row"><span>${escapeHtml(t.name)}</span><span class="check">✓</span></div>
+    </button>`).join('');
   }
   function renderAccount(){
     const currentThemeId = getSavedThemeId();
@@ -2500,8 +2528,14 @@ body{padding-top:58px !important}
       <div class="panel">
         <h2>Theme</h2>
         <div class="note" style="margin-top:0">Choose a preset, or build a custom theme. Custom mode lets you decide which parts of the interface the theme controls.</div>
+        <div class="theme-category-row">
+          <label for="themeCategorySelect">Theme category</label>
+          <select id="themeCategorySelect">
+            ${['All Themes','Black / Grey','Brown / Bronze','Red','Pink / Rose','Orange','Yellow / Gold','Green','Teal / Cyan','Blue','Purple','Light Themes','Special'].map(name=>`<option value="${escapeHtml(name)}"${themeFamilyFilter===name?' selected':''}>${escapeHtml(name)}</option>`).join('')}
+          </select>
+        </div>
         <div class="theme-grid">
-          ${renderThemeOptions(currentThemeId)}
+          ${renderThemeOptions(currentThemeId, themeFamilyFilter)}
           <button type="button" class="theme-swatch${currentThemeId==='custom'?' active':''}" data-theme="custom" style="--theme-accent:${escapeHtml(getCustomTheme()?.accent||'#a78bfa')}">
             <div class="preview" style="background:${escapeHtml(getCustomTheme()?.bg||'#0e1218')}"><span style="background:${escapeHtml(getCustomTheme()?.panel||'#161c26')}"></span><span style="background:${escapeHtml(getCustomTheme()?.accent||'#a78bfa')}"></span></div>
             <div class="label-row"><span>Custom</span><span class="check">✓</span></div>
@@ -2526,6 +2560,15 @@ body{padding-top:58px !important}
     const customPanel=document.getElementById('customThemePanel');
     const syncCustomPanel=()=>{ customPanel.style.display=contentEl.querySelector('[data-theme="custom"]')?.classList.contains('active')?'block':'none'; };
     syncCustomPanel();
+
+    const themeCategorySelect=document.getElementById('themeCategorySelect');
+    if(themeCategorySelect){
+      themeCategorySelect.onchange=()=>{
+        themeFamilyFilter=themeCategorySelect.value;
+        renderAccount();
+      };
+    }
+
     contentEl.querySelectorAll('[data-theme]').forEach(btn=>btn.onclick=()=>{ applyTheme(btn.dataset.theme); renderAccount(); });
     document.getElementById('saveCustomTheme').onclick=()=>{
       const base=getCustomTheme()||Object.assign({},THEMES[0]); base.enabled={}; base.base=getSavedThemeId()==='custom'?(base.base||'amber'):getSavedThemeId();
