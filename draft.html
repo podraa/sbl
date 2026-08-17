@@ -92,7 +92,7 @@
   @media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}.page-nav .lock-hint{display:none}}
 </style>
 
-<script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
+<script id="sbl-global-theme-loader" src="js/sbl-themes.js"></script>
 <style id="sbl-theme-final-overrides">
 /* Final site-wide theme surface and text pass */
 :root{
@@ -355,6 +355,7 @@ input,textarea,select{
 .type-badge,[class^="type-"],[class*=" type-"]{color:inherit}
 </style>
 
+  <link rel="stylesheet" href="css/sbl-site.css">
 </head>
 <body>
 
@@ -378,7 +379,10 @@ input,textarea,select{
   <div id="content"></div>
 </div>
 
+<script src="js/sbl-site.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/pokemon-dex-ids.js"></script>
+<script src="js/services/pokemon.js"></script>
 <script>
 (function(){
   const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
@@ -404,7 +408,7 @@ input,textarea,select{
     const d = Object.assign(defaultDraftState(), draft || {});
     d.budgets = d.budgets && typeof d.budgets === 'object' ? d.budgets : {};
     d.pool = Array.isArray(d.pool) ? d.pool.map(m => ({
-      id: String(m?.id ?? ''), name: String(m?.name ?? '').trim(), points: Number(m?.points) || 0,
+      id: String(m?.id ?? ''), name: (SBL.pokemon.displayNameWithForm ? SBL.pokemon.displayNameWithForm(String(m?.name ?? '').trim()) : SBL.pokemon.displayName(String(m?.name ?? '').trim())), points: Number(m?.points) || 0,
       drafted: !!m?.drafted, draftedBy: m?.draftedBy || null, pickNumber: m?.pickNumber ?? null
     })).filter(m => m.id && m.name) : [];
     d.order = Array.isArray(d.order) ? d.order.map(String) : [];
@@ -418,8 +422,8 @@ input,textarea,select{
     const out = {};
     for(const [team, list] of Object.entries(rosters || {})){
       out[team] = (Array.isArray(list) ? list : []).map(mon => typeof mon === 'string'
-        ? {name:mon, points:null}
-        : {name:String(mon?.name ?? ''), points:mon?.points ?? null}
+        ? {name:(SBL.pokemon.displayNameWithForm ? SBL.pokemon.displayNameWithForm(mon) : SBL.pokemon.displayName(mon)), points:null}
+        : {name:(SBL.pokemon.displayNameWithForm ? SBL.pokemon.displayNameWithForm(String(mon?.name ?? '')) : SBL.pokemon.displayName(String(mon?.name ?? ''))), points:mon?.points ?? null}
       ).filter(mon => mon.name);
     }
     return out;
@@ -485,19 +489,8 @@ input,textarea,select{
   }
 
   // ---------- sprites ----------
-  function spriteCandidates(name){
-    const raw = String(name || '').trim().toLowerCase().replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m');
-    const hyphenated = raw.replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
-    const compact = hyphenated.replace(/-/g,'');
-    const candidates = [];
-    const add = id => { if(id && !candidates.includes(id)) candidates.push(id); };
-    add(hyphenated); add(compact);
-    return candidates;
-  }
-  function spriteUrl(name){
-    const c = spriteCandidates(name)[0] || '';
-    return `https://play.pokemonshowdown.com/sprites/gen5/${c}.png`;
-  }
+  function spriteCandidates(name){ return SBL.pokemon.candidateIds(name); }
+  function spriteUrl(name){ return SBL.pokemon.spriteUrl(name); }
 
   // ---------- pick flow ----------
   async function makePick(mon, team){
@@ -597,8 +590,8 @@ input,textarea,select{
             <div class="mon-grid">
               ${groups[pts].sort((a,b)=>a.name.localeCompare(b.name)).map(m => `
                 <div class="mon-card ${m.drafted ? 'taken' : ''}" ${m.drafted ? '' : `data-pick="${esc(m.id)}"`}>
-                  <img src="${spriteUrl(m.name)}" alt="${esc(m.name)}" loading="lazy" onerror="this.style.opacity=.2">
-                  <div class="name">${esc(m.name)}</div>
+                  ${SBL.pokemon.spriteMarkup(m.name, 'sprite')}
+                  <div class="name">${esc(SBL.pokemon.displayName(m.name))}</div>
                   <div class="pts">${m.points} pts</div>
                   ${m.drafted ? `<div class="taken-to">→ ${esc(m.draftedBy || '')}</div>` : ''}
                 </div>`).join('')}
@@ -631,7 +624,7 @@ input,textarea,select{
     const overlay = document.createElement('div');
     overlay.className = 'overlay';
     overlay.innerHTML = `<div class="overlay-box">
-      <h3>${esc(mon.name)}</h3>
+      <h3>${esc(SBL.pokemon.displayName(mon.name))}</h3>
       <div class="pts">${mon.points} points</div>
       <label>Assign to franchise</label>
       <select id="pickTeamSelect">
@@ -782,5 +775,10 @@ input,textarea,select{
   client?.auth.onAuthStateChange((_event, session) => { lockNav(!session?.user); });
 })();
 </script>
+
+  <script src="js/sbl-supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/services/rosters.js"></script>
+    <script src="js/sbl-site.js"></script>
 </body>
 </html>

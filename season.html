@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -715,7 +717,7 @@ button{touch-action:manipulation;}
 </style>
 
 <style>[hidden]{display:none!important}</style>
-<script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
+<script id="sbl-global-theme-loader" src="js/sbl-themes.js"></script>
 
 <style id="season-ui-polish">
 /* ===== Season page: stronger finals ladder + redesigned fixture ===== */
@@ -1161,6 +1163,7 @@ body.modal-page-locked {
   -ms-overflow-style: none !important;
 }
 </style>
+  <link rel="stylesheet" href="css/sbl-site.css">
 </head>
 <body data-admin="false">
 <style>
@@ -1172,16 +1175,7 @@ body.modal-page-locked {
 @media(max-width:700px){.page-nav{top:8px;right:8px}.page-nav label{display:none}.page-nav .lock-hint{display:none}}
 </style>
 
-<nav class="page-nav" id="pageNav" aria-label="Site navigation">
-  <a href="index.html" data-page="index.html">My Team</a>
-  <a href="stats.html" data-page="stats.html">Stats</a>
-  <a href="season.html" data-page="season.html">Season</a>
-  <a href="rosters.html" data-page="rosters.html">Rosters</a>
-  <a href="team-analysis.html" data-page="team-analysis.html">Match Prep</a>
-  <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
-  <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
-</nav>
-<div class="nav-hover-zone" id="navHoverZone" aria-hidden="true"></div>
+<nav id="pageNav" class="page-nav" aria-label="Site navigation"></nav>
 <div id="app" style="display:none">
   <header>
     <br>
@@ -1196,7 +1190,15 @@ body.modal-page-locked {
 </div>
 <div id="auditModal"></div>
 
+<script src="js/sbl-site.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/pokemon-dex-ids.js"></script>
+<script src="js/services/pokemon.js"></script>
+<script src="js/services/seasons.js"></script>
+<script src="js/services/league.js"></script>
+<script src="js/services/replays.js"></script>
+<script src="js/services/trades.js"></script>
+<script src="js/performance.js"></script>
 <script>
 (function(){
   const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
@@ -1209,18 +1211,7 @@ body.modal-page-locked {
   const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
   const SUPABASE_STATE_ID = '__dashboard_state__';
-  const DEFAULT_SEASON = 'Season 15';
-  function seasonKey(name){ return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'season'; }
-  function selectedSeasonSnapshot(shared){
-    const settings=shared?.settings||{}, archives=settings.seasonArchives||{}, requested=new URLSearchParams(location.search).get('season');
-    if(requested && archives[requested]){ const a=archives[requested]; return {name:a.name||requested,key:requested,teamMap:a.teamMap||{},settings:a.settings||{},replays:a.replays||{},archived:true,archives}; }
-    return {name:settings.activeSeason||DEFAULT_SEASON,key:'',teamMap:shared?.teamMap||{},settings,replays:null,archived:false,archives};
-  }
-  function installSeasonPicker(shared){
-    // Season picker UI removed; still resolve which season's data to use.
-    return selectedSeasonSnapshot(shared);
-  }
-
+  
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const IS_ADMIN_PAGE = document.body.dataset.admin === 'true';
   const POLL_MS = 10000;
@@ -1234,30 +1225,10 @@ body.modal-page-locked {
   async function loadState(){
     loadingFromRemote = true;
     try{
-      const {data, error} = await supabase.from('replays').select('replay_id,replay_data');
+      const { data, error } = await SBL.replays.load(supabase);
       if(error) throw error;
-      const replays = {};
-      let sharedState = null;
-      let publishedRosters = {};
-      for(const row of (data || [])){
-        if(row.replay_id === SUPABASE_STATE_ID) sharedState = row.replay_data || {};
-        else if(row.replay_id === '__rosters__'){
-          // Keep the separately-published roster record as a fallback.
-          publishedRosters = row.replay_data?.rosters || {};
-        } else if(row.replay_id === '__free_agency__'){
-          // Published metadata record, not a replay.
-          continue;
-        } else if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
-      }
-      // Some older shared-state backups stored replays inside __dashboard_state__;
-      // the current schema stores them as individual rows. Support both so a state
-      // migration can never blank the public dashboard.
-      if(sharedState && sharedState.replays && typeof sharedState.replays === 'object') {
-        for(const [id, replay] of Object.entries(sharedState.replays)) {
-          if(id && replay && typeof replay === 'object') replays[id] = replay;
-        }
-      }
-      const snap=installSeasonPicker(sharedState || {});
+      const { sharedState, replays, publishedRosters } = SBL.replays.partition(data);
+      const snap=SBL.seasons.getSnapshot(sharedState || {});
       const titleEl=document.getElementById('seasonTitle'); if(titleEl) titleEl.textContent=`SBL ${snap.name}: National Dex Draft`;
       STATE.replays = snap.archived ? snap.replays : replays;
       STATE.teamMap = snap.teamMap || {};
@@ -1272,6 +1243,10 @@ body.modal-page-locked {
       PUBLISHED_ROSTERS = Object.keys(dashboardRosters).length
         ? dashboardRosters
         : (publishedRosters && typeof publishedRosters === 'object' ? publishedRosters : {});
+      if(!snap.archived){
+        const {data:tradeRows} = await SBL.trades.load(supabase);
+        PUBLISHED_ROSTERS = SBL.trades.getEffectiveRosters(PUBLISHED_ROSTERS, tradeRows || []);
+      }
       STATE.settings.rosters = PUBLISHED_ROSTERS;
       STATE.settings.teamLogos = STATE.settings.teamLogos || {};
       const bp=JSON.parse(localStorage.getItem('sbl-banner-preferences')||'null'); if(bp){ STATE.settings.bannerMode=bp.bannerMode||STATE.settings.bannerMode; STATE.settings.bannerTeam=bp.bannerTeam||STATE.settings.bannerTeam; }
@@ -1392,23 +1367,9 @@ body.modal-page-locked {
     if(raw.replace(/\s+/g,'')==='yefmoc') return 'comfey';
     return raw;
   }
-  function toShowdownId(species){
-    // Showdown's sprite filenames keep the hyphen as a forme separator
-    // (landorus-therian.png, ho-oh.png, porygon-z.png, necrozma-dusk-mane.png)
-    // but collapse everything else — so each hyphen-delimited segment gets
-    // lowercased and stripped of spaces/punctuation, then rejoined with '-'.
-    // Stripping hyphens outright (the old behavior) turned every forme name
-    // into a 404 (e.g. "landorustherian"), which just showed the mon's actual
-    // name faded out behind a broken-image icon.
-    return species.split('-').map(part => part.toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean).join('-');
-  }
-  function spriteUrl(species){
-    return `https://play.pokemonshowdown.com/sprites/gen5/${toShowdownId(species)}.png`;
-  }
-  function spriteImg(species, cls){
-    const safe = escapeHtml(species);
-    return `<img class="${cls}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
-  }
+  function toShowdownId(species){ return SBL.pokemon.normalizeName(species); }
+  function spriteUrl(species){ return SBL.pokemon.spriteUrl(species); }
+  function spriteImg(species, cls){ return SBL.pokemon.spriteMarkup(species, cls || 'sprite'); }
   // Pokémon typing is loaded from Showdown's public Pokédex and cached locally.
   // This keeps the dashboard data-driven while avoiding a huge hard-coded type table.
   let POKEDEX_TYPES = {};
@@ -1475,11 +1436,32 @@ body.modal-page-locked {
   function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
 
   // ---------- replay parsing ----------
+  function canonicalBattleSpecies(name){
+    const raw = String(name || '').trim();
+    if(!raw) return raw;
+    if(window.SBL?.pokemon?.displayName) return SBL.pokemon.displayName(raw);
+    const id = raw.toLowerCase().replace(/[’']/g,'').replace(/_/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-');
+    const map = {
+      'mimikyu-busted':'Mimikyu','aegislash-blade':'Aegislash','aegislash-shield':'Aegislash',
+      'terapagos-terastal':'Terapagos','terapagos-stellar':'Terapagos','palafin-hero':'Palafin',
+      'zacian-crowned':'Zacian','zamazenta-crowned':'Zamazenta','eiscue-noice':'Eiscue',
+      'morpeko-hangry':'Morpeko','wishiwashi-school':'Wishiwashi','cramorant-gulping':'Cramorant',
+      'cramorant-gorging':'Cramorant','darmanitan-zen':'Darmanitan','meloetta-pirouette':'Meloetta',
+      'minior-meteor':'Minior','zygarde-10-percent':'Zygarde','zygarde-50-percent':'Zygarde',
+      'necrozma-dusk-mane':'Necrozma','necrozma-dawn-wings':'Necrozma','necrozma-ultra':'Necrozma',
+      'giratina-origin':'Giratina','shaymin-sky':'Shaymin','hoopa-unbound':'Hoopa',
+      'kyurem-black':'Kyurem','kyurem-white':'Kyurem','deoxys-attack':'Deoxys','deoxys-defense':'Deoxys',
+      'deoxys-speed':'Deoxys','keldeo-resolute':'Keldeo'
+    };
+    return map[id] || raw;
+  }
+
   function parseLog(json, replayId){
     const lines = json.log.split('\n');
     const players = {p1:'', p2:''};
-    const slots = {}; // slotId -> {species, hp, side}
-    const mons = {}; // "p1|species" -> stats
+    const slots = {}; // slotId -> {species, hp, side, monId}
+    let nextMonInstance = 0;
+    const mons = {}; // unique battle-stint id -> stats
     const appearedThisReplay = new Set();
     let lastMove = null; // {source, target, move}
     let currentTurn = 0;
@@ -1634,15 +1616,14 @@ body.modal-page-locked {
 
     function monKey(slot){
       const s = slots[slot];
-      if(!s) return null;
-      return s.side + '|' + normName(s.species);
+      return s?.monId || null;
     }
     function ensureMon(slot){
       const s = slots[slot];
       if(!s) return null;
       const k = monKey(slot);
       if(!mons[k]) mons[k] = {
-        side:s.side, species:s.species, damageDealt:0, damageTaken:0,
+        id:k, side:s.side, species:s.species, damageDealt:0, damageTaken:0,
         kills:0, deaths:0, appearances:0, killLog:[], deathLog:[],      };
       if(!appearedThisReplay.has(k)){
         appearedThisReplay.add(k);
@@ -1735,7 +1716,8 @@ body.modal-page-locked {
         const side = sideOf(slot);
         const species = parts[3].split(',')[0].trim();
         const hp = parseHP(parts[4] || '100/100');
-        slots[slot] = {species, hp, side};
+        const monId = side + '|' + (++nextMonInstance);
+        slots[slot] = {species, hp, hpMax: parseMaxHP(parts[4] || '100/100'), side, monId};
         // A new mon now occupies this slot — any prior *direct-hit* attacker
         // credit for this slot belonged to the mon that just left, so that must
         // not carry over. Status-source credit (poison/burn) is intentionally
@@ -1746,6 +1728,19 @@ body.modal-page-locked {
         delete lastAttacker[slot];
         delete pendingDelayedHit[slot];
         ensureMon(slot);
+      } else if(cmd === 'replace' || cmd === '-formechange' || cmd === 'detailschange'){
+        const slotFull = parts[2];
+        const slot = slotFull ? slotFull.split(':')[0].trim() : null;
+        const species = parts[3] ? parts[3].split(',')[0].trim() : '';
+        if(slot && species){
+          const st = slots[slot];
+          if(st){
+            st.species = species;
+            const k = monKey(slot);
+            if(k && mons[k]) mons[k].species = species;
+            if(k && luckPokemon[k]) luckPokemon[k].species = species;
+          }
+        }
       } else if(cmd === 'move'){
         finalizePendingStatusChecks();
         const source = parts[2] ? parts[2].split(':')[0].trim() : null;
@@ -2078,8 +2073,36 @@ body.modal-page-locked {
       }
     }
 
+    // Aggregate only after parsing. Internally each switch-in is a unique stint,
+    // which prevents Zoroark/Transform, form changes and repeated species from
+    // sharing damage attribution. League-facing data is still one row per species.
+    const aggregatedMons = {};
+    for(const stint of Object.values(mons)){
+      const species = canonicalBattleSpecies(stint.species);
+      const key = stint.side + '|' + normName(species);
+      if(!aggregatedMons[key]) aggregatedMons[key] = Object.assign({}, stint, {id:key, species, appearances:1, killLog:[], deathLog:[], assistLog:[], moves:{}});
+      else {
+        const out=aggregatedMons[key];
+        out.damageDealt += Number(stint.damageDealt||0); out.damageTaken += Number(stint.damageTaken||0);
+        out.kills += Number(stint.kills||0); out.deaths += Number(stint.deaths||0); out.assists = Number(out.assists||0)+Number(stint.assists||0);
+        out.killLog.push(...(stint.killLog||[])); out.deathLog.push(...(stint.deathLog||[])); out.assistLog.push(...(stint.assistLog||[]));
+        for(const [mv,n] of Object.entries(stint.moves||{})) out.moves[mv]=(out.moves[mv]||0)+Number(n||0);
+        if(Number.isFinite(stint.maxHpObserved)) out.maxHpObserved=Math.max(out.maxHpObserved||0,stint.maxHpObserved);
+      }
+    }
+    const aggregatedLuckPokemon = {};
+    for(const [mk,l] of Object.entries(luckPokemon)){
+      const species=canonicalBattleSpecies(l.species || mk.split('|')[1] || '');
+      if(!species) continue;
+      const side=String(mk).split('|')[0];
+      const key=side+'|'+normName(species);
+      if(!aggregatedLuckPokemon[key]) aggregatedLuckPokemon[key]=Object.assign({species}, newLuckSide());
+      const out=aggregatedLuckPokemon[key];
+      for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) out[k]+=Number(l[k]||0);
+      out.luckEvents.push(...(l.luckEvents||[]));
+    }
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner, teamRoster, luck, luckPokemon,
+      players, mons:aggregatedMons, winner, teamRoster, luck, luckPokemon:aggregatedLuckPokemon,
       };
   }
 
@@ -3222,7 +3245,29 @@ body.modal-page-locked {
     function draw(){
       const q = input.value.trim().toLowerCase();
       const wantedType = typeFilter.value;
-      const stats = globalPokemonStats('ALL').filter(s => (!q || s.species.toLowerCase().includes(q)) && (wantedType==='all' || pokemonTypes(s.species).includes(wantedType))).sort((a,b)=>a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
+      const rawStats = globalPokemonStats('ALL');
+      const grouped = new Map();
+      rawStats.forEach(raw => {
+        const canonical = SBL.pokemon.displayName(raw.species);
+        const k = norm(canonical);
+        if(!k) return;
+        if(!grouped.has(k)){
+          grouped.set(k,{...raw,species:canonical,coaches:new Set(raw.coaches||[])});
+        }else{
+          const g=grouped.get(k);
+          g.coaches = new Set([...(g.coaches||[]),...(raw.coaches||[])]);
+          ['dealt','taken','kills','assists','deaths','games'].forEach(key=>{
+            if(key in g || key in raw) g[key]=(Number(g[key])||0)+(Number(raw[key])||0);
+          });
+          if(raw.killLog) g.killLog=[...(g.killLog||[]),...raw.killLog];
+          if(raw.assistLog) g.assistLog=[...(g.assistLog||[]),...raw.assistLog];
+          if(raw.deathLog) g.deathLog=[...(g.deathLog||[]),...raw.deathLog];
+        }
+      });
+      const stats = [...grouped.values()].filter(s => {
+        const name=s.species.toLowerCase();
+        return (!q || name.includes(q)) && (wantedType==='all' || pokemonTypes(s.species).includes(wantedType));
+      }).sort((a,b)=>a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
       if(!stats.length){
         table.innerHTML = `<div class="empty-state">${q ? `No Pokémon matching <strong>${escapeHtml(input.value.trim())}</strong> in this scope.` : 'No Pokémon data for this scope yet.'}</div>`;
         return;
@@ -4328,146 +4373,9 @@ body.modal-page-locked {
 })();
 </script>
 
-<script>
-(function(){
-  const nav=document.getElementById('pageNav');
-  if(!nav) return;
-  const links=[...nav.querySelectorAll('a[data-page]')];
-  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  const client=window.supabase?.createClient(
-    'https://dfxdkkemltukxaklhcpo.supabase.co',
-    'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-  );
-  links.forEach(a=>{ if(a.dataset.page===current) a.classList.add('active'); });
-  function lockNav(locked){
-    nav.classList.toggle('locked',locked);
-    links.forEach(a=>{
-      a.setAttribute('aria-disabled',locked?'true':'false');
-      if(locked) a.title='Log in to switch pages'; else a.removeAttribute('title');
-    });
-  }
-  links.forEach(a=>a.addEventListener('click',e=>{
-    if(nav.classList.contains('locked')){ e.preventDefault(); return; }
-  }));
-  function hidePrivilegedLinks(){
-    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
-    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
-  }
-  function showAdminLinks(){
-    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=false; });
-  }
-  function showDraftLink(){
-    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=false; });
-  }
-  // Commissioner status rarely changes, so we only check it against the
-  // database once per login and cache the result (plus the last-seen draft
-  // status) in sessionStorage. Crucially, we also paint from that cache
-  // *synchronously* below, before any awaiting -- otherwise hidePrivilegedLinks()
-  // hides the admin-only / draft-room links on every fresh page load, and they
-  // only pop back in a tick later once getSession() resolves. That pop-in is
-  // the flicker/"reload" look when swapping between pages.
-  const NAV_CACHE_PREFIX='navPerms:';
-  const NAV_LAST_UID_KEY='navLastUid';
-  function readNavCache(uid){
-    try{ const raw=sessionStorage.getItem(NAV_CACHE_PREFIX+uid); return raw?JSON.parse(raw):null; }
-    catch(e){ return null; }
-  }
-  function writeNavCache(uid,perms){
-    try{ sessionStorage.setItem(NAV_CACHE_PREFIX+uid, JSON.stringify(perms)); }catch(e){}
-  }
-  function readLastUid(){
-    try{ return sessionStorage.getItem(NAV_LAST_UID_KEY); }catch(e){ return null; }
-  }
-  function writeLastUid(uid){
-    try{ sessionStorage.setItem(NAV_LAST_UID_KEY, uid); }catch(e){}
-  }
-  function clearNavCache(){
-    try{
-      Object.keys(sessionStorage).forEach(k=>{ if(k.indexOf(NAV_CACHE_PREFIX)===0) sessionStorage.removeItem(k); });
-      sessionStorage.removeItem(NAV_LAST_UID_KEY);
-    }catch(e){}
-  }
-  // Paint immediately from whatever was cached on the previous page, before
-  // doing any real check -- this is what removes the flash. Only falls back
-  // to hiding everything when there's nothing to paint from yet (first load
-  // of the session, or a signed-out visitor).
-  let paintedFromCache=false;
-  const lastUid=readLastUid();
-  if(lastUid){
-    const cached=readNavCache(lastUid);
-    if(cached){
-      lockNav(false);
-      if(cached.isCommissioner) showAdminLinks();
-      if(cached.draftLive) showDraftLink();
-      paintedFromCache=true;
-    }
-  }
-  if(!paintedFromCache) hidePrivilegedLinks();
-  async function setupNav(){
-    try{
-      if(!client){ lockNav(true); hidePrivilegedLinks(); return; }
-      const {data:{session}}=await client.auth.getSession();
-      lockNav(!session?.user);
-      if(!session?.user){ hidePrivilegedLinks(); return; }
-      writeLastUid(session.user.id);
-      let perms=readNavCache(session.user.id);
-      if(!perms){
-        const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
-        if(error) throw error;
-        perms={isCommissioner:!!profile?.is_commissioner};
-      }
-      if(perms.isCommissioner){
-        showAdminLinks();
-      }else{
-        nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
-      }
-      // "Draft Room" is shown to any logged-in team owner, but only while a
-      // draft is actually in progress -- independent of commissioner status.
-      try{
-        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-        perms.draftLive = stateRow?.replay_data?.settings?.draft?.status === 'live';
-      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
-      if(perms.draftLive) showDraftLink();
-      else nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
-      writeNavCache(session.user.id,perms);
-    }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); hidePrivilegedLinks(); }
-  }
-  setupNav();
-  client?.auth.onAuthStateChange((_event,session)=>{
-    lockNav(!session?.user);
-    if(_event==='SIGNED_IN'||_event==='SIGNED_OUT'){ clearNavCache(); }
-    if(session?.user) setupNav(); else hidePrivilegedLinks();
-  });
-})();
-</script>
-
-<script>
-(function(){
-  const nav = document.getElementById('pageNav');
-  if(!nav) return;
-  let ticking = false;
-  function updateNav(){
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-
-    // Keep the nav visible at the top and automatically reveal it as the
-    // user approaches the top. The moment the page is scrolled away from
-    // the top, hide it without requiring another interaction.
-    if(y <= 140){
-      nav.classList.remove('nav-hidden');
-    } else {
-      nav.classList.add('nav-hidden');
-    }
-    ticking = false;
-  }
-  window.addEventListener('scroll', function(){
-    if(!ticking){ ticking = true; requestAnimationFrame(updateNav); }
-  }, {passive:true});
-  nav.addEventListener('mouseenter', function(){ nav.classList.remove('nav-hidden'); });
-  document.addEventListener('mousemove', function(e){
-    if(e.clientY <= 12) nav.classList.remove('nav-hidden');
-  }, {passive:true});
-  nav.classList.remove('nav-hidden');
-})();
-</script>
+  <script src="js/sbl-supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/services/rosters.js"></script>
+    <script src="js/sbl-site.js"></script>
 </body>
 </html>

@@ -572,7 +572,7 @@ th{border-color:var(--border)}
 td{border-color:var(--border)}
 a{color:var(--amber)}
 </style>
-<script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
+<script id="sbl-global-theme-loader" src="js/sbl-themes.js"></script>
 <style id="theme-family-ui">
 .theme-grid{align-items:stretch}
 .theme-family-label{grid-column:1/-1;margin:14px 0 2px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--panel-alt);color:var(--text-dim);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
@@ -1194,19 +1194,11 @@ body{padding-top:58px !important}
 }
 </style>
 
+  <link rel="stylesheet" href="css/sbl-site.css">
 </head>
 <body>
 
-<nav class="page-nav" id="pageNav" aria-label="Site navigation">
-  <a href="index.html" data-page="index.html">My Team</a>
-  <a href="stats.html" data-page="stats.html">Stats</a>
-  <a href="season.html" data-page="season.html">Season</a>
-  <a href="rosters.html" data-page="rosters.html">Rosters</a>
-  <a href="team-analysis.html" data-page="team-analysis.html">Match Prep</a>
-  <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
-  <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
-</nav>
-<div class="nav-hover-zone" id="navHoverZone" aria-hidden="true"></div>
+<nav id="pageNav" class="page-nav" aria-label="Site navigation"></nav>
 <div id="app">
   <header>
     <h1>My Team</h1>
@@ -1215,24 +1207,20 @@ body{padding-top:58px !important}
   <div id="content"><div class="empty-state">Loading…</div></div>
 </div>
 
+<script src="js/sbl-site.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/pokemon-dex-ids.js"></script>
+<script src="js/services/pokemon.js"></script>
+<script src="js/services/seasons.js"></script>
+<script src="js/services/league.js"></script>
+<script src="js/services/replays.js"></script>
+<script src="js/services/trades.js"></script>
 <script>
 (function(){
   const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
   const SUPABASE_STATE_ID = '__dashboard_state__';
-  const DEFAULT_SEASON = 'Season 15';
-  function seasonKey(name){ return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g) || 'season'; }
-  function selectedSeasonSnapshot(shared){
-    const settings=shared?.settings||{}, archives=settings.seasonArchives||{}, requested=new URLSearchParams(location.search).get('season');
-    if(requested && archives[requested]){ const a=archives[requested]; return {name:a.name||requested,key:requested,teamMap:a.teamMap||{},settings:a.settings||{},replays:a.replays||{},archived:true,archives}; }
-    return {name:settings.activeSeason||DEFAULT_SEASON,key:'',teamMap:shared?.teamMap||{},settings,replays:null,archived:false,archives};
-  }
-  function installSeasonPicker(shared){
-    // Season picker UI removed; still resolve which season's data to use.
-    return selectedSeasonSnapshot(shared);
-  }
-
+  
   const ROSTER_BUDGET = 115; // keep in sync with the `budget` constant in accept_trade()
   function currentSeason(){ return new Date().getFullYear(); }
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -1304,14 +1292,9 @@ body{padding-top:58px !important}
 
   // ---------- helpers ----------
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function toShowdownId(species){
-    return String(species||'').split('-').map(part => part.toLowerCase().replace(/[^a-z0-9]/g)).filter(Boolean).join('-');
-  }
-  function spriteUrl(species){ return `https://play.pokemonshowdown.com/sprites/gen5/${toShowdownId(species)}.png`; }
-  function spriteImg(species, cls){
-    const safe = escapeHtml(species);
-    return `<img class="${cls||'sprite'}" src="${spriteUrl(species)}" alt="${safe}" loading="lazy" onerror="this.onerror=null;this.src='https://play.pokemonshowdown.com/sprites/gen5/0.png';this.style.opacity='.25';">`;
-  }
+  function toShowdownId(species){ return SBL.pokemon.normalizeName(species); }
+  function spriteUrl(species){ return SBL.pokemon.spriteUrl(species); }
+  function spriteImg(species, cls){ return SBL.pokemon.spriteMarkup(species, cls || 'sprite'); }
   function normalizeStoredRosters(rosters){
     const out = {};
     for(const [team, list] of Object.entries(rosters || {})){
@@ -1440,17 +1423,11 @@ body{padding-top:58px !important}
 
   // ---------- data loading ----------
   async function loadDashboardState(){
-    const {data, error} = await supabase.from('replays').select('replay_id,replay_data');
+    const { data, error } = await SBL.replays.load(supabase);
     if(error) throw error;
-    let sharedState = null;
-    const replays = {};
-    for(const row of (data||[])){
-      if(row.replay_id === SUPABASE_STATE_ID){ sharedState = row.replay_data || {}; continue; }
-      if(row.replay_id === '__rosters__' || row.replay_id === '__free_agency__') continue;
-      if(row.replay_id) replays[row.replay_id] = row.replay_data || {};
-    }
+    const { sharedState, replays } = SBL.replays.partition(data);
     const shared = sharedState || {};
-    const snap = installSeasonPicker(shared);
+    const snap = SBL.seasons.getSnapshot(shared);
     DASH.teamMap = snap.teamMap;
     DASH.settings = Object.assign({ rosters:{}, freeAgency:{mons:[]} }, snap.settings || {});
     DASH.settings.rosters = normalizeStoredRosters(DASH.settings.rosters||{});
@@ -1505,12 +1482,7 @@ body{padding-top:58px !important}
   }
 
   function completedTradeCount(team, kind='team'){
-    const season = activeTradeSeason;
-    return trades.filter(t=>
-      (t.status==='accepted' || t.status==='reverted') &&
-      Number(t.season ?? new Date(t.created_at).getFullYear())===season &&
-      (kind==='freeagency' ? t.target_team===null && t.proposer_team===team : t.target_team!==null && (t.proposer_team===team || t.target_team===team))
-    ).length;
+    return SBL.trades.consumedCount(trades, team, kind, activeTradeSeason);
   }
 
   function tradeAllowance(team, kind='team'){
@@ -1525,6 +1497,14 @@ body{padding-top:58px !important}
 
   async function refreshAll(){
     await Promise.all([loadDashboardState(), loadProfile(), loadTrades()]);
+    const rawRosters = DASH.settings.rosters || {};
+    DASH.settings.rosters = SBL.trades.getEffectiveRosters(rawRosters, trades);
+    DASH.settings.freeAgency = DASH.settings.freeAgency || {mons:[]};
+    DASH.settings.freeAgency.mons = SBL.trades.restoreFutureFreeAgencyPool(
+      DASH.settings.freeAgency.mons || [],
+      rawRosters,
+      trades
+    );
   }
 
   // ---------- auth screens ----------
@@ -1899,7 +1879,7 @@ body{padding-top:58px !important}
     const winner=(r.winner||'').trim(); const resultText=winner?`${winner} won`:'Result unavailable';
     const mons=Object.values(r.mons||{});
     const sideMons=side=>{const seen={};(r.teamRoster?.[side]||[]).forEach(sp=>seen[normName(sp)]={side,species:sp,kills:0,assists:0,deaths:0,damageDealt:0,damageTaken:0,appearances:0});mons.filter(m=>m.side===side).forEach(m=>seen[normName(m.species)]=m);return Object.values(seen).sort((a,b)=>(b.kills-a.kills)||(a.deaths-b.deaths)||(b.damageDealt-a.damageDealt));};
-    const sideCard=(side,player)=>{const list=sideMons(side),team=teamFor(player),kills=list.reduce((n,m)=>n+(Number(m.kills)||0),0),deaths=list.reduce((n,m)=>n+(Number(m.deaths)||0),0),assists=list.reduce((n,m)=>n+(Number(m.assists)||0),0),dealt=list.reduce((n,m)=>n+(Number(m.damageDealt)||0),0),taken=list.reduce((n,m)=>n+(Number(m.damageTaken)||0),0);return `<div class="myteam-summary-side"><div class="myteam-summary-side-head"><div><strong>${escapeHtml(player)}</strong><div class="myteam-summary-team">${escapeHtml(team)}</div></div><div class="myteam-summary-score">${deaths} fainted</div></div><div class="myteam-summary-line"><span>${kills} kills</span><span>${assists} assists</span><span>${dealt.toFixed(1)}% damage dealt</span><span>${taken.toFixed(1)}% taken</span></div><div class="myteam-summary-mons">${list.map(m=>`<div class="myteam-summary-mon">${spriteImg(m.species,'sprite')}<div class="myteam-summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="myteam-summary-mon-stats">${m.kills||0} K · ${m.assists||0} A · ${m.deaths||0} D · ${(Number(m.damageDealt)||0).toFixed(1)}% dmg</div></div>${m.appearances?(m.deaths?'<span class="badge danger-badge">Fainted</span>':'<span class="badge">Survived</span>'):'<span class="badge">Not sent</span>'}</div>`).join('')||'<div class="empty-state">No Pokémon recorded.</div>'}</div></div>`;};
+    const sideCard=(side,player)=>{const list=sideMons(side),team=teamFor(player),kills=list.reduce((n,m)=>n+(Number(m.kills)||0),0),deaths=list.reduce((n,m)=>n+(Number(m.deaths)||0),0),assists=list.reduce((n,m)=>n+(Number(m.assists)||0),0),dealt=list.reduce((n,m)=>n+(Number(m.damageDealt)||0),0),taken=list.reduce((n,m)=>n+(Number(m.damageTaken)||0),0);return `<div class="myteam-summary-side"><div class="myteam-summary-side-head"><div><strong>${escapeHtml(player)}</strong><div class="myteam-summary-team">${escapeHtml(team)}</div></div><div class="myteam-summary-score">${deaths} fainted</div></div><div class="myteam-summary-line"><span>${kills} kills</span><span>${assists} assists</span><span>${dealt.toFixed(1)}% damage dealt</span><span>${taken.toFixed(1)}% taken</span></div><div class="myteam-summary-mons">${list.map(m=>`<div class="myteam-summary-mon">${spriteImg(m.species,'sprite')}<div class="myteam-summary-mon-main"><strong>${escapeHtml(SBL.pokemon.displayName(m.species))}</strong><div class="myteam-summary-mon-stats">${m.kills||0} K · ${m.assists||0} A · ${m.deaths||0} D · ${(Number(m.damageDealt)||0).toFixed(1)}% dmg</div></div>${m.appearances?(m.deaths?'<span class="badge danger-badge">Fainted</span>':'<span class="badge">Survived</span>'):'<span class="badge">Not sent</span>'}</div>`).join('')||'<div class="empty-state">No Pokémon recorded.</div>'}</div></div>`;};
     let overlay=document.getElementById('myteamReplayOverlay'); if(overlay) overlay.remove();
     overlay=document.createElement('div'); overlay.className='myteam-replay-overlay'; overlay.id='myteamReplayOverlay';
     overlay.innerHTML=`<div class="myteam-replay-box"><div class="myteam-summary-header"><div><div class="myteam-summary-kicker">${escapeHtml(r.week||'Unassigned')} · ${escapeHtml(r.format||'Replay')}</div><h3>${escapeHtml(p1)} <span class="myteam-summary-vs">vs</span> ${escapeHtml(p2)}</h3><div class="myteam-summary-result">${escapeHtml(resultText)}</div></div><div class="myteam-summary-meta"><span>${mons.length} Pokémon recorded</span><span>Replay ${escapeHtml(r.id||replayId)}</span></div></div><div class="myteam-summary-grid">${sideCard('p1',p1)}${sideCard('p2',p2)}</div><div class="myteam-summary-actions"><a class="primary nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(r.id||replayId)}" target="_blank" rel="noopener">Open Showdown replay</a><button class="ghost" type="button" id="myteamReplayClose">Close</button></div></div>`;
@@ -1964,7 +1944,7 @@ body{padding-top:58px !important}
         ${roster.length?`<div class="myteam-roster-grid">${roster.map(mon=>{
           const st=myPokemonStats(mon.name); const has=st&&st.games>0;
           return `<div class="myteam-mon">
-            <div class="myteam-mon-top">${spriteImg(mon.name,'sprite')}<div><div class="myteam-mon-name">${escapeHtml(mon.name)}</div><div class="myteam-mon-points">${mon.points!=null?escapeHtml(mon.points)+' pts':'Unranked'}</div></div></div>
+            <div class="myteam-mon-top">${spriteImg(mon.name,'sprite')}<div><div class="myteam-mon-name">${escapeHtml(SBL.pokemon.displayName(mon.name))}</div><div class="myteam-mon-points">${mon.points!=null?escapeHtml(mon.points)+' pts':'Unranked'}</div></div></div>
             <div class="myteam-mon-stats">
               <div class="myteam-mon-stat"><div class="v">${has?st.games:'—'}</div><div class="l">Games</div></div>
               <div class="myteam-mon-stat"><div class="v" style="color:var(--teal)">${has?st.kills:'—'}</div><div class="l">Kills</div></div>
@@ -1983,10 +1963,10 @@ body{padding-top:58px !important}
         <section class="panel">
           <div class="myteam-section-head"><div><h2>Basic Stats</h2><div class="note">Quick season leaders from your roster.</div></div></div>
           <div class="myteam-stat-grid">
-            <div class="myteam-stat-card"><div class="eyebrow">Top Kills</div><div class="big stat-mon">${topKills?spriteImg(topKills.m.name,'sprite'):''}<span>${topKills?escapeHtml(topKills.m.name):'—'}</span></div><div class="small">${topKills?`${topKills.s.kills} KOs`: 'No games recorded'}</div></div>
-            <div class="myteam-stat-card"><div class="eyebrow">Top Deaths</div><div class="big stat-mon">${topDeaths?spriteImg(topDeaths.m.name,'sprite'):''}<span>${topDeaths?escapeHtml(topDeaths.m.name):'—'}</span></div><div class="small">${topDeaths?`${topDeaths.s.deaths} deaths`: 'No games recorded'}</div></div>
-            <div class="myteam-stat-card"><div class="eyebrow">Most Brought</div><div class="big stat-mon">${mostBrought?spriteImg(mostBrought.m.name,'sprite'):''}<span>${mostBrought?escapeHtml(mostBrought.m.name):'—'}</span></div><div class="small">${mostBrought?`${mostBrought.s.games} games`: 'No games recorded'}</div></div>
-            <div class="myteam-stat-card"><div class="eyebrow">Top Assists</div><div class="big stat-mon">${topAssists?spriteImg(topAssists.m.name,'sprite'):''}<span>${topAssists?escapeHtml(topAssists.m.name):'—'}</span></div><div class="small">${topAssists?`${topAssists.s.assists} assists`: 'No games recorded'}</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Top Kills</div><div class="big stat-mon">${topKills?spriteImg(topKills.m.name,'sprite'):''}<span>${topKills?escapeHtml(SBL.pokemon.displayName(topKills.m.name)):'—'}</span></div><div class="small">${topKills?`${topKills.s.kills} KOs`: 'No games recorded'}</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Top Deaths</div><div class="big stat-mon">${topDeaths?spriteImg(topDeaths.m.name,'sprite'):''}<span>${topDeaths?escapeHtml(SBL.pokemon.displayName(topDeaths.m.name)):'—'}</span></div><div class="small">${topDeaths?`${topDeaths.s.deaths} deaths`: 'No games recorded'}</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Most Brought</div><div class="big stat-mon">${mostBrought?spriteImg(mostBrought.m.name,'sprite'):''}<span>${mostBrought?escapeHtml(SBL.pokemon.displayName(mostBrought.m.name)):'—'}</span></div><div class="small">${mostBrought?`${mostBrought.s.games} games`: 'No games recorded'}</div></div>
+            <div class="myteam-stat-card"><div class="eyebrow">Top Assists</div><div class="big stat-mon">${topAssists?spriteImg(topAssists.m.name,'sprite'):''}<span>${topAssists?escapeHtml(SBL.pokemon.displayName(topAssists.m.name)):'—'}</span></div><div class="small">${topAssists?`${topAssists.s.assists} assists`: 'No games recorded'}</div></div>
             <div class="myteam-stat-card"><div class="eyebrow">Team Kills</div><div class="big">${totalKills}</div><div class="small">Across ${rec.games} team games</div></div>
             <div class="myteam-stat-card"><div class="eyebrow">Team Deaths</div><div class="big">${totalDeaths}</div><div class="small">${totalAssists} assists recorded</div></div>
           </div>
@@ -1995,7 +1975,7 @@ body{padding-top:58px !important}
         <section class="panel">
           <div class="myteam-section-head"><div><h2>Random Trade Suggestions</h2><div class="note">Find a random legal 1-for-1 swap with another franchise.</div></div></div>
           <div class="random-trade">
-            <div id="randomTradeResult">${suggestion?`<div class="random-trade-flow"><div class="random-trade-side"><div class="label">You give</div><div class="random-trade-mon stat-mon">${spriteImg(suggestion.give.name,'sprite')}<span>${escapeHtml(suggestion.give.name)}</span></div><div class="note" style="margin:2px 0 0">${suggestion.give.points} pts</div></div><div class="random-trade-arrow">→</div><div class="random-trade-side"><div class="label">You get · ${escapeHtml(suggestion.team)}</div><div class="random-trade-mon stat-mon">${spriteImg(suggestion.get.name,'sprite')}<span>${escapeHtml(suggestion.get.name)}</span></div><div class="note" style="margin:2px 0 0">${suggestion.get.points} pts</div></div></div>`:'<div class="empty-state" style="padding:8px 0">No legal random swap found right now.</div>'}</div>
+            <div id="randomTradeResult">${suggestion?`<div class="random-trade-flow"><div class="random-trade-side"><div class="label">You give</div><div class="random-trade-mon stat-mon">${spriteImg(suggestion.give.name,'sprite')}<span>${escapeHtml(SBL.pokemon.displayName(suggestion.give.name))}</span></div><div class="note" style="margin:2px 0 0">${suggestion.give.points} pts</div></div><div class="random-trade-arrow">→</div><div class="random-trade-side"><div class="label">You get · ${escapeHtml(suggestion.team)}</div><div class="random-trade-mon stat-mon">${spriteImg(suggestion.get.name,'sprite')}<span>${escapeHtml(SBL.pokemon.displayName(suggestion.get.name))}</span></div><div class="note" style="margin:2px 0 0">${suggestion.get.points} pts</div></div></div>`:'<div class="empty-state" style="padding:8px 0">No legal random swap found right now.</div>'}</div>
             <div class="foot-actions" style="margin-top:10px"><button class="ghost small" id="rerollTradeBtn">🎲 Reroll</button>${suggestion?'<button class="primary small" id="useTradeSuggestionBtn">Use suggestion</button>':''}</div>
           </div>
         </section>
@@ -2020,7 +2000,7 @@ body{padding-top:58px !important}
       return `<div class="pick-card${checked?' checked':''}" data-role="${role}" data-name="${escapeHtml(m.name)}" role="button" tabindex="0" aria-pressed="${checked}">
         <span class="pick-card-check">✓</span>
         ${spriteImg(m.name,'sprite')}
-        <div class="pick-card-name">${escapeHtml(m.name)}</div>
+        <div class="pick-card-name">${escapeHtml(SBL.pokemon.displayName(m.name))}</div>
         ${m.points!=null?`<div class="pick-card-pts">${escapeHtml(m.points)} pts</div>`:''}
       </div>`;
     }
@@ -2271,9 +2251,9 @@ body{padding-top:58px !important}
       <div class="trade-head">
         <div>
           <div class="trade-teams">${escapeHtml(t.proposer_team)}<span class="arrow">→</span>${t.target_team ? escapeHtml(t.target_team) : 'Free Agency'}</div>
-          <div class="trade-sub">${new Date(t.created_at).toLocaleString()}</div>
+          <div class="trade-sub">${new Date(t.created_at).toLocaleString()}${t.status === 'accepted' ? ` · ${SBL.trades.isScheduled(t) ? 'Effective' : 'Active'} ${SBL.trades.formatEffectiveDate(t)}` : ''}</div>
         </div>
-        <span class="status-pill ${t.status}">${t.status}</span>
+        <span class="status-pill ${t.status}">${t.status === 'accepted' && SBL.trades.isScheduled(t) ? 'scheduled' : t.status}</span>
       </div>
       <div class="trade-cols">
         <div class="trade-col"><h4>Offered</h4><div class="mon-list">${(t.mons_offered||[]).length ? t.mons_offered.map(n=>`<span class="mon-pill">${spriteImg(n)} ${escapeHtml(n)}</span>`).join('') : '<span class="note">Nothing</span>'}</div></div>
@@ -2734,236 +2714,6 @@ body{padding-top:58px !important}
   })();
 })();
 </script>
-<script>
-(function(){
-  const nav=document.getElementById('pageNav');
-  if(!nav) return;
-  const links=[...nav.querySelectorAll('a[data-page]')];
-  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  const client=window.supabase?.createClient(
-    'https://dfxdkkemltukxaklhcpo.supabase.co',
-    'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-  );
-  links.forEach(a=>{ if(a.dataset.page===current) a.classList.add('active'); });
-  function lockNav(locked){
-    nav.classList.toggle('locked',locked);
-    links.forEach(a=>{
-      a.setAttribute('aria-disabled',locked?'true':'false');
-      if(locked) a.title='Log in to switch pages'; else a.removeAttribute('title');
-    });
-  }
-  links.forEach(a=>a.addEventListener('click',e=>{
-    if(nav.classList.contains('locked')){ e.preventDefault(); return; }
-  }));
-  function hidePrivilegedLinks(){
-    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
-    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
-  }
-  function showAdminLinks(){
-    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=false; });
-  }
-  function showDraftLink(){
-    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=false; });
-  }
-  // Commissioner status rarely changes, so we only check it against the
-  // database once per login and cache the result (plus the last-seen draft
-  // status) in sessionStorage. Crucially, we also paint from that cache
-  // *synchronously* below, before any awaiting -- otherwise hidePrivilegedLinks()
-  // hides the admin-only / draft-room links on every fresh page load, and they
-  // only pop back in a tick later once getSession() resolves. That pop-in is
-  // the flicker/"reload" look when swapping between pages.
-  const NAV_CACHE_PREFIX='navPerms:';
-  const NAV_LAST_UID_KEY='navLastUid';
-  function readNavCache(uid){
-    try{ const raw=sessionStorage.getItem(NAV_CACHE_PREFIX+uid); return raw?JSON.parse(raw):null; }
-    catch(e){ return null; }
-  }
-  function writeNavCache(uid,perms){
-    try{ sessionStorage.setItem(NAV_CACHE_PREFIX+uid, JSON.stringify(perms)); }catch(e){}
-  }
-  function readLastUid(){
-    try{ return sessionStorage.getItem(NAV_LAST_UID_KEY); }catch(e){ return null; }
-  }
-  function writeLastUid(uid){
-    try{ sessionStorage.setItem(NAV_LAST_UID_KEY, uid); }catch(e){}
-  }
-  function clearNavCache(){
-    try{
-      Object.keys(sessionStorage).forEach(k=>{ if(k.indexOf(NAV_CACHE_PREFIX)===0) sessionStorage.removeItem(k); });
-      sessionStorage.removeItem(NAV_LAST_UID_KEY);
-    }catch(e){}
-  }
-  // Paint immediately from whatever was cached on the previous page, before
-  // doing any real check -- this is what removes the flash. Only falls back
-  // to hiding everything when there's nothing to paint from yet (first load
-  // of the session, or a signed-out visitor).
-  let paintedFromCache=false;
-  const lastUid=readLastUid();
-  if(lastUid){
-    const cached=readNavCache(lastUid);
-    if(cached){
-      lockNav(false);
-      if(cached.isCommissioner) showAdminLinks();
-      if(cached.draftLive) showDraftLink();
-      paintedFromCache=true;
-    }
-  }
-  if(!paintedFromCache) hidePrivilegedLinks();
-  async function setupNav(){
-    try{
-      if(!client){ lockNav(true); hidePrivilegedLinks(); return; }
-      const {data:{session}}=await client.auth.getSession();
-      lockNav(!session?.user);
-      if(!session?.user){ hidePrivilegedLinks(); return; }
-      writeLastUid(session.user.id);
-      let perms=readNavCache(session.user.id);
-      if(!perms){
-        const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
-        if(error) throw error;
-        perms={isCommissioner:!!profile?.is_commissioner};
-      }
-      if(perms.isCommissioner){
-        showAdminLinks();
-      }else{
-        nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
-      }
-      // "Draft Room" is shown to any logged-in team owner, but only while a
-      // draft is actually in progress -- independent of commissioner status.
-      try{
-        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-        perms.draftLive = stateRow?.replay_data?.settings?.draft?.status === 'live';
-      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
-      if(perms.draftLive) showDraftLink();
-      else nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
-      writeNavCache(session.user.id,perms);
-    }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); hidePrivilegedLinks(); }
-  }
-  setupNav();
-  client?.auth.onAuthStateChange((_event,session)=>{
-    lockNav(!session?.user);
-    if(_event==='SIGNED_IN'||_event==='SIGNED_OUT'){ clearNavCache(); }
-    if(session?.user) setupNav(); else hidePrivilegedLinks();
-  });
-})();
-</script>
-
-<script>
-(function(){
-  const nav = document.getElementById('pageNav');
-  if(!nav) return;
-  let ticking = false;
-  function updateNav(){
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-
-    // Keep the nav visible at the top and automatically reveal it as the
-    // user approaches the top. The moment the page is scrolled away from
-    // the top, hide it without requiring another interaction.
-    if(y <= 140){
-      nav.classList.remove('nav-hidden');
-    } else {
-      nav.classList.add('nav-hidden');
-    }
-    ticking = false;
-  }
-  window.addEventListener('scroll', function(){
-    if(!ticking){ ticking = true; requestAnimationFrame(updateNav); }
-  }, {passive:true});
-  nav.addEventListener('mouseenter', function(){ nav.classList.remove('nav-hidden'); });
-  document.addEventListener('mousemove', function(e){
-    if(e.clientY <= 12) nav.classList.remove('nav-hidden');
-  }, {passive:true});
-  nav.classList.remove('nav-hidden');
-})();
-</script>
-<script id="sitewide-sprite-fix">
-(function(){
-  const BASE='https://play.pokemonshowdown.com/sprites/';
-  const aliases={
-    'ogerpon-teal-mask':['ogerpon'],
-    'ogerpon-wellspring-mask':['ogerpon-wellspring'],
-    'ogerpon-hearthflame-mask':['ogerpon-hearthflame'],
-    'ogerpon-cornerstone-mask':['ogerpon-cornerstone'],
-    'squawkabilly-green-plumage':['squawkabilly-green'],
-    'squawkabilly-blue-plumage':['squawkabilly-blue'],
-    'squawkabilly-yellow-plumage':['squawkabilly-yellow'],
-    'squawkabilly-white-plumage':['squawkabilly-white'],
-    'dudunsparce-three-segment':['dudunsparce-3'],
-    'dudunsparce-two-segment':['dudunsparce-2'],
-    'maushold-family-of-three':['maushold-family3'],
-    'maushold-family-of-four':['maushold'],
-    'zygarde-10-percent':['zygarde-10'],
-    'zygarde-50-percent':['zygarde'],
-    'zygarde-complete':['zygarde-complete'],
-    'necrozma-dusk-mane':['necrozma-dusk'],
-    'necrozma-dawn-wings':['necrozma-dawn'],
-    'lycanroc-midday':['lycanroc'],
-    'lycanroc-midnight':['lycanroc-midnight'],
-    'lycanroc-dusk':['lycanroc-dusk'],
-    'wishiwashi-school':['wishiwashi-school'],
-    'eiscue-ice':['eiscue'],
-    'eiscue-noice':['eiscue-noice'],
-    'morpeko-hangry':['morpeko-hangry'],
-    'palafin-zero':['palafin'],
-    'palafin-hero':['palafin-hero'],
-    'minior-red-meteor':['minior-red'],
-    'minior-orange-meteor':['minior-orange'],
-    'minior-yellow-meteor':['minior-yellow'],
-    'minior-green-meteor':['minior-green'],
-    'minior-blue-meteor':['minior-blue'],
-    'minior-indigo-meteor':['minior-indigo'],
-    'minior-violet-meteor':['minior-violet']
-  };
-  function slug(s){
-    return String(s||'').trim().toLowerCase()
-      .replace(/[’']/g).replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
-      .replace(/[.:]/g).replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g);
-  }
-  function urlsFor(img){
-    let id=slug(img.getAttribute('data-sprite-species')||img.alt||'');
-    if(!id){
-      const m=(img.src||'').match(/sprites\/[^/]+\/([^/?#]+)\.png/i);
-      id=m?m[1].toLowerCase():'';
-    }
-    if(!id)return [];
-    const ids=[]; const add=x=>{if(x&&!ids.includes(x))ids.push(x)};
-    add(id); (aliases[id]||[]).forEach(add);
-    add(id.replace(/-plumage$/)); add(id.replace(/-mask$/));
-    add(id.replace(/-forme$/)); add(id.replace(/-form$/));
-    add(id.replace(/-standard$/)); add(id.replace(/-normal$/));
-    const parts=id.split('-');
-    for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
-    const out=[];
-    for(const x of ids){
-      out.push(BASE+'gen9/'+x+'.png');
-      out.push(BASE+'gen5/'+x+'.png');
-      out.push(BASE+'dex/'+x+'.png');
-    }
-    return out;
-  }
-  function install(img){
-    if(!(img instanceof HTMLImageElement)||img.dataset.sitewideSpriteFix)return;
-    const src=img.src||'';
-    if(!src.includes('/sprites/'))return;
-    img.dataset.sitewideSpriteFix='1';
-    img.dataset.sitewideSpriteUrls=JSON.stringify(urlsFor(img));
-    img.dataset.sitewideSpriteIndex='-1';
-    img.onerror=function(){
-      const urls=JSON.parse(img.dataset.sitewideSpriteUrls||'[]');
-      let i=Number(img.dataset.sitewideSpriteIndex||-1)+1;
-      while(i<urls.length && urls[i]===img.src)i++;
-      if(i<urls.length){img.dataset.sitewideSpriteIndex=String(i);img.style.opacity='';img.src=urls[i];}
-      else{img.onerror=null;img.removeAttribute('src');img.style.opacity='.25';}
-    };
-  }
-  function scan(root){
-    if(root instanceof HTMLImageElement)install(root);
-    else if(root&&root.querySelectorAll)root.querySelectorAll('img[src*="/sprites/"]').forEach(install);
-  }
-  function start(){scan(document); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(scan))).observe(document.documentElement,{subtree:true,childList:true});}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
-})();
-</script>
-
 <style id="season-nav-unified">
 .page-nav{width:100%;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;padding:10px 16px;margin:0;border-bottom:1px solid var(--border,#ddd);background:var(--panel,#fff);box-sizing:border-box;position:fixed;top:0;left:0;right:0;height:58px;z-index:1000;box-shadow:0 6px 18px rgba(0,0,0,.18);transform:translateY(0);transition:transform .22s ease,box-shadow .22s ease;}
 .page-nav a{display:inline-flex;align-items:center;justify-content:center;padding:8px 13px;border-radius:8px;color:var(--text,#222);text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;border:1px solid transparent;flex:0 0 auto;}
@@ -2978,26 +2728,10 @@ body{padding-top:58px;}
 @media(max-width:700px){body{padding-top:52px}.page-nav{height:52px;padding:7px 10px;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}.page-nav a{flex:0 0 auto;padding:8px 11px;font-size:12px}.nav-hover-zone{height:8px}}
 @media(max-width:480px){.page-nav a{padding:7px 10px;font-size:11px}}
 </style>
-<script id="season-nav-unified-js">
-(function(){
-  const nav=document.getElementById('pageNav');
-  if(!nav) return;
-  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  nav.querySelectorAll('a[data-page]').forEach(a=>{
-    if((a.getAttribute('data-page')||'').toLowerCase()===current) a.classList.add('active');
-  });
-  let ticking=false;
-  function update(){
-    const y=window.scrollY||document.documentElement.scrollTop||0;
-    nav.classList.toggle('nav-hidden',y>140);
-    ticking=false;
-  }
-  window.addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(update)}},{passive:true});
-  nav.addEventListener('mouseenter',function(){nav.classList.remove('nav-hidden')});
-  document.addEventListener('mousemove',function(e){if(e.clientY<=12)nav.classList.remove('nav-hidden')},{passive:true});
-  update();
-})();
-</script>
 
+  <script src="js/sbl-supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/services/rosters.js"></script>
+    <script src="js/sbl-site.js"></script>
 </body>
 </html>

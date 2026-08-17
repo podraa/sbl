@@ -1154,7 +1154,7 @@ th{border-color:var(--border)}
 td{border-color:var(--border)}
 a{color:var(--amber)}
 </style>
-<script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
+<script id="sbl-global-theme-loader" src="js/sbl-themes.js"></script>
 <style id="switch-analyser-enhancements">.switch-analyser-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.switch-role-toggle{flex:0 0 auto;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--panel-alt);color:var(--text);font-weight:850;font-size:10px;cursor:pointer}.switch-role-toggle:hover{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 10%,var(--panel-alt))}.switch-card-detail{line-height:1.45}@media(max-width:700px){.switch-analyser-head{flex-direction:column}.switch-role-toggle{width:100%}}</style>
 <style id="team-overview-your-team-toggle">
 .team-overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px}
@@ -1452,6 +1452,7 @@ body{
 #prepTypeChart .tc-table{width:100%!important;min-width:0!important;table-layout:fixed}
 #prepTypeChart .tc-table th,#prepTypeChart .tc-table td{overflow:hidden;text-overflow:clip}
 </style>
+  <link rel="stylesheet" href="css/sbl-site.css">
 </head>
 
 <style>
@@ -1497,16 +1498,7 @@ body{
 .prep-detail-dialog .prep-analysis-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch;width:100%;padding:0}.prep-detail-dialog .matchprep-analysis-overview{display:contents}.prep-detail-dialog .prep-analysis-grid > .prep-card-section{min-width:0;min-height:165px;display:flex;flex-direction:column;padding:15px 16px;margin:0;border:1px solid var(--border);border-radius:12px;background:var(--panel-alt);box-shadow:0 5px 16px rgba(0,0,0,.10)}.prep-detail-dialog .prep-analysis-grid > .prep-card-section > span:first-child{display:block;margin-bottom:9px;font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim)}.prep-detail-dialog .prep-analysis-grid > .prep-card-section .prep-chip-row{flex:1;align-content:flex-start;gap:7px}.prep-detail-dialog .prep-analysis-grid > .prep-card-section .prep-chip{padding:7px 9px;border-radius:9px;line-height:1.25;background:var(--panel);border-color:var(--border)}.prep-detail-dialog .prep-week-summary{display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start}.prep-detail-dialog .prep-week-pill{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--border);background:var(--panel);border-radius:9px;font-size:12px;font-weight:850;color:var(--text)}.prep-detail-dialog .prep-week-pill{cursor:pointer;transition:transform .12s ease,background .12s ease,border-color .12s ease}.prep-detail-dialog .prep-week-pill:hover{transform:translateY(-1px);background:var(--panel-alt);border-color:var(--accent,#8b5cf6)}.prep-detail-dialog .prep-week-pill.active{background:color-mix(in srgb,var(--accent,#8b5cf6) 16%,var(--panel));border-color:var(--accent,#8b5cf6)}.prep-detail-dialog .prep-week-chevron{font-size:16px;line-height:10px;color:var(--text-dim)}.prep-detail-dialog .prep-week-moves{margin-top:11px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}.prep-detail-dialog .prep-week-moves[hidden]{display:none}.prep-detail-dialog .prep-week-moves-title{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:7px}.prep-detail-dialog .prep-week-moves-list{display:flex;flex-wrap:wrap;gap:6px}.prep-detail-dialog .prep-analysis-grid > .prep-card-section{background:linear-gradient(145deg,var(--panel-alt),var(--panel));box-shadow:0 7px 20px rgba(0,0,0,.13)}.prep-detail-dialog .prep-week-dot{width:7px;height:7px;border-radius:50%;background:var(--amber,#f5b942)}.prep-detail-dialog .prep-analysis-note{display:block;margin-top:auto;padding-top:11px;color:var(--text-dim);font-size:10px;line-height:1.45}.prep-detail-dialog .prep-popup-nav{align-items:center}.prep-detail-dialog .prep-mode-tabs{padding:3px;background:var(--panel-alt);border:1px solid var(--border);border-radius:11px;gap:3px}.prep-detail-dialog .prep-mode-tab{min-height:34px;padding:7px 13px;border:0;border-radius:8px;background:transparent;color:var(--text-dim)}.prep-detail-dialog .prep-mode-tab.active{background:var(--accent,#8b5cf6);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.16)}@media(max-width:900px){.prep-detail-dialog .prep-analysis-grid{grid-template-columns:1fr;gap:10px}.prep-detail-dialog .prep-analysis-grid > .prep-card-section{min-height:130px}}@media(max-width:760px){.prep-detail-dialog .prep-popup-nav{align-items:stretch}.prep-detail-dialog .prep-mode-tabs{width:100%}.prep-detail-dialog .prep-mode-tab{flex:1}.prep-detail-dialog .prep-popup-calc{width:100%}}
 </style>
 
-<nav class="page-nav" id="pageNav" aria-label="Site navigation">
-  <a href="index.html" data-page="index.html">My Team</a>
-  <a href="stats.html" data-page="stats.html">Stats</a>
-  <a href="season.html" data-page="season.html">Season</a>
-  <a href="rosters.html" data-page="rosters.html">Rosters</a>
-  <a href="team-analysis.html" data-page="team-analysis.html">Match Prep</a>
-  <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
-  <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
-</nav>
-<div class="nav-hover-zone" id="navHoverZone" aria-hidden="true"></div>
+<nav id="pageNav" class="page-nav" aria-label="Site navigation"></nav>
 <div id="app" style="display:none">
 <header>
   <div class="toolbar">
@@ -1517,7 +1509,14 @@ body{
 </div>
 <script src="https://unpkg.com/@smogon/calc/dist/data/production.min.js"></script>
 <script src="https://unpkg.com/@smogon/calc"></script>
+<script src="js/sbl-site.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/pokemon-dex-ids.js"></script>
+<script src="js/services/pokemon.js"></script>
+<script src="js/services/seasons.js"></script>
+<script src="js/services/league.js"></script>
+<script src="js/services/replays.js"></script>
+<script src="js/services/trades.js"></script>
 
 <style id="calc-team-and-stage-fixes">
 .team-overview-side-by-side{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
@@ -2374,149 +2373,7 @@ body{
 </script>
 </script>
 
-<script>
-(function(){
-  const nav=document.getElementById('pageNav');
-  if(!nav) return;
-  const links=[...nav.querySelectorAll('a[data-page]')];
-  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  const client=window.supabase?.createClient(
-    'https://dfxdkkemltukxaklhcpo.supabase.co',
-    'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-  );
-  links.forEach(a=>{ if(a.dataset.page===current) a.classList.add('active'); });
-  function lockNav(locked){
-    nav.classList.toggle('locked',locked);
-    links.forEach(a=>{
-      a.setAttribute('aria-disabled',locked?'true':'false');
-      if(locked) a.title='Log in to switch pages'; else a.removeAttribute('title');
-    });
-  }
-  links.forEach(a=>a.addEventListener('click',e=>{
-    if(nav.classList.contains('locked')){ e.preventDefault(); return; }
-  }));
-  function hidePrivilegedLinks(){
-    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
-    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
-  }
-  function showAdminLinks(){
-    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=false; });
-  }
-  function showDraftLink(){
-    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=false; });
-  }
-  // Commissioner status rarely changes, so we only check it against the
-  // database once per login and cache the result (plus the last-seen draft
-  // status) in sessionStorage. Crucially, we also paint from that cache
-  // *synchronously* below, before any awaiting -- otherwise hidePrivilegedLinks()
-  // hides the admin-only / draft-room links on every fresh page load, and they
-  // only pop back in a tick later once getSession() resolves. That pop-in is
-  // the flicker/"reload" look when swapping between pages.
-  const NAV_CACHE_PREFIX='navPerms:';
-  const NAV_LAST_UID_KEY='navLastUid';
-  function readNavCache(uid){
-    try{ const raw=sessionStorage.getItem(NAV_CACHE_PREFIX+uid); return raw?JSON.parse(raw):null; }
-    catch(e){ return null; }
-  }
-  function writeNavCache(uid,perms){
-    try{ sessionStorage.setItem(NAV_CACHE_PREFIX+uid, JSON.stringify(perms)); }catch(e){}
-  }
-  function readLastUid(){
-    try{ return sessionStorage.getItem(NAV_LAST_UID_KEY); }catch(e){ return null; }
-  }
-  function writeLastUid(uid){
-    try{ sessionStorage.setItem(NAV_LAST_UID_KEY, uid); }catch(e){}
-  }
-  function clearNavCache(){
-    try{
-      Object.keys(sessionStorage).forEach(k=>{ if(k.indexOf(NAV_CACHE_PREFIX)===0) sessionStorage.removeItem(k); });
-      sessionStorage.removeItem(NAV_LAST_UID_KEY);
-    }catch(e){}
-  }
-  // Paint immediately from whatever was cached on the previous page, before
-  // doing any real check -- this is what removes the flash. Only falls back
-  // to hiding everything when there's nothing to paint from yet (first load
-  // of the session, or a signed-out visitor).
-  let paintedFromCache=false;
-  const lastUid=readLastUid();
-  if(lastUid){
-    const cached=readNavCache(lastUid);
-    if(cached){
-      lockNav(false);
-      if(cached.isCommissioner) showAdminLinks();
-      if(cached.draftLive) showDraftLink();
-      paintedFromCache=true;
-    }
-  }
-  if(!paintedFromCache) hidePrivilegedLinks();
-  async function setupNav(){
-    try{
-      if(!client){ lockNav(true); hidePrivilegedLinks(); return; }
-      const {data:{session}}=await client.auth.getSession();
-      lockNav(!session?.user);
-      if(!session?.user){ hidePrivilegedLinks(); return; }
-      writeLastUid(session.user.id);
-      let perms=readNavCache(session.user.id);
-      if(!perms){
-        const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
-        if(error) throw error;
-        perms={isCommissioner:!!profile?.is_commissioner};
-      }
-      if(perms.isCommissioner){
-        showAdminLinks();
-      }else{
-        nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
-      }
-      // "Draft Room" is shown to any logged-in team owner, but only while a
-      // draft is actually in progress -- independent of commissioner status.
-      try{
-        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-        perms.draftLive = stateRow?.replay_data?.settings?.draft?.status === 'live';
-      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
-      if(perms.draftLive) showDraftLink();
-      else nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
-      writeNavCache(session.user.id,perms);
-    }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); hidePrivilegedLinks(); }
-  }
-  setupNav();
-  client?.auth.onAuthStateChange((_event,session)=>{
-    lockNav(!session?.user);
-    if(_event==='SIGNED_IN'||_event==='SIGNED_OUT'){ clearNavCache(); }
-    if(session?.user) setupNav(); else hidePrivilegedLinks();
-  });
 
-  // Damage Calculator helpers are published by the main app scope above.
-})();
-</script>
-
-<script>
-(function(){
-  const nav = document.getElementById('pageNav');
-  if(!nav) return;
-  let ticking = false;
-  function updateNav(){
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-
-    // Keep the nav visible at the top and automatically reveal it as the
-    // user approaches the top. The moment the page is scrolled away from
-    // the top, hide it without requiring another interaction.
-    if(y <= 140){
-      nav.classList.remove('nav-hidden');
-    } else {
-      nav.classList.add('nav-hidden');
-    }
-    ticking = false;
-  }
-  window.addEventListener('scroll', function(){
-    if(!ticking){ ticking = true; requestAnimationFrame(updateNav); }
-  }, {passive:true});
-  nav.addEventListener('mouseenter', function(){ nav.classList.remove('nav-hidden'); });
-  document.addEventListener('mousemove', function(e){
-    if(e.clientY <= 12) nav.classList.remove('nav-hidden');
-  }, {passive:true});
-  nav.classList.remove('nav-hidden');
-})();
-</script>
 <script>
 (function(){
   // Reliable browser-side option loader. Showdown's current data files are
@@ -2569,18 +2426,7 @@ body{
 const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
 const SUPABASE_KEY='sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
 const STATE_ID='__dashboard_state__';
-  const DEFAULT_SEASON = 'Season 15';
-  function seasonKey(name){ return String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'season'; }
-  function selectedSeasonSnapshot(shared){
-    const settings=shared?.settings||{}, archives=settings.seasonArchives||{}, requested=new URLSearchParams(location.search).get('season');
-    if(requested && archives[requested]){ const a=archives[requested]; return {name:a.name||requested,key:requested,teamMap:a.teamMap||{},settings:a.settings||{},replays:a.replays||{},archived:true,archives}; }
-    return {name:settings.activeSeason||DEFAULT_SEASON,key:'',teamMap:shared?.teamMap||{},settings,replays:null,archived:false,archives};
-  }
-  function installSeasonPicker(shared){
-    // Season picker UI removed; still resolve which season's data to use.
-    return selectedSeasonSnapshot(shared);
-  }
-
+  
 const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let STATE={profileUserId:'',replays:{},teamMap:{},settings:{caseInsensitiveNames:true,rosters:{}},profileTeam:'',compareOpponent:'',comparePokemon:'',setPokemon:'',prepSection:'overview',prepCoverageMon:'',prepSwitchAtkItem:'',prepSwitchDefItem:'',prepSwitchWeather:'',prepSwitchTerrain:'',prepSwitchHits:'',prepSwitchAtkEVs:{hp:0,atk:0,def:0,spa:0,spd:0,spe:0},prepSwitchAttackerSide:'opponent'};
 const $=id=>document.getElementById(id);
@@ -2595,53 +2441,9 @@ function norm(s){
 function teamKey(s){return norm(s).replace(/[^a-z0-9]/g,'')}
 function sameTeam(a,b){return teamKey(a)===teamKey(b)}
 function teamFor(u){const raw=String(u||'').trim();const k=raw.toLowerCase();return STATE.teamMap[k]||raw||'Unknown'}
-function spriteId(s){
-  return String(s||'').trim().toLowerCase()
-    .replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
-    .replace(/[.:]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-')
-    .replace(/^-|-$/g,'');
-}
-function spriteCandidates(s){
-  const raw=spriteId(s), out=[], add=x=>{if(x&&!out.includes(x))out.push(x)};
-  const aliases={
-    'mr-mime':'mrmime','mr-mime-galar':'mrmime-galar',
-    'mime-jr':'mimejr','mime-jr-galar':'mimejr-galar',
-    'farfetchd':'farfetchd','farfetchd-galar':'farfetchd-galar',
-    'sirfetchd':'sirfetchd','sirfetchd-galar':'sirfetchd-galar',
-    'galarian-weezing':'weezing-galar','weezing-galar':'weezing-galar',
-    'galarian-zapdos':'zapdos-galar','galarian-moltres':'moltres-galar','galarian-articuno':'articuno-galar',
-    'landorus-incarnate':'landorus','landorus-i':'landorus','landorus-therian':'landorus-therian','landorus-t':'landorus-therian',
-    'tornadus-incarnate':'tornadus','tornadus-i':'tornadus','tornadus-therian':'tornadus-therian','tornadus-t':'tornadus-therian',
-    'thundurus-incarnate':'thundurus','thundurus-i':'thundurus','thundurus-therian':'thundurus-therian','thundurus-t':'thundurus-therian',
-    'keldeo-ordinary':'keldeo','keldeo-resolute':'keldeo-resolute',
-    'urshifu-single-strike':'urshifu-single','urshifu-rapid-strike':'urshifu-rapid',
-    'calyrex-ice-rider':'calyrex-ice','calyrex-shadow-rider':'calyrex-shadow',
-    'necrozma-dusk-mane':'necrozma-dusk','necrozma-dawn-wings':'necrozma-dawn',
-    'ogerpon-teal-mask':'ogerpon','ogerpon-wellspring-mask':'ogerpon-wellspring','ogerpon-hearthflame-mask':'ogerpon-hearthflame','ogerpon-cornerstone-mask':'ogerpon-cornerstone',
-    'squawkabilly-green-plumage':'squawkabilly-green','squawkabilly-blue-plumage':'squawkabilly-blue','squawkabilly-yellow-plumage':'squawkabilly-yellow','squawkabilly-white-plumage':'squawkabilly-white',
-    'dudunsparce-two-segment':'dudunsparce-2','dudunsparce-three-segment':'dudunsparce-3',
-    'maushold-family-of-four':'maushold','maushold-family-of-three':'maushold-family3',
-    'zygarde-10-percent':'zygarde-10','zygarde-50-percent':'zygarde','zygarde-complete':'zygarde-complete',
-    'lycanroc-midday':'lycanroc','lycanroc-midnight':'lycanroc-midnight','lycanroc-dusk':'lycanroc-dusk',
-    'eiscue-ice':'eiscue','eiscue-noice':'eiscue-noice','morpeko-full-belly':'morpeko','morpeko-hangry':'morpeko-hangry',
-    'palafin-zero':'palafin','palafin-hero':'palafin-hero',
-    'minior-red-meteor':'minior-red','minior-orange-meteor':'minior-orange','minior-yellow-meteor':'minior-yellow','minior-green-meteor':'minior-green','minior-blue-meteor':'minior-blue','minior-indigo-meteor':'minior-indigo','minior-violet-meteor':'minior-violet',
-    'gouging-fire':'gougingfire','scream-tail':'screamtail','roaring-moon':'roaringmoon','walking-wake':'walkingwake','iron-valiant':'ironvaliant','iron-boulder':'ironboulder','iron-crown':'ironcrown','iron-leaves':'ironleaves'
-  };
-  add(aliases[raw]||raw);
-  add(raw.replace(/-plumage$/,'')); add(raw.replace(/-mask$/,'')); add(raw.replace(/-forme$/,'')); add(raw.replace(/-form$/,''));
-  add(raw.replace(/-standard$/,'')); add(raw.replace(/-normal$/,''));
-  const compact=raw.replace(/-/g,''); add(compact);
-  const parts=raw.split('-');
-  for(let i=parts.length-1;i>=1;i--) add(parts.slice(0,i).join('-'));
-  return out;
-}
-function sprite(s,cls='sprite'){
-  const species=String(s??'').trim();
-  const candidates=spriteCandidates(species);
-  const id=candidates[0]||spriteId(species);
-  return `<img class="${cls}" src="https://play.pokemonshowdown.com/sprites/gen5/${id}.png" alt="${esc(species)}" data-sprite-species="${esc(species)}" loading="eager">`;
-}
+function spriteId(s){ return SBL.pokemon.normalizeName(s); }
+function spriteCandidates(s){ return SBL.pokemon.candidateIds(s); }
+function sprite(s,cls='sprite'){ return SBL.pokemon.spriteMarkup(s, cls); }
 function allRows(){return Object.values(STATE.replays)}
 // Resolve a team's next unplayed fixture opponent. Shared by Match Prep's
 // default-opponent logic and the standalone Damage Calculator, so the
@@ -2760,6 +2562,7 @@ const BATTLE_ONLY_FORM_MAP={
 };
 function canonicalSpecies(s){
   let raw=String(s??'').trim().replace(/[–—]/g,'-').replace(/\s+/g,' ');
+  if(window.SBL?.pokemon?.displayName && window.SBL.pokemon.normalizeName(raw)==='scovillain') raw='Scovillain';
   // Some rosters/replay sources spell regional forms with the region name as
   // a PREFIX ("Hisuian Zoroark", "Galarian Zapdos", "Alolan Raichu", "Paldean
   // Tauros") instead of Showdown's suffix convention ("Zoroark-Hisui",
@@ -3194,7 +2997,13 @@ function groupEquivalentVariants(list){
   return out;
 }
 function displaySpecies(m){
-  return m.names?.length?m.names.join(', '):m.species;
+  const rawNames = Array.isArray(m?.names) && m.names.length ? m.names : [m?.species];
+  const names = rawNames.map(x=>canonicalSpecies(x)).filter(Boolean);
+  const unique = [...new Map(names.map(x=>[norm(x),x])).values()];
+  // Battle-only formes (Aegislash Blade, Mimikyu Busted, etc.) are internal
+  // replay representations, not separate roster Pokémon. If they resolve to
+  // the same canonical species, only show the canonical name.
+  return unique[0] || String(m?.species || '');
 }
 
 
@@ -4912,28 +4721,23 @@ async function load(){
     STATE.profileUserId=user.id; STATE.profileTeam=profile?.team_name||'';
     if(!STATE.profileTeam){ location.replace('index.html'); return; }
     document.getElementById('app').style.display = '';
-    const {data,error}=await supabase.from('replays').select('replay_id,replay_data');
+    const {data,error}=await SBL.replays.load(supabase);
     if(error)throw error;
-    for(const row of data||[]){
-      if(row.replay_id===STATE_ID){
-        const shared=row.replay_data||{};
-        const snap=installSeasonPicker(shared);
-        STATE.teamMap=snap.teamMap;
-        STATE.settings=Object.assign(STATE.settings,snap.settings||{});
-        STATE.settings.rosters=STATE.settings.rosters||{};
-        const seasonReplays=snap.archived ? snap.replays : shared.replays;
-        if(seasonReplays && typeof seasonReplays==='object'){
-          for(const [id,replay] of Object.entries(seasonReplays)) if(id && replay) STATE.replays[id]=replay;
-        }
-      }else if(row.replay_id==='__rosters__'){
-        const published=row.replay_data?.rosters;
-        if(published && typeof published==='object' && Object.keys(STATE.settings.rosters||{}).length===0){
-          STATE.settings.rosters=published;
-        }
-      }else if(row.replay_id){
-        STATE.replays[row.replay_id]=row.replay_data||{};
-      }
+    const { sharedState, replays, publishedRosters } = SBL.replays.partition(data);
+    const shared = sharedState || {};
+    const snap=SBL.seasons.getSnapshot(shared);
+    STATE.teamMap=snap.teamMap;
+    STATE.settings=Object.assign(STATE.settings,snap.settings||{});
+    STATE.settings.rosters=STATE.settings.rosters||{};
+    const seasonReplays=snap.archived ? snap.replays : replays;
+    if(seasonReplays && typeof seasonReplays==='object'){
+      for(const [id,replay] of Object.entries(seasonReplays)) if(id && replay) STATE.replays[id]=replay;
     }
+    if(publishedRosters && typeof publishedRosters==='object' && Object.keys(STATE.settings.rosters||{}).length===0){
+      STATE.settings.rosters=publishedRosters;
+    }
+    const {data:tradeRows} = await SBL.trades.load(supabase);
+    STATE.settings.rosters = SBL.trades.getEffectiveRosters(STATE.settings.rosters || {}, tradeRows || []);
   }catch(e){
     $('main').innerHTML=`<div class="panel"><div class="empty">Could not load shared replay data: ${esc(e.message)}</div></div>`;
     return;
@@ -5082,96 +4886,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.addEventListener('pageshow', clearCalculatorBrowserState);
 })();
 </script>
-
-
-<script id="sitewide-sprite-fix">
-(function(){
-  const BASE='https://play.pokemonshowdown.com/sprites/';
-  const aliases={
-    'ogerpon-teal-mask':['ogerpon'],
-    'ogerpon-wellspring-mask':['ogerpon-wellspring'],
-    'ogerpon-hearthflame-mask':['ogerpon-hearthflame'],
-    'ogerpon-cornerstone-mask':['ogerpon-cornerstone'],
-    'squawkabilly-green-plumage':['squawkabilly-green'],
-    'squawkabilly-blue-plumage':['squawkabilly-blue'],
-    'squawkabilly-yellow-plumage':['squawkabilly-yellow'],
-    'squawkabilly-white-plumage':['squawkabilly-white'],
-    'dudunsparce-three-segment':['dudunsparce-3'],
-    'dudunsparce-two-segment':['dudunsparce-2'],
-    'maushold-family-of-three':['maushold-family3'],
-    'maushold-family-of-four':['maushold'],
-    'zygarde-10-percent':['zygarde-10'],
-    'zygarde-50-percent':['zygarde'],
-    'zygarde-complete':['zygarde-complete'],
-    'necrozma-dusk-mane':['necrozma-dusk'],
-    'necrozma-dawn-wings':['necrozma-dawn'],
-    'lycanroc-midday':['lycanroc'],
-    'lycanroc-midnight':['lycanroc-midnight'],
-    'lycanroc-dusk':['lycanroc-dusk'],
-    'wishiwashi-school':['wishiwashi-school'],
-    'eiscue-ice':['eiscue'],
-    'eiscue-noice':['eiscue-noice'],
-    'morpeko-hangry':['morpeko-hangry'],
-    'palafin-zero':['palafin'],
-    'palafin-hero':['palafin-hero'],
-    'minior-red-meteor':['minior-red'],
-    'minior-orange-meteor':['minior-orange'],
-    'minior-yellow-meteor':['minior-yellow'],
-    'minior-green-meteor':['minior-green'],
-    'minior-blue-meteor':['minior-blue'],
-    'minior-indigo-meteor':['minior-indigo'],
-    'minior-violet-meteor':['minior-violet']
-  };
-  function slug(s){
-    return String(s||'').trim().toLowerCase()
-      .replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
-      .replace(/[.:]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
-  }
-  function urlsFor(img){
-    let id=slug(img.getAttribute('data-sprite-species')||img.alt||'');
-    if(!id){
-      const m=(img.src||'').match(/sprites\/[^/]+\/([^/?#]+)\.png/i);
-      id=m?m[1].toLowerCase():'';
-    }
-    if(!id)return [];
-    const ids=[]; const add=x=>{if(x&&!ids.includes(x))ids.push(x)};
-    add(id); (aliases[id]||[]).forEach(add);
-    add(id.replace(/-plumage$/,'')); add(id.replace(/-mask$/,''));
-    add(id.replace(/-forme$/,'')); add(id.replace(/-form$/,''));
-    add(id.replace(/-standard$/,'')); add(id.replace(/-normal$/,''));
-    const parts=id.split('-');
-    for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
-    const out=[];
-    for(const x of ids){
-      out.push(BASE+'gen9/'+x+'.png');
-      out.push(BASE+'gen5/'+x+'.png');
-      out.push(BASE+'dex/'+x+'.png');
-    }
-    return out;
-  }
-  function install(img){
-    if(!(img instanceof HTMLImageElement)||img.dataset.sitewideSpriteFix)return;
-    const src=img.src||'';
-    if(!src.includes('/sprites/'))return;
-    img.dataset.sitewideSpriteFix='1';
-    img.dataset.sitewideSpriteUrls=JSON.stringify(urlsFor(img));
-    img.dataset.sitewideSpriteIndex='-1';
-    img.onerror=function(){
-      const urls=JSON.parse(img.dataset.sitewideSpriteUrls||'[]');
-      let i=Number(img.dataset.sitewideSpriteIndex||-1)+1;
-      while(i<urls.length && urls[i]===img.src)i++;
-      if(i<urls.length){img.dataset.sitewideSpriteIndex=String(i);img.style.opacity='';img.src=urls[i];}
-      else{img.onerror=null;img.removeAttribute('src');img.style.opacity='.25';}
-    };
-  }
-  function scan(root){
-    if(root instanceof HTMLImageElement)install(root);
-    else if(root&&root.querySelectorAll)root.querySelectorAll('img[src*="/sprites/"]').forEach(install);
-  }
-  function start(){scan(document); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(scan))).observe(document.documentElement,{subtree:true,childList:true});}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
-})();
-</script>
-
+<script src="js/sbl-supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/services/rosters.js"></script>
+    <script src="js/sbl-site.js"></script>
 </body>
 </html>

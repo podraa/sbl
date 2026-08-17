@@ -502,7 +502,7 @@ th{border-color:var(--border)}
 td{border-color:var(--border)}
 a{color:var(--amber)}
 </style>
-<script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
+<script id="sbl-global-theme-loader" src="js/sbl-themes.js"></script>
 <style id="sbl-theme-final-overrides">
 /* Final site-wide theme surface and text pass */
 :root{
@@ -765,6 +765,7 @@ input,textarea,select{
 .type-badge,[class^="type-"],[class*=" type-"]{color:inherit}
 </style>
 
+  <link rel="stylesheet" href="css/sbl-site.css">
 </head>
 <body data-admin="true">
 <style>
@@ -828,7 +829,17 @@ input,textarea,select{
 </div>
 <div id="auditModal"></div>
 
+<script src="js/sbl-site.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/pokemon-dex-ids.js"></script>
+<script src="js/services/pokemon.js"></script>
+  <script src="js/sbl-supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/services/rosters.js"></script>
+    <script src="js/services/trades.js"></script>
+<script src="js/performance.js"></script>
+<script src="js/sbl-site.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 (function(){
@@ -880,7 +891,7 @@ input,textarea,select{
     d.budgets = d.budgets && typeof d.budgets === 'object' ? d.budgets : {};
     d.pool = Array.isArray(d.pool) ? d.pool.map(m => ({
       id: String(m?.id ?? ''),
-      name: String(m?.name ?? '').trim(),
+      name: (SBL.pokemon.displayNameWithForm ? SBL.pokemon.displayNameWithForm(String(m?.name ?? '').trim()) : SBL.pokemon.displayName(String(m?.name ?? '').trim())),
       points: Number(m?.points) || 0,
       types: Array.isArray(m?.types) ? m.types.map(t => String(t).trim()).filter(Boolean) : [],
       drafted: !!m?.drafted,
@@ -947,12 +958,14 @@ input,textarea,select{
       if(error) throw error;
     }
     await saveSharedState();
+    await SBL.performance?.invalidate('replays:all');
   }
 
   async function deleteReplayRemote(id){
     requireAdmin();
     const {error} = await supabase.from('replays').delete().eq('replay_id', id);
     if(error) throw error;
+    await SBL.performance?.invalidate('replays:all');
   }
 
   async function saveSharedState(){
@@ -963,6 +976,7 @@ input,textarea,select{
       updated_at: new Date().toISOString()
     }], {onConflict:'replay_id'});
     if(error) throw error;
+    await SBL.performance?.invalidate('replays:all');
   }
   // Public rosters are kept in their own row because rosters.html reads
   // __rosters__ directly. Keeping this separate from dashboard state means
@@ -975,6 +989,7 @@ input,textarea,select{
       updated_at: new Date().toISOString()
     }], {onConflict:'replay_id'});
     if(error) throw error;
+    await SBL.performance?.invalidate('replays:all');
   }
   async function saveTeamMap(){ await saveSharedState(); }
   async function saveSettings(){ await saveSharedState(); }
@@ -987,6 +1002,7 @@ input,textarea,select{
     if(ids.length){
       const {error: delErr}=await supabase.from('replays').delete().in('replay_id',ids);
       if(delErr) throw delErr;
+      await SBL.performance?.invalidate('replays:all');
     }
   }
 
@@ -998,6 +1014,7 @@ input,textarea,select{
     if(stale.length){
       const {error: delErr} = await supabase.from('replays').delete().in('replay_id', stale);
       if(delErr) throw delErr;
+      await SBL.performance?.invalidate('replays:all');
     }
   }
 
@@ -1207,29 +1224,11 @@ input,textarea,select{
     'jellicent-f':'jellicent'
   };
 
-  function toShowdownId(name){
-    return String(name || '').trim().split('-')
-      .map(seg => seg.toLowerCase().replace(/[^a-z0-9]/g,''))
-      .filter(Boolean).join('-');
-  }
+  function toShowdownId(name){ return SBL.pokemon.normalizeName(name); }
 
-  // Keep sprite resolution identical to the Free Agency page:
-  // 1) normal Showdown id, 2) fully compact id, 3) Showdown's 0 fallback.
-  // This is deliberately simple because Showdown's sprite filenames do not
-  // always line up with our league/form aliases.
-  function spriteImg(species, cls){
-    const safe = escapeHtml(species);
-    const id = toShowdownId(species);
-    const compact = id.replace(/-/g,'');
-    const urls = JSON.stringify([
-      'https://play.pokemonshowdown.com/sprites/gen5/' + id + '.png',
-      'https://play.pokemonshowdown.com/sprites/gen5/' + compact + '.png',
-      'https://play.pokemonshowdown.com/sprites/gen5/0.png'
-    ]);
-    return `<img class="${cls}" src="https://play.pokemonshowdown.com/sprites/gen5/${id}.png" alt="${safe}" loading="lazy" `+
-      `data-sprite-urls="${escapeHtml(urls)}" data-sprite-idx="0" `+
-      `onerror="(function(i){var us=JSON.parse(i.dataset.spriteUrls||'[]');var nx=Number(i.dataset.spriteIdx||0)+1;if(nx<us.length){i.dataset.spriteIdx=nx;i.src=us[nx];}else{i.onerror=null;i.style.opacity='.25';}})(this)">`;
-  }
+  function spriteImg(species, cls){ return SBL.pokemon.spriteMarkup(species, cls || 'sprite'); }
+
+
   function usernameKey(username){
     return String(username || '')
       .trim()
@@ -1397,11 +1396,33 @@ input,textarea,select{
   }
   function newLuckSide(){ return {crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0,luckEvents:[]}; }
   // ---------- replay parsing ----------
+
+  function canonicalBattleSpecies(name){
+    const raw = String(name || '').trim();
+    if(!raw) return raw;
+    if(window.SBL?.pokemon?.displayName) return SBL.pokemon.displayName(raw);
+    const id = raw.toLowerCase().replace(/[’']/g,'').replace(/_/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-');
+    const map = {
+      'mimikyu-busted':'Mimikyu','aegislash-blade':'Aegislash','aegislash-shield':'Aegislash',
+      'terapagos-terastal':'Terapagos','terapagos-stellar':'Terapagos','terapagos-terastal-form':'Terapagos',
+      'palafin-hero':'Palafin','zacian-crowned':'Zacian','zamazenta-crowned':'Zamazenta',
+      'eiscue-noice':'Eiscue','morpeko-hangry':'Morpeko','wishiwashi-school':'Wishiwashi',
+      'cramorant-gulping':'Cramorant','cramorant-gorging':'Cramorant','darmanitan-zen':'Darmanitan',
+      'darmanitan-zen-galar':'Darmanitan-Galar','meloetta-pirouette':'Meloetta','minior-meteor':'Minior',
+      'zygarde-10-percent':'Zygarde','zygarde-50-percent':'Zygarde','necrozma-dusk-mane':'Necrozma',
+      'necrozma-dawn-wings':'Necrozma','necrozma-ultra':'Necrozma','giratina-origin':'Giratina',
+      'shaymin-sky':'Shaymin','hoopa-unbound':'Hoopa','kyurem-black':'Kyurem','kyurem-white':'Kyurem',
+      'deoxys-attack':'Deoxys','deoxys-defense':'Deoxys','deoxys-speed':'Deoxys','keldeo-resolute':'Keldeo'
+    };
+    return map[id] || raw;
+  }
+
   function parseLog(json, replayId){
     const lines = json.log.split('\n');
     const players = {p1:'', p2:''};
-    const slots = {}; // slotId -> {species, hp, side}
-    const mons = {}; // "p1|species" -> stats
+    const slots = {}; // slotId -> {species, hp, side, monId}
+    let nextMonInstance = 0;
+    const mons = {}; // unique battle-stint id -> stats
     const appearedThisReplay = new Set();
     const teamRoster = {p1:[], p2:[]};
     let lastMove = null; // {source, target, move}
@@ -1468,15 +1489,14 @@ input,textarea,select{
 
     function monKey(slot){
       const s = slots[slot];
-      if(!s) return null;
-      return s.side + '|' + normName(s.species);
+      return s?.monId || null;
     }
     function ensureMon(slot){
       const s = slots[slot];
       if(!s) return null;
       const k = monKey(slot);
       if(!mons[k]) mons[k] = {
-        side:s.side, species:s.species, damageDealt:0, damageTaken:0,
+        id:k, side:s.side, species:s.species, damageDealt:0, damageTaken:0,
         kills:0, deaths:0, assists:0, appearances:0, killLog:[], deathLog:[], assistLog:[],
         moves: {},
         maxHpObserved: null
@@ -1508,45 +1528,10 @@ input,textarea,select{
     function migrateSlotSpecies(slot, newSpecies){
       const s = slots[slot];
       if(!s || !newSpecies) return;
-      const side = s.side;
-      const oldNorm = normName(s.species);
-      const newNorm = normName(newSpecies);
       s.species = newSpecies;
-      if(oldNorm === newNorm) return;
-      const oldKey = side + '|' + oldNorm;
-      const newKey = side + '|' + newNorm;
-      const oldMon = mons[oldKey];
-      if(!oldMon) return; // nothing recorded yet under the old identity this stint
-      // Relabel in place first so any stray reference to this exact object
-      // (e.g. a pending hazard/delayed-hit credit) resolves to the true
-      // species even if it's never merged into `mons` below.
-      oldMon.species = newSpecies;
-      oldMon.side = side;
-      delete mons[oldKey];
-      const existing = mons[newKey];
-      if(existing && existing !== oldMon){
-        // The true species already has its own stats object this game (an
-        // earlier undisguised/pre-transform stint, or toggling back to a
-        // forme it already held). Merge this stint's totals into it.
-        existing.damageDealt += oldMon.damageDealt;
-        existing.damageTaken += oldMon.damageTaken;
-        existing.kills += oldMon.kills;
-        existing.deaths += oldMon.deaths;
-        existing.assists += oldMon.assists;
-        existing.appearances += oldMon.appearances;
-        existing.killLog = existing.killLog.concat(oldMon.killLog);
-        existing.deathLog = existing.deathLog.concat(oldMon.deathLog);
-        existing.assistLog = existing.assistLog.concat(oldMon.assistLog);
-        for(const mv in oldMon.moves) existing.moves[mv] = (existing.moves[mv] || 0) + oldMon.moves[mv];
-        if(Number.isFinite(oldMon.maxHpObserved)) existing.maxHpObserved = Math.max(existing.maxHpObserved || 0, oldMon.maxHpObserved);
-        mons[newKey] = existing;
-      } else {
-        mons[newKey] = oldMon;
-      }
-      if(appearedThisReplay.has(oldKey)){
-        appearedThisReplay.delete(oldKey);
-        appearedThisReplay.add(newKey);
-      }
+      const k = monKey(slot);
+      if(k && mons[k]) mons[k].species = newSpecies;
+      if(k && luckPokemon[k]) luckPokemon[k].species = newSpecies;
     }
 
 
@@ -1665,7 +1650,8 @@ input,textarea,select{
         // Capture the individual that is leaving BEFORE replacing the slot.
         // The slot is reused after switches, so this must be resolved first.
         const oldMonKey = slots[slot] ? monKey(slot) : null;
-        slots[slot] = {species, hp, hpMax: parseMaxHP(parts[4] || '100/100'), side};
+        const monId = side + '|' + (++nextMonInstance);
+        slots[slot] = {species, hp, hpMax: parseMaxHP(parts[4] || '100/100'), side, monId};
         // A new mon now occupies this slot — any prior *direct-hit* attacker
         // credit for this slot belonged to the mon that just left, so that must
         // not carry over. Status-source credit (poison/burn) is intentionally
@@ -2067,7 +2053,7 @@ input,textarea,select{
           attackerStats.damageDealt += dmg;
           // Track this attacker's cumulative contribution to this specific victim.
           const victimMk = monKey(slot);
-          const attackerMk = attackerStats.side + '|' + normName(attackerStats.species);
+          const attackerMk = attackerStats.id || (attackerStats.side + '|' + normName(attackerStats.species));
           if(victimMk && attackerMk){
             if(!damageContributors[victimMk]) damageContributors[victimMk] = {};
             if(!damageContributors[victimMk][attackerMk]) damageContributors[victimMk][attackerMk] = {stats:attackerStats, damage:0};
@@ -2176,8 +2162,45 @@ input,textarea,select{
     for(const mk of Object.keys(frozen)) finalizeStatusDuration(mk, 'frz');
     finalizePendingStatusChecks();
 
+    // Collapse battle stints back to league-level Pokémon identities only after
+    // parsing is complete. This prevents Illusion/Transform/form changes/switches
+    // and duplicate species from contaminating attribution while the replay is
+    // being processed.
+    const aggregatedMons = {};
+    for(const stint of Object.values(mons)){
+      const species = canonicalBattleSpecies(stint.species);
+      const key = stint.side + '|' + normName(species);
+      if(!aggregatedMons[key]){
+        aggregatedMons[key] = Object.assign({}, stint, {
+          id:key, species, appearances:1, moves:{}, killLog:[], deathLog:[], assistLog:[]
+        });
+      } else {
+        const out = aggregatedMons[key];
+        out.damageDealt += Number(stint.damageDealt||0);
+        out.damageTaken += Number(stint.damageTaken||0);
+        out.kills += Number(stint.kills||0);
+        out.deaths += Number(stint.deaths||0);
+        out.assists += Number(stint.assists||0);
+        out.killLog.push(...(stint.killLog||[]));
+        out.deathLog.push(...(stint.deathLog||[]));
+        out.assistLog.push(...(stint.assistLog||[]));
+        for(const [mv,count] of Object.entries(stint.moves||{})) out.moves[mv]=(out.moves[mv]||0)+Number(count||0);
+        if(Number.isFinite(stint.maxHpObserved)) out.maxHpObserved=Math.max(out.maxHpObserved||0,stint.maxHpObserved);
+      }
+    }
+    const aggregatedLuckPokemon = {};
+    for(const [mk,l] of Object.entries(luckPokemon)){
+      const species=canonicalBattleSpecies(l.species || mk.split('|')[1] || '');
+      if(!species) continue;
+      const side=String(mk).split('|')[0];
+      const key=side+'|'+normName(species);
+      if(!aggregatedLuckPokemon[key]) aggregatedLuckPokemon[key]=Object.assign({species}, newLuckSide());
+      const out=aggregatedLuckPokemon[key];
+      for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) out[k]+=Number(l[k]||0);
+      out.luckEvents.push(...(l.luckEvents||[]));
+    }
     return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons, winner, teamRoster, luck, luckPokemon,
+      players, mons:aggregatedMons, winner, teamRoster, luck, luckPokemon:aggregatedLuckPokemon,
       };
   }
 
@@ -2554,7 +2577,7 @@ input,textarea,select{
       <div class="tick">
         <div class="lbl">Dmg Dealt</div>
         <div class="pname-cell">${spriteImg(s.species,'sprite')}<div>
-          <div class="name">${escapeHtml(s.species)}</div>
+          <div class="name">${escapeHtml(SBL.pokemon.displayName(s.species))}</div>
           <div class="val">${s.dealt.toFixed(0)}%</div>
         </div></div>
       </div>`).join('');
@@ -2587,7 +2610,7 @@ input,textarea,select{
     document.getElementById('auditModal').innerHTML = `
       <div class="audit-overlay" id="auditOverlay">
         <div class="audit-box">
-          <h3>${escapeHtml(species)} — ${label} (${rows.length})</h3>
+          <h3>${escapeHtml(SBL.pokemon.displayName(species))} — ${label} (${rows.length})</h3>
           <div class="audit-sub">Every ${type==='kills'?'kill':'death'} credited to this Pokémon this scope, with the turn${showLink?', replay,':''} and why it was credited.</div>
           ${rows.length===0 ? `<div class="empty-state">No entries.</div>` : `<ul class="audit-list">
             ${rows.map(r=>`<li>
@@ -2816,7 +2839,7 @@ input,textarea,select{
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
         ${stats.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
+          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(SBL.pokemon.displayName(s.species))}</div></td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
@@ -2856,7 +2879,7 @@ input,textarea,select{
           <div class="gf-rank">${medals[i] || (i+1)}</div>
           ${spriteImg(s.species,'gf-sprite')}
           <div class="gf-info">
-            <div class="gf-name">${escapeHtml(s.species)}</div>
+            <div class="gf-name">${escapeHtml(SBL.pokemon.displayName(s.species))}</div>
             <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
             <div class="gf-sub">${s.kills} kills · ${s.assists} assists · ${s.deaths} deaths · ${s.games} games</div>
           </div>
@@ -2898,7 +2921,7 @@ input,textarea,select{
         `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Appearances</th></tr></thead><tbody>
         ${list.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(s.species)}</div></td>
+          <td class="pname"><div class="pname-cell">${spriteImg(s.species,'sprite-xl')}${escapeHtml(SBL.pokemon.displayName(s.species))}</div></td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
@@ -3565,7 +3588,14 @@ input,textarea,select{
       if(d.pool.some(m => m.name.toLowerCase() === name.toLowerCase())){ status.innerHTML = '<div class="note danger">That Pokémon is already on the board.</div>'; return; }
       try{
         status.innerHTML = `<div class="note">Finding typing for ${escapeHtml(name)}…</div>`;
-        const types = await fetchPokemonTypes(name);
+        /*
+         * Manual entry must use the same resolver as Excel imports.
+         * The import path goes through fetchPokemonTypesUncached(), which
+         * applies draftApiSlug() and the special-form fallbacks before calling
+         * PokéAPI. Calling the shared legacy wrapper here was bypassing that
+         * proven path.
+         */
+        const types = await fetchPokemonTypesUncached(name);
         d.pool.push({
           id: genDraftId(),
           name,
@@ -3677,7 +3707,7 @@ input,textarea,select{
   // the existing roster importer. It does not create a replay row or alter any
   // replay/stat processing logic.
   function normalizeFreeAgencyName(name){
-    return String(name ?? '')
+    return (SBL.pokemon?.displayNameWithForm ? SBL.pokemon.displayNameWithForm(name) : (SBL.pokemon?.displayName ? SBL.pokemon.displayName(name) : String(name ?? '')))
       .replace(/[’']/g, '')
       .replace(/[_]+/g, ' ')
       .replace(/\s+/g, ' ')
@@ -3932,8 +3962,8 @@ input,textarea,select{
     const teams = [...new Set((COMM_PROFILES||[]).filter(p=>p.status==='approved' && p.team_name).map(p=>p.team_name))].sort();
     const rows = teams.map(team=>{
       const row = COMM_TRADE_LIMITS.find(x=>x.team_name===team) || {team_name:team, team_trade_limit:8, free_agency_trade_limit:8};
-      const teamUsed = COMM_TRADES.filter(t=>t.status==='accepted' || t.status==='reverted').filter(t=>t.target_team!==null && (t.proposer_team===team || t.target_team===team) && new Date(t.created_at).getFullYear()===season).length;
-      const faUsed = COMM_TRADES.filter(t=>t.status==='accepted' || t.status==='reverted').filter(t=>t.target_team===null && t.proposer_team===team && new Date(t.created_at).getFullYear()===season).length;
+      const teamUsed = COMM_TRADES.filter(t=>t.status==='accepted').filter(t=>t.target_team!==null && (t.proposer_team===team || t.target_team===team) && new Date(t.created_at).getFullYear()===season).length;
+      const faUsed = COMM_TRADES.filter(t=>t.status==='accepted').filter(t=>t.target_team===null && t.proposer_team===team && new Date(t.created_at).getFullYear()===season).length;
       const teamLimit = Math.max(0, Number(row.team_trade_limit) || 0);
       const faLimit = Math.max(0, Number(row.free_agency_trade_limit) || 0);
       return `<tr>
@@ -4021,13 +4051,13 @@ input,textarea,select{
         const teamRemaining = Number(document.getElementById(`teamRemaining-${key}`)?.value);
         const faRemaining = Number(document.getElementById(`faRemaining-${key}`)?.value);
         const teamUsed = COMM_TRADES.filter(t=>
-          (t.status==='accepted' || t.status==='reverted') &&
+          t.status==='accepted' &&
           t.target_team!==null &&
           (t.proposer_team===team || t.target_team===team) &&
           new Date(t.created_at).getFullYear()===new Date().getFullYear()
         ).length;
         const faUsed = COMM_TRADES.filter(t=>
-          (t.status==='accepted' || t.status==='reverted') &&
+          t.status==='accepted' &&
           t.target_team===null &&
           t.proposer_team===team &&
           new Date(t.created_at).getFullYear()===new Date().getFullYear()
@@ -4111,18 +4141,38 @@ input,textarea,select{
           } else if(action === 'revert'){
             const trade = COMM_TRADES.find(t => Number(t.id) === id);
             if(!trade) throw new Error('Trade not found.');
-            const {error} = await supabase.rpc('commissioner_revert_trade', { trade_id:id });
-            if(error) throw error;
 
-            // Older deployments of the RPC can end the trade without restoring
-            // the roster snapshot. Reconcile the roster locally and persist both
-            // dashboard state and the public roster row. The reconciliation is
-            // idempotent, so it is safe if the RPC already restored the rosters.
-            reconcileRevertedTradeRoster(trade);
-            await saveSharedState();
-            await savePublishedRosters(STATE.settings.rosters || {});
+            if(trade.target_team === null){
+              // Free Agency reversions must not depend on the team-to-team
+              // commissioner_revert_trade RPC. That RPC validates both sides
+              // of a roster swap and can reject a FA pickup when the receiving
+              // roster has since changed. A FA trade has only one recipient,
+              // so revert it directly and restore the Pokémon to the FA pool.
+              const {error} = await supabase.from('trade_requests')
+                .update({ status:'reverted', responded_at:new Date().toISOString(), responded_by:adminUser.id })
+                .eq('id', id);
+              if(error) throw error;
+
+              reconcileRevertedTradeRoster(trade);
+              restoreRevertedFreeAgencyPool(trade);
+              await saveSharedState();
+              await savePublishedRosters(STATE.settings.rosters || {});
+            } else {
+              const {error} = await supabase.rpc('commissioner_revert_trade', { trade_id:id });
+              if(error) throw error;
+
+              // Older deployments of the RPC can end the trade without restoring
+              // the roster snapshot. Reconcile the roster locally and persist both
+              // dashboard state and the public roster row. The reconciliation is
+              // idempotent, so it is safe if the RPC already restored the rosters.
+              reconcileRevertedTradeRoster(trade);
+              await saveSharedState();
+              await savePublishedRosters(STATE.settings.rosters || {});
+            }
           }
           const trade = COMM_TRADES.find(t => Number(t.id) === id);
+          await SBL.performance?.invalidate('trades:all');
+          await SBL.performance?.invalidate('replays:all');
           await logAdminAction('commissioner_trade_action', `Commissioner ${action} action on trade #${id}.`, {
             tradeId:id, action, proposerTeam:trade?.proposer_team || null, targetTeam:trade?.target_team || null
           });
@@ -4141,6 +4191,35 @@ input,textarea,select{
   // The database RPC is responsible for ending the trade; this client-side
   // reconciliation keeps the roster snapshot in STATE.settings.rosters in sync
   // even when an older/alternate RPC only updates the trade status.
+  function restoreRevertedFreeAgencyPool(trade){
+    if(!trade || trade.target_team !== null) return;
+    STATE.settings = STATE.settings || {};
+    STATE.settings.freeAgency = STATE.settings.freeAgency || {mons:[]};
+    const pool = Array.isArray(STATE.settings.freeAgency.mons) ? STATE.settings.freeAgency.mons : [];
+    const key = name => rosterKey(name);
+    const existing = new Set(pool.map(mon => key(typeof mon === 'string' ? mon : mon?.name)));
+
+    // Prefer the point value from the draft pool, then from any remaining
+    // published FA metadata. The Pokémon is restored exactly once.
+    const pointLookup = {};
+    for(const mon of (STATE.settings?.draft?.pool || [])){
+      if(mon?.name) pointLookup[key(mon.name)] = mon.points ?? null;
+    }
+    for(const mon of pool){
+      const name = typeof mon === 'string' ? mon : mon?.name;
+      if(name && pointLookup[key(name)] == null && typeof mon !== 'string') pointLookup[key(name)] = mon.points ?? null;
+    }
+
+    const requested = Array.isArray(trade.mons_requested) ? trade.mons_requested : [];
+    for(const name of requested){
+      const k = key(name);
+      if(!k || existing.has(k)) continue;
+      pool.push({name, points: pointLookup[k] ?? null});
+      existing.add(k);
+    }
+    STATE.settings.freeAgency.mons = pool;
+  }
+
   function reconcileRevertedTradeRoster(trade){
     if(!trade) throw new Error('Trade not found while reverting roster.');
     STATE.settings = STATE.settings || {};
@@ -5684,94 +5763,6 @@ document.addEventListener('DOMContentLoaded', function(){
     el.classList.remove('active');
   });
 });
-</script>
-<script id="sitewide-sprite-fix">
-(function(){
-  const BASE='https://play.pokemonshowdown.com/sprites/';
-  const aliases={
-    'ogerpon-teal-mask':['ogerpon'],
-    'ogerpon-wellspring-mask':['ogerpon-wellspring'],
-    'ogerpon-hearthflame-mask':['ogerpon-hearthflame'],
-    'ogerpon-cornerstone-mask':['ogerpon-cornerstone'],
-    'squawkabilly-green-plumage':['squawkabilly-green'],
-    'squawkabilly-blue-plumage':['squawkabilly-blue'],
-    'squawkabilly-yellow-plumage':['squawkabilly-yellow'],
-    'squawkabilly-white-plumage':['squawkabilly-white'],
-    'dudunsparce-three-segment':['dudunsparce-3'],
-    'dudunsparce-two-segment':['dudunsparce-2'],
-    'maushold-family-of-three':['maushold-family3'],
-    'maushold-family-of-four':['maushold'],
-    'zygarde-10-percent':['zygarde-10'],
-    'zygarde-50-percent':['zygarde'],
-    'zygarde-complete':['zygarde-complete'],
-    'necrozma-dusk-mane':['necrozma-dusk'],
-    'necrozma-dawn-wings':['necrozma-dawn'],
-    'lycanroc-midday':['lycanroc'],
-    'lycanroc-midnight':['lycanroc-midnight'],
-    'lycanroc-dusk':['lycanroc-dusk'],
-    'wishiwashi-school':['wishiwashi-school'],
-    'eiscue-ice':['eiscue'],
-    'eiscue-noice':['eiscue-noice'],
-    'morpeko-hangry':['morpeko-hangry'],
-    'palafin-zero':['palafin'],
-    'palafin-hero':['palafin-hero'],
-    'minior-red-meteor':['minior-red'],
-    'minior-orange-meteor':['minior-orange'],
-    'minior-yellow-meteor':['minior-yellow'],
-    'minior-green-meteor':['minior-green'],
-    'minior-blue-meteor':['minior-blue'],
-    'minior-indigo-meteor':['minior-indigo'],
-    'minior-violet-meteor':['minior-violet']
-  };
-  function slug(s){
-    return String(s||'').trim().toLowerCase()
-      .replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
-      .replace(/[.:]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
-  }
-  function urlsFor(img){
-    let id=slug(img.getAttribute('data-sprite-species')||img.alt||'');
-    if(!id){
-      const m=(img.src||'').match(/sprites\/[^/]+\/([^/?#]+)\.png/i);
-      id=m?m[1].toLowerCase():'';
-    }
-    if(!id)return [];
-    const ids=[]; const add=x=>{if(x&&!ids.includes(x))ids.push(x)};
-    add(id); (aliases[id]||[]).forEach(add);
-    add(id.replace(/-plumage$/,'')); add(id.replace(/-mask$/,''));
-    add(id.replace(/-forme$/,'')); add(id.replace(/-form$/,''));
-    add(id.replace(/-standard$/,'')); add(id.replace(/-normal$/,''));
-    const parts=id.split('-');
-    for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
-    const out=[];
-    for(const x of ids){
-      out.push(BASE+'gen9/'+x+'.png');
-      out.push(BASE+'gen5/'+x+'.png');
-      out.push(BASE+'dex/'+x+'.png');
-    }
-    return out;
-  }
-  function install(img){
-    if(!(img instanceof HTMLImageElement)||img.dataset.sitewideSpriteFix)return;
-    const src=img.src||'';
-    if(!src.includes('/sprites/'))return;
-    img.dataset.sitewideSpriteFix='1';
-    img.dataset.sitewideSpriteUrls=JSON.stringify(urlsFor(img));
-    img.dataset.sitewideSpriteIndex='-1';
-    img.onerror=function(){
-      const urls=JSON.parse(img.dataset.sitewideSpriteUrls||'[]');
-      let i=Number(img.dataset.sitewideSpriteIndex||-1)+1;
-      while(i<urls.length && urls[i]===img.src)i++;
-      if(i<urls.length){img.dataset.sitewideSpriteIndex=String(i);img.style.opacity='';img.src=urls[i];}
-      else{img.onerror=null;img.removeAttribute('src');img.style.opacity='.25';}
-    };
-  }
-  function scan(root){
-    if(root instanceof HTMLImageElement)install(root);
-    else if(root&&root.querySelectorAll)root.querySelectorAll('img[src*="/sprites/"]').forEach(install);
-  }
-  function start(){scan(document); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(scan))).observe(document.documentElement,{subtree:true,childList:true});}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
-})();
 </script>
 </body>
 </html>

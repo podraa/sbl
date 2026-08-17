@@ -277,7 +277,7 @@ td{border-color:var(--border)}
 a{color:var(--amber)}
 </style>
 
-<script id="sbl-global-theme-loader" src="sbl-themes.js"></script>
+<script id="sbl-global-theme-loader" src="js/sbl-themes.js"></script>
 <style id="sbl-theme-final-overrides">
 /* Final site-wide theme surface and text pass */
 :root{
@@ -580,6 +580,10 @@ body{padding-top:58px !important;}
   box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent);transform:translateY(-1px);
 }
 
+.points-filter{min-width:145px}
+@media(max-width:980px){.toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar-wide{grid-column:span 2 !important}}
+@media(max-width:620px){.toolbar{grid-template-columns:1fr}.toolbar-wide{grid-column:auto !important}}
+
 /* Availability */
 .avail-toggle{
   display:grid;grid-template-columns:repeat(3,1fr);gap:4px;height:44px;padding:4px;
@@ -738,18 +742,10 @@ body{padding-top:58px !important;}
 body{padding-top:52px !important}
 </style>
 
+  <link rel="stylesheet" href="css/sbl-site.css">
 </head>
 <body>
-<nav class="page-nav" id="pageNav" aria-label="Site navigation">
-  <a href="index.html" data-page="index.html">My Team</a>
-  <a href="stats.html" data-page="stats.html">Stats</a>
-  <a href="season.html" data-page="season.html">Season</a>
-  <a href="rosters.html" data-page="rosters.html">Rosters</a>
-  <a href="team-analysis.html" data-page="team-analysis.html">Match Prep</a>
-  <a href="free-agency.html" data-page="free-agency.html">Free Agency</a>
-  <a href="admin.html" data-page="admin.html" data-admin-only hidden>Admin Dashboard</a>
-</nav>
-<div class="nav-hover-zone" id="navHoverZone" aria-hidden="true"></div>
+<nav id="pageNav" class="page-nav" aria-label="Site navigation"></nav>
 <div id="app" style="display:none">
   <header>
     <h1>Free Agency</h1>
@@ -758,7 +754,14 @@ body{padding-top:52px !important}
   <div id="main"><div class="empty">Loading Free Agency…</div></div>
 </div>
 
+<script src="js/sbl-site.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/pokemon-dex-ids.js"></script>
+<script src="js/services/pokemon.js"></script>
+<script src="js/services/seasons.js"></script>
+<script src="js/services/league.js"></script>
+<script src="js/services/trades.js"></script>
+<script src="js/services/free-agency.js"></script>
 <script>
 (()=>{
 const SUPABASE_URL='https://dfxdkkemltukxaklhcpo.supabase.co';
@@ -829,7 +832,8 @@ function normalizeRosters(raw){
 }
 
 function pokemonMatchKey(n){
-  return key(n)
+  const base=SBL.pokemon?.normalizeName ? SBL.pokemon.normalizeName(n) : key(n);
+  return base
     .replace(/(^|-)paldea(?=-|$)/g,'')
     .replace(/-+/g,'-')
     .replace(/^-|-$/g,'');
@@ -847,24 +851,9 @@ function owner(name){
   return null;
 }
 
-function toShowdownId(name){
-  return String(name||''). trim().split('-')
-    .map(seg=>seg.toLowerCase().replace(/[^a-z0-9]/g,''))
-    .filter(Boolean).join('-');
-}
+function toShowdownId(name){ return SBL.pokemon.normalizeName(name); }
 
-function sprite(name){
-  const id=toShowdownId(name);
-  const compact=id.replace(/-/g,'');
-  const urls=JSON.stringify([
-    'https://play.pokemonshowdown.com/sprites/gen5/'+id+'.png',
-    'https://play.pokemonshowdown.com/sprites/gen5/'+compact+'.png',
-    'https://play.pokemonshowdown.com/sprites/gen5/0.png'
-  ]);
-  return `<img src="https://play.pokemonshowdown.com/sprites/gen5/${id}.png" alt="${esc(name)}" `+
-    `data-sprite-urls="${esc(urls)}" data-sprite-idx="0" `+
-    `onerror="(function(i){var us=JSON.parse(i.dataset.spriteUrls||'[]');var nx=Number(i.dataset.spriteIdx||0)+1;if(nx<us.length){i.dataset.spriteIdx=nx;i.src=us[nx];}else{i.onerror=null;i.style.opacity='.25';}})(this)">`;
-}
+function sprite(name){ return SBL.pokemon.spriteMarkup(name, 'sprite'); }
 
 // ---- Static Pokémon type table ----
 // Every mon's type is fixed game data — it never changes — so instead of
@@ -947,7 +936,7 @@ function openSelection(mon){
   const modal=document.createElement('div');
   modal.className='modal';
   modal.innerHTML=`<div class="modalbox">
-    <h2>${esc(mon.name)}</h2>
+    <h2>${esc((SBL.pokemon.displayNameWithForm ? SBL.pokemon.displayNameWithForm(mon.name) : SBL.pokemon.displayName(mon.name)))}</h2>
     <div class="note">${mon.points} points · ${owner(mon.name)?'Drafted':'Available'}</div>
     <div class="modal-types">${types.map(typeBadge).join('')||''}</div>
     <p class="note">${owner(mon.name)?`Drafted by <strong>${esc(owner(mon.name))}</strong>.`:'This Pokémon is available — it does not appear on any currently published roster.'}</p>
@@ -965,24 +954,13 @@ function openSelection(mon){
 let lastDataSignature=null;
 
 async function load(){
-  const res=await db.from('replays').select('replay_id,replay_data')
-    .in('replay_id',['__dashboard_state__','__rosters__']);
-  if(res.error) throw res.error;
-  for(const r of res.data||[]){
-    if(r.replay_id==='__dashboard_state__'){
-      const snap=installSeasonPicker(r.replay_data||{});
-      settings=snap.settings||settings;
-      if(snap.archived) allRosters=normalizeRosters(settings.rosters||{});
-    }
-    if(r.replay_id==='__rosters__' && !Object.keys(allRosters).length && !new URLSearchParams(location.search).get('season')) allRosters=normalizeRosters(r.replay_data?.rosters||{});
-  }
-  if(!Object.keys(allRosters).length) allRosters=normalizeRosters(settings.rosters||{});
-  const mons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
+  const result=await SBL.freeAgency.load(db);
+  settings=result.settings||settings;
+  allRosters=result.rosters||{};
+  const mons=result.pool||[];
 
   // Skip the (expensive, focus-stealing) re-render on the periodic 5s poll
-  // unless the pool or rosters actually changed since last time. Types are
-  // looked up synchronously from the static table now, so there's nothing
-  // async left to wait on here.
+  // unless the pool or rosters actually changed since last time.
   const signature=JSON.stringify({mons,allRosters});
   const changed=signature!==lastDataSignature;
   lastDataSignature=signature;
@@ -1098,7 +1076,7 @@ function renderResults(){
           const o=owner(m.name), types=lookupTypes(m.name);
           return `<article class="mon ${o?'taken':''}" data-name="${esc(m.name)}">
             ${sprite(m.name)}
-            <div class="mon-name">${esc(m.name)}</div>
+            <div class="mon-name">${esc((SBL.pokemon.displayNameWithForm ? SBL.pokemon.displayNameWithForm(m.name) : SBL.pokemon.displayName(m.name)))}</div>
             <div class="mon-points">${m.points} pts</div>
             <div class="mon-types">${types.map(typeBadge).join('')}</div>
             <div class="mon-status ${o?'taken-status':'available'}">${o?'Drafted by '+esc(o):'Available'}</div>
@@ -1127,7 +1105,15 @@ function syncFilterControls(){
   Object.entries(vals).forEach(([id,val])=>{
     const el=$(id); if(el && document.activeElement!==el && el.value!==val) el.value=val;
   });
-  const points=$('filterPoints'); if(points && points.value!==filterPoints) points.value=filterPoints;
+  const points=$('filterPoints');
+  if(points){
+    const allMons=Array.isArray(settings.freeAgency?.mons)?settings.freeAgency.mons:[];
+    const pointValues=[...new Set(allMons.map(m=>Number(m.points)).filter(Number.isFinite))].sort((a,b)=>b-a);
+    const wanted=filterPoints;
+    points.innerHTML='<option value="">All point values</option>'+pointValues.map(p=>`<option value="${p}">${p} pts</option>`).join('');
+    points.value=pointValues.some(p=>String(p)===wanted)?wanted:'';
+    if(points.value!==wanted) filterPoints='';
+  }
   const stat=$('filterStat'); if(stat && stat.value!==filterStat) stat.value=filterStat;
   document.querySelectorAll('[data-avail]').forEach(btn=>btn.classList.toggle('active',btn.dataset.avail===filterAvail));
   document.querySelectorAll('[data-type]').forEach(chip=>chip.classList.toggle('active',filterTypes.has(chip.dataset.type)));
@@ -1146,7 +1132,7 @@ function render(){
   $('main').innerHTML=`
     <div class="toolbar">
       <div class="toolbar-wide"><label>Search by name</label><input type="text" id="searchName" value="${esc(filterName)}" placeholder="e.g. Landorus, Cinderace…" autocomplete="off"></div>
-      <div><label>Points</label><select class="filter-select" id="filterPoints"><option value=""> </option>${pointValues.map(p=>`<option value="${p}" ${filterPoints===String(p)?'selected':''}>${p} pts</option>`).join('')}</select></div>
+      <div class="points-filter"><label for="filterPoints">Points</label><select class="filter-select" id="filterPoints"><option value="">All point values</option>${pointValues.map(p=>`<option value="${p}" ${filterPoints===String(p)?'selected':''}>${p} pts</option>`).join('')}</select></div>
       <div><label>Availability</label><div class="avail-toggle"><button class="avail-btn ${filterAvail==='all'?'active':''}" data-avail="all">All</button><button class="avail-btn ${filterAvail==='available'?'active':''}" data-avail="available">Available</button><button class="avail-btn ${filterAvail==='taken'?'active':''}" data-avail="taken">Taken</button></div></div>
       <div class="toolbar-wide"><label>Move</label><input type="text" id="filterMove" value="${esc(filterMove)}" placeholder="e.g. Earthquake, Knock Off…" autocomplete="off"></div>
       <div class="toolbar-wide"><label>Ability</label><input type="text" id="filterAbility" value="${esc(filterAbility)}" placeholder="e.g. Intimidate, Levitate…" autocomplete="off"></div>
@@ -1183,252 +1169,8 @@ function render(){
 })();
 })();
 </script>
-<script>
-(function(){
-  const nav=document.getElementById('pageNav');
-  if(!nav) return;
-  const links=[...nav.querySelectorAll('a[data-page]')];
-  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  const client=window.supabase?.createClient(
-    'https://dfxdkkemltukxaklhcpo.supabase.co',
-    'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-  );
-  links.forEach(a=>{ if(a.dataset.page===current) a.classList.add('active'); });
-  function lockNav(locked){
-    nav.classList.toggle('locked',locked);
-    links.forEach(a=>{
-      a.setAttribute('aria-disabled',locked?'true':'false');
-      if(locked) a.title='Log in to switch pages'; else a.removeAttribute('title');
-    });
-  }
-  links.forEach(a=>a.addEventListener('click',e=>{
-    if(nav.classList.contains('locked')){ e.preventDefault(); return; }
-  }));
-  function hidePrivilegedLinks(){
-    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
-    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
-  }
-  function showAdminLinks(){
-    nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=false; });
-  }
-  function showDraftLink(){
-    nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=false; });
-  }
-  // Commissioner status rarely changes, so we only check it against the
-  // database once per login and cache the result (plus the last-seen draft
-  // status) in sessionStorage. Crucially, we also paint from that cache
-  // *synchronously* below, before any awaiting -- otherwise hidePrivilegedLinks()
-  // hides the admin-only / draft-room links on every fresh page load, and they
-  // only pop back in a tick later once getSession() resolves. That pop-in is
-  // the flicker/"reload" look when swapping between pages.
-  const NAV_CACHE_PREFIX='navPerms:';
-  const NAV_LAST_UID_KEY='navLastUid';
-  function readNavCache(uid){
-    try{ const raw=sessionStorage.getItem(NAV_CACHE_PREFIX+uid); return raw?JSON.parse(raw):null; }
-    catch(e){ return null; }
-  }
-  function writeNavCache(uid,perms){
-    try{ sessionStorage.setItem(NAV_CACHE_PREFIX+uid, JSON.stringify(perms)); }catch(e){}
-  }
-  function readLastUid(){
-    try{ return sessionStorage.getItem(NAV_LAST_UID_KEY); }catch(e){ return null; }
-  }
-  function writeLastUid(uid){
-    try{ sessionStorage.setItem(NAV_LAST_UID_KEY, uid); }catch(e){}
-  }
-  function clearNavCache(){
-    try{
-      Object.keys(sessionStorage).forEach(k=>{ if(k.indexOf(NAV_CACHE_PREFIX)===0) sessionStorage.removeItem(k); });
-      sessionStorage.removeItem(NAV_LAST_UID_KEY);
-    }catch(e){}
-  }
-  // Paint immediately from whatever was cached on the previous page, before
-  // doing any real check -- this is what removes the flash. Only falls back
-  // to hiding everything when there's nothing to paint from yet (first load
-  // of the session, or a signed-out visitor).
-  let paintedFromCache=false;
-  const lastUid=readLastUid();
-  if(lastUid){
-    const cached=readNavCache(lastUid);
-    if(cached){
-      lockNav(false);
-      if(cached.isCommissioner) showAdminLinks();
-      if(cached.draftLive) showDraftLink();
-      paintedFromCache=true;
-    }
-  }
-  if(!paintedFromCache) hidePrivilegedLinks();
-  async function setupNav(){
-    try{
-      if(!client){ lockNav(true); hidePrivilegedLinks(); return; }
-      const {data:{session}}=await client.auth.getSession();
-      lockNav(!session?.user);
-      if(!session?.user){ hidePrivilegedLinks(); return; }
-      writeLastUid(session.user.id);
-      let perms=readNavCache(session.user.id);
-      if(!perms){
-        const {data:profile,error}=await client.from('profiles').select('is_commissioner').eq('id',session.user.id).maybeSingle();
-        if(error) throw error;
-        perms={isCommissioner:!!profile?.is_commissioner};
-      }
-      if(perms.isCommissioner){
-        showAdminLinks();
-      }else{
-        nav.querySelectorAll('[data-admin-only]').forEach(a=>{ a.hidden=true; });
-      }
-      // "Draft Room" is shown to any logged-in team owner, but only while a
-      // draft is actually in progress -- independent of commissioner status.
-      try{
-        const {data:stateRow}=await client.from('replays').select('replay_data').eq('replay_id','__dashboard_state__').maybeSingle();
-        perms.draftLive = stateRow?.replay_data?.settings?.draft?.status === 'live';
-      }catch(draftErr){ console.warn('Draft status check failed:',draftErr); }
-      if(perms.draftLive) showDraftLink();
-      else nav.querySelectorAll('[data-draft-live-only]').forEach(a=>{ a.hidden=true; });
-      writeNavCache(session.user.id,perms);
-    }catch(err){ console.warn('Navigation check failed:',err); lockNav(true); hidePrivilegedLinks(); }
-  }
-  setupNav();
-  client?.auth.onAuthStateChange((_event,session)=>{
-    lockNav(!session?.user);
-    if(_event==='SIGNED_IN'||_event==='SIGNED_OUT'){ clearNavCache(); }
-    if(session?.user) setupNav(); else hidePrivilegedLinks();
-  });
-})();
-</script>
-
-<script>
-(function(){
-  const nav = document.getElementById('pageNav');
-  if(!nav) return;
-  let ticking = false;
-  function updateNav(){
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-
-    // Keep the nav visible at the top and automatically reveal it as the
-    // user approaches the top. The moment the page is scrolled away from
-    // the top, hide it without requiring another interaction.
-    if(y <= 140){
-      nav.classList.remove('nav-hidden');
-    } else {
-      nav.classList.add('nav-hidden');
-    }
-    ticking = false;
-  }
-  window.addEventListener('scroll', function(){
-    if(!ticking){ ticking = true; requestAnimationFrame(updateNav); }
-  }, {passive:true});
-  nav.addEventListener('mouseenter', function(){ nav.classList.remove('nav-hidden'); });
-  document.addEventListener('mousemove', function(e){
-    if(e.clientY <= 12) nav.classList.remove('nav-hidden');
-  }, {passive:true});
-  nav.classList.remove('nav-hidden');
-})();
-</script>
-<script id="sitewide-sprite-fix">
-(function(){
-  const BASE='https://play.pokemonshowdown.com/sprites/';
-  const aliases={
-    'ogerpon-teal-mask':['ogerpon'],
-    'ogerpon-wellspring-mask':['ogerpon-wellspring'],
-    'ogerpon-hearthflame-mask':['ogerpon-hearthflame'],
-    'ogerpon-cornerstone-mask':['ogerpon-cornerstone'],
-    'squawkabilly-green-plumage':['squawkabilly-green'],
-    'squawkabilly-blue-plumage':['squawkabilly-blue'],
-    'squawkabilly-yellow-plumage':['squawkabilly-yellow'],
-    'squawkabilly-white-plumage':['squawkabilly-white'],
-    'dudunsparce-three-segment':['dudunsparce-3'],
-    'dudunsparce-two-segment':['dudunsparce-2'],
-    'maushold-family-of-three':['maushold-family3'],
-    'maushold-family-of-four':['maushold'],
-    'zygarde-10-percent':['zygarde-10'],
-    'zygarde-50-percent':['zygarde'],
-    'zygarde-complete':['zygarde-complete'],
-    'necrozma-dusk-mane':['necrozma-dusk'],
-    'necrozma-dawn-wings':['necrozma-dawn'],
-    'lycanroc-midday':['lycanroc'],
-    'lycanroc-midnight':['lycanroc-midnight'],
-    'lycanroc-dusk':['lycanroc-dusk'],
-    'wishiwashi-school':['wishiwashi-school'],
-    'eiscue-ice':['eiscue'],
-    'eiscue-noice':['eiscue-noice'],
-    'morpeko-hangry':['morpeko-hangry'],
-    'palafin-zero':['palafin'],
-    'palafin-hero':['palafin-hero'],
-    'minior-red-meteor':['minior-red'],
-    'minior-orange-meteor':['minior-orange'],
-    'minior-yellow-meteor':['minior-yellow'],
-    'minior-green-meteor':['minior-green'],
-    'minior-blue-meteor':['minior-blue'],
-    'minior-indigo-meteor':['minior-indigo'],
-    'minior-violet-meteor':['minior-violet']
-  };
-  function slug(s){
-    return String(s||'').trim().toLowerCase()
-      .replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m')
-      .replace(/[.:]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
-  }
-  function urlsFor(img){
-    let id=slug(img.getAttribute('data-sprite-species')||img.alt||'');
-    if(!id){
-      const m=(img.src||'').match(/sprites\/[^/]+\/([^/?#]+)\.png/i);
-      id=m?m[1].toLowerCase():'';
-    }
-    if(!id)return [];
-    const ids=[]; const add=x=>{if(x&&!ids.includes(x))ids.push(x)};
-    add(id); (aliases[id]||[]).forEach(add);
-    add(id.replace(/-plumage$/,'')); add(id.replace(/-mask$/,''));
-    add(id.replace(/-forme$/,'')); add(id.replace(/-form$/,''));
-    add(id.replace(/-standard$/,'')); add(id.replace(/-normal$/,''));
-    const parts=id.split('-');
-    for(let i=parts.length-1;i>=1;i--)add(parts.slice(0,i).join('-'));
-    const out=[];
-    for(const x of ids){
-      out.push(BASE+'gen9/'+x+'.png');
-      out.push(BASE+'gen5/'+x+'.png');
-      out.push(BASE+'dex/'+x+'.png');
-    }
-    return out;
-  }
-  function install(img){
-    if(!(img instanceof HTMLImageElement)||img.dataset.sitewideSpriteFix)return;
-    const src=img.src||'';
-    if(!src.includes('/sprites/'))return;
-    img.dataset.sitewideSpriteFix='1';
-    img.dataset.sitewideSpriteUrls=JSON.stringify(urlsFor(img));
-    img.dataset.sitewideSpriteIndex='-1';
-    img.onerror=function(){
-      const urls=JSON.parse(img.dataset.sitewideSpriteUrls||'[]');
-      let i=Number(img.dataset.sitewideSpriteIndex||-1)+1;
-      while(i<urls.length && urls[i]===img.src)i++;
-      if(i<urls.length){img.dataset.sitewideSpriteIndex=String(i);img.style.opacity='';img.src=urls[i];}
-      else{img.onerror=null;img.removeAttribute('src');img.style.opacity='.25';}
-    };
-  }
-  function scan(root){
-    if(root instanceof HTMLImageElement)install(root);
-    else if(root&&root.querySelectorAll)root.querySelectorAll('img[src*="/sprites/"]').forEach(install);
-  }
-  function start(){scan(document); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(scan))).observe(document.documentElement,{subtree:true,childList:true});}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
-})();
-</script>
-<script id="season-nav-final-js">
-(function(){
-  const nav=document.getElementById('pageNav');
-  if(!nav) return;
-  const links=[...nav.querySelectorAll('a[data-page]')];
-  const current=(location.pathname.split('/').pop()||'index.html').toLowerCase();
-  links.forEach(a=>a.classList.toggle('active',(a.dataset.page||'').toLowerCase()===current));
-  function updateNav(){
-    nav.classList.toggle('nav-hidden',window.scrollY>140);
-  }
-  let ticking=false;
-  window.addEventListener('scroll',function(){
-    if(!ticking){ticking=true;requestAnimationFrame(function(){updateNav();ticking=false;});}
-  },{passive:true});
-  nav.addEventListener('mouseenter',()=>nav.classList.remove('nav-hidden'));
-  document.addEventListener('mousemove',e=>{if(e.clientY<=12) nav.classList.remove('nav-hidden');},{passive:true});
-  updateNav();
-})();
-</script>
+<script src="js/sbl-supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/services/rosters.js"></script>
+    <script src="js/sbl-site.js"></script>
 </body></html>
