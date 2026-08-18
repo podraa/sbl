@@ -1,0 +1,62 @@
+
+=== phase5a-parser-regression.js ===
+PASS | damage without faint does not award assist
+PASS | damage + killer faint awards one assist
+PASS | item removal assist retains prior damage
+PASS | item removal under 50 percent still records damage
+PASS | item removal over 50 percent records damage and uses combined reason
+PASS | escaped replay HP tokens preserve damage and item-removal attribution
+PASS | direct and indirect damage buckets reconcile
+PASS | Illusion replace preserves same mon stats
+PASS | mid-battle forme change preserves same mon stats
+PASS | hazard damage is indirect and credited to setter
+PASS | status residual damage is credited to status inflictor
+PASS | switching does not transfer prior attacker credit to new occupant
+
+12/12 tests passed
+
+=== phase5a-item-removal-ledger.test.js ===
+Phase 5A Item Removal ledger tests: 5/5 passed
+
+=== replay-regression-suite.js ===
+PASS | Attribution: explicit [of] source wins
+PASS | Attribution: switching target breaks stale direct-hit attribution
+PASS | Damage: multi-hit attacks sum every damage event
+PASS | Damage: Substitute damage is not credited as opposing direct damage
+PASS | Damage: recoil is self damage and not credited to opponent
+PASS | Forms: Illusion replace merges battle identity
+PASS | Forms: Illusion disguise does not steal an existing species identity
+PASS | Forms: mid-battle formechange preserves identity
+PASS | KDA: final damaging attacker gets kill, prior contributor gets assist
+PASS | KDA: killer never receives its own assist
+PASS | Assists: below threshold plus real KO gives no damage assist
+PASS | Assists: qualifying damage gives exactly one assist
+PASS | Assists: item removal + qualifying damage merges into one audit entry
+PASS | Assists: killer excluded from item-removal contribution
+PASS | Attribution: Stealth Rock is indirect and setter-owned
+PASS | Attribution: persistent status damage remains tied to inflictor
+PASS | Attribution: Future Sight delayed hit stays with original setter
+PASS | Attribution: weather chip is indirect and setter-owned
+PASS | KDA: simultaneous fainting produces distinct deaths without fake kills
+PASS | KDA: self-KO does not award opposing kill/assist
+PASS | Outcomes: forfeit/disconnect log without fabricating a death
+PASS | Forms: Transform does not create a second source identity
+
+22/22 regression cases passed
+
+=== phase5a-real-replay-2636238237.test.js ===
+PASS | real replay 2636238237 item-removal audit regression
+
+=== phase5b-parser-extraction.test.js ===
+PASS | Phase 5B parser extraction: shared parser is the sole page-independent implementation
+
+=== phase5b-zoroark-identity.test.js ===
+PASS | Phase 5B Zoroark identity: Zoroark and Zoroark-Hisui remain separate canonical stat rows
+
+=== phase5b-death-killer-badges.test.js ===
+PASS | Phase 5B death killer UI: killer entries render without type badges
+
+=== phase5c-luck-logic.test.js ===
+PASS | Phase 5C luck logic: secondary procs, flinches, confusion and consecutive Protect are scored
+
+Replay regression suite: PASS (8 suites)

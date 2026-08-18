@@ -356,6 +356,7 @@ input,textarea,select{
 </style>
 
   <link rel="stylesheet" href="css/sbl-site.css">
+  <link rel="stylesheet" href="css/sbl-sprites-layout.css">
 </head>
 <body>
 
@@ -383,12 +384,12 @@ input,textarea,select{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/pokemon-dex-ids.js"></script>
 <script src="js/services/pokemon.js"></script>
+<script src="js/sbl-supabase.js"></script>
+<script src="js/services/admin.js"></script>
 <script>
 (function(){
-  const SUPABASE_URL = 'https://dfxdkkemltukxaklhcpo.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN';
-  const SUPABASE_STATE_ID = '__dashboard_state__';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabase = SBL.getSupabase();
+  const SUPABASE_STATE_ID = SBL.admin.STATE_ID;
 
   let adminUser = null;
   let STATE = { teamMap:{}, settings:{ rosters:{}, draft:null } };
@@ -430,49 +431,52 @@ input,textarea,select{
   }
 
   async function loadState(){
-    const [{data, error}, {data:profilesData, error:profErr}] = await Promise.all([
-      supabase.from('replays').select('replay_id,replay_data').eq('replay_id', SUPABASE_STATE_ID).maybeSingle(),
-      supabase.from('profiles').select('id,team_name,status').eq('status','approved')
-    ]);
+    // The Draft Room must be able to READ the published draft board before
+    // authentication is considered.  In particular, a profiles/RLS failure
+    // must never prevent an otherwise valid live draft from rendering.
+    const {data, error} = await supabase
+      .from('replays')
+      .select('replay_id,replay_data')
+      .eq('replay_id', SUPABASE_STATE_ID)
+      .maybeSingle();
     if(error) throw error;
-    if(profErr) throw profErr;
+
     const shared = data?.replay_data || {};
     STATE.teamMap = shared.teamMap || {};
     STATE.settings = Object.assign({rosters:{}}, shared.settings || {});
     STATE.settings.rosters = normalizeStoredRosters(STATE.settings.rosters);
     STATE.settings.draft = normalizeDraftState(STATE.settings.draft);
     const seasonLabel=document.getElementById('seasonLabel'); if(seasonLabel) seasonLabel.textContent=STATE.settings.activeSeason || 'Current season';
-    PROFILES = (profilesData || []).filter(p => p.team_name);
+    // Profiles are supplementary only. They are commonly protected by RLS,
+    // so failure here is deliberately non-fatal. Franchises are also derived
+    // from the published draft order/team map below.
+    try{
+      const {data:profilesData} = await supabase
+        .from('profiles')
+        .select('id,team_name,status')
+        .eq('status','approved');
+      PROFILES = (profilesData || []).filter(p => p.team_name);
+    }catch(profileError){
+      console.warn('Draft Room: approved profile lookup unavailable; continuing from published draft state.', profileError);
+      PROFILES = [];
+    }
     loaded = true;
   }
 
-  async function saveSharedState(){
-    requireAdmin();
-    const {error} = await supabase.from('replays').upsert([{
-      replay_id: SUPABASE_STATE_ID,
-      replay_data: {teamMap: STATE.teamMap, settings: STATE.settings},
-      updated_at: new Date().toISOString()
-    }], {onConflict:'replay_id'});
-    if(error) throw error;
-  }
-  async function savePublishedRosters(){
-    requireAdmin();
-    const {error} = await supabase.from('replays').upsert([{
-      replay_id: '__rosters__',
-      replay_data: {rosters: STATE.settings.rosters},
-      updated_at: new Date().toISOString()
-    }], {onConflict:'replay_id'});
-    if(error) throw error;
-  }
-  async function persist(){
-    await saveSharedState();
-    await savePublishedRosters();
-  }
+  async function saveSharedState(){ requireAdmin(); await SBL.admin.saveSharedState(STATE, adminUser); }
+  async function savePublishedRosters(){ requireAdmin(); await SBL.admin.savePublishedRosters(STATE.settings.rosters || {}, adminUser); }
+  async function persist(){ requireAdmin(); await SBL.admin.persistDraft(STATE, adminUser); }
 
   function franchises(){
     const fromProfiles = PROFILES.map(p => p.team_name);
     const fromOrder = STATE.settings.draft.order || [];
-    return [...new Set([...fromProfiles, ...fromOrder])].sort();
+    const fromRosters = Object.keys(STATE.settings.rosters || {});
+    const map = STATE.teamMap || {};
+    const fromTeamMap = [
+      ...Object.keys(map),
+      ...Object.values(map).map(v => typeof v === 'string' ? v : v?.team_name)
+    ].filter(Boolean);
+    return [...new Set([...fromProfiles, ...fromOrder, ...fromRosters, ...fromTeamMap])].sort();
   }
   function draftBudget(team){
     const d = STATE.settings.draft;
@@ -670,67 +674,54 @@ input,textarea,select{
     if(!el){
       el = document.createElement('div');
       el.id = 'adminError';
-      el.style.cssText = 'position:fixed;top:12px;right:12px;z-index:1000;max-width:420px;padding:10px 14px;border:1px solid var(--red);border-radius:8px;background:var(--panel);color:var(--red);font-size:12px;';
-      document.body.appendChild(el);
+      el.style.cssText = [
+        'position:relative', 'z-index:2000', 'margin:14px 0', 'max-width:none',
+        'padding:12px 14px', 'border:1px solid var(--red)', 'border-radius:8px',
+        'background:var(--panel)', 'color:var(--red)', 'font-size:12px',
+        'line-height:1.5', 'white-space:pre-wrap'
+      ].join(';');
+      const app = document.getElementById('app');
+      const header = app?.querySelector('header');
+      if(header?.parentNode) header.parentNode.insertBefore(el, header.nextSibling);
+      else document.body.prepend(el);
     }
     el.textContent = msg;
     el.style.display = 'block';
   }
-  function showAdminLogin(){
-    const app = document.getElementById('app');
-    app.style.display = 'none';
-    document.getElementById('adminAuth')?.remove();
-    const wrap = document.createElement('div');
-    wrap.id = 'adminAuth';
-    wrap.style.cssText = 'max-width:420px;margin:80px auto;padding:24px;background:var(--panel);border:1px solid var(--border);border-radius:10px;';
-    wrap.innerHTML = `
-      <h1 style="margin:0 0 6px;font-size:22px;">Draft Room</h1>
-      <div class="sub">Sign in to run the draft.</div>
-      <label>Email</label><input id="adminEmail" type="email" autocomplete="username" placeholder="you@example.com" style="width:100%;margin-bottom:12px;">
-      <label>Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Password" style="width:100%;margin-bottom:14px;">
-      <button class="primary" id="adminLoginBtn" style="width:100%;">Log in</button>
-      <div id="adminError" class="note danger" style="margin-top:10px;"></div>`;
-    document.body.appendChild(wrap);
-    document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
-    document.getElementById('adminPassword').addEventListener('keydown', e => { if(e.key === 'Enter') adminLogin(); });
-  }
-  async function adminLogin(){
-    const email = document.getElementById('adminEmail').value.trim();
-    const password = document.getElementById('adminPassword').value;
-    if(!email || !password){ showAdminError('Enter your email and password.'); return; }
-    const btn = document.getElementById('adminLoginBtn');
-    btn.disabled = true; btn.textContent = 'Logging in…';
-    const {data, error} = await supabase.auth.signInWithPassword({email, password});
-    btn.disabled = false; btn.textContent = 'Log in';
-    if(error){ showAdminError(error.message); return; }
-    adminUser = data.user;
-    document.getElementById('adminAuth')?.remove();
-    document.getElementById('app').style.display = '';
-    try{ await loadState(); render(); }
-    catch(e){ showAdminError('Could not load draft data: ' + e.message); }
-  }
-  async function initAuth(){
-    const {data, error} = await supabase.auth.getSession();
-    if(error) throw error;
-    if(data.session){
-      adminUser = data.session.user;
-      document.getElementById('app').style.display = '';
-      return true;
+
+  async function refreshAuth(){
+    try{
+      const {data, error} = await supabase.auth.getSession();
+      if(error) throw error;
+      adminUser = data?.session?.user || null;
+    }catch(e){
+      // Authentication is for write actions only. A session lookup failure
+      // must not prevent the public draft board from loading.
+      console.warn('Draft Room auth check failed; continuing read-only.', e);
+      adminUser = null;
     }
-    showAdminLogin();
-    return false;
   }
 
+  // Boot is intentionally independent of auth. A live published draft should
+  // render even when the visitor is logged out; login is only needed to pick.
   (async function init(){
+    contentEl.innerHTML = '<div class="empty-state">Loading draft board…</div>';
     try{
-      const authed = await initAuth();
-      if(!authed) return;
       await loadState();
+      await refreshAuth();
       render();
     }catch(e){
-      console.error(e);
-      showAdminError('Could not start the Draft Room: ' + e.message);
+      console.error('Draft Room boot failed:', e);
+      showAdminError('Could not load the Draft Room.\n' + (e?.message || String(e)));
+      contentEl.innerHTML = '<div class="empty-state">The Draft Room could not load. See the error above.</div>';
     }
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      adminUser = session?.user || null;
+      // Do not reload the board on auth events. Authentication only changes
+      // whether write actions are available.
+      if(loaded) render();
+    });
   })();
 })();
 </script>
@@ -750,10 +741,7 @@ input,textarea,select{
     if(lockHint) lockHint.hidden = !locked;
   }
 
-  const client = window.supabase?.createClient(
-    'https://dfxdkkemltukxaklhcpo.supabase.co',
-    'sb_publishable_H7iIBiJTxY77lBAcpJn2VQ_u2hAG2CN'
-  );
+  const client = window.SBL?.getSupabase ? window.SBL.getSupabase() : null;
 
   async function setupCommissionerNav(){
     try{
@@ -776,9 +764,7 @@ input,textarea,select{
 })();
 </script>
 
-  <script src="js/sbl-supabase.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/services/rosters.js"></script>
-    <script src="js/sbl-site.js"></script>
 </body>
 </html>

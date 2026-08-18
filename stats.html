@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>window.__SBL_BOOT_START=performance.now();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Stats</title>
@@ -71,6 +72,16 @@
   }
   textarea{min-height:90px; resize:vertical;}
   .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+
+  /* Phase 3: consistent Stats filter placement */
+  .stats-controls{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:14px 0 18px;}
+  .stats-controls > .stats-control{min-width:180px;}
+  .stats-controls label{display:block;margin-bottom:6px;}
+  .stats-controls select{width:auto;min-width:180px;}
+  .stats-controls-damage{justify-content:flex-start;}
+  .stats-controls-damage .stats-control{min-width:0;}
+  .stats-controls-damage .stats-control select{min-width:170px;}
+  @media(max-width:760px){.stats-controls{align-items:stretch;}.stats-controls > .stats-control{width:100%;}.stats-controls select{width:100%;}}
   .row > div{flex:1; min-width:160px;}
 
   button.primary{
@@ -328,7 +339,7 @@
 
   /* Pokémon profile modal */
   .pokemon-overlay{
-    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center;
     padding:24px; overflow:hidden; overscroll-behavior:contain; background:rgba(4,7,12,.62);
     backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
     animation:pokemonOverlayIn .16s ease-out;
@@ -362,13 +373,24 @@
   .profile-record-tab:hover{color:var(--text);border-color:var(--text-dim);}
   .profile-record-tab.active{color:var(--text);background:var(--panel2);border-color:var(--amber);box-shadow:inset 0 -2px 0 var(--amber);}
   .profile-record-panel[hidden]{display:none !important;}
+  .profile-section-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;padding:4px;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;}
+  .profile-section-tab{flex:1 1 110px;border:1px solid transparent;background:transparent;color:var(--text-dim);border-radius:7px;padding:8px 11px;font:700 11px var(--sans);cursor:pointer;transition:.15s ease;}
+  .profile-section-tab:hover{color:var(--text);background:var(--panel2);}
+  .profile-section-tab.active{color:var(--text);background:var(--panel2);border-color:var(--border);box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .profile-section-panel[hidden]{display:none !important;}
+  .profile-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:10px;}
+  .profile-summary-grid>div{background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:11px 12px;}
+  .profile-summary-grid span{display:block;font-size:10px;text-transform:uppercase;color:var(--text-dim);letter-spacing:.05em;margin-bottom:4px;}
+  .profile-summary-grid strong{font-family:var(--mono);font-size:17px;}
+  @media(max-width:850px){.profile-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:520px){.profile-summary-grid{grid-template-columns:1fr 1fr;gap:7px;}.profile-summary-grid>div{padding:9px;}.profile-summary-grid strong{font-size:15px;}.profile-section-tab{flex-basis:80px;padding:7px 8px;}}
 
   /* audit modal */
   td.auditable{cursor:pointer; text-decoration:underline dotted var(--text-dim); text-underline-offset:3px;}
   td.auditable:hover{color:var(--amber);}
   /* Franchise summary overlay */
   .audit-overlay{
-    position:fixed; inset:0; z-index:50;
+    position:fixed; inset:0; z-index:11000;
     display:flex; align-items:center; justify-content:center;
     padding:24px 16px; overflow-y:auto;
     background:rgba(6,9,14,.72);
@@ -506,6 +528,8 @@
     margin-right:auto !important;
   }
 .profile-two-col .type-badge{display:none!important;}
+.profile-event-pokemon .type-badges,.profile-event-pokemon .type-badge{display:none!important;}
+.profile-record-panel .type-badges,.profile-record-panel .type-badge{display:none!important;}
 .pokemon-type-filter{min-width:150px; display:flex; flex-direction:column;}
 .pokemon-type-filter label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
 .pokemon-type-filter select{width:100%;height:38px;box-sizing:border-box;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px;font:inherit;}
@@ -599,6 +623,9 @@
     .franchise-total-grid{grid-template-columns:repeat(2,1fr);}
   }
  .page-nav a[hidden]{display:none !important;}
+
+.summary-kad-link{cursor:pointer;text-decoration:underline dotted var(--text-dim);text-underline-offset:3px;}
+.summary-kad-link:hover{color:var(--amber);}
 </style>
 
 <style id="all-popouts-animation">
@@ -756,7 +783,7 @@ th{border-color:var(--border)}
 td{border-color:var(--border)}
 a{color:var(--amber)}
 </style>
-<script id="sbl-global-theme-loader" src="js/sbl-themes.js"></script>
+<script id="sbl-global-theme-loader" src="js/sbl-themes.js" defer></script>
 <style id="sbl-theme-final-overrides">
 /* Final site-wide theme surface and text pass */
 :root{
@@ -1032,6 +1059,7 @@ body{
 }
 </style>
   <link rel="stylesheet" href="css/sbl-site.css">
+  <link rel="stylesheet" href="css/sbl-sprites-layout.css">
 </head>
 <body data-admin="true">
 <style>
@@ -1069,14 +1097,17 @@ body{
 <div id="auditModal"></div>
 
 <script src="js/sbl-site.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/pokemon-dex-ids.js"></script>
-<script src="js/services/pokemon.js"></script>
-<script src="js/services/seasons.js"></script>
-<script src="js/services/league.js"></script>
-<script src="js/services/replays.js"></script>
-<script src="js/services/trades.js"></script>
-<script src="js/performance.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="js/pokemon-dex-ids.js" defer></script>
+<script src="js/services/pokemon.js" defer></script>
+<script src="js/services/seasons.js" defer></script>
+<script src="js/services/league.js" defer></script>
+<script src="js/services/replays.js" defer></script>
+<script src="js/services/stats.js" defer></script>
+<script src="js/services/trades.js" defer></script>
+<script src="js/performance.js" defer></script>
+<script src="js/stats/profile-ui.js?v=phase3-profile-6-luck-kpg-overview" defer></script>
+<script src="js/stats/golden-fist-ui.js" defer></script>
 <script>
 (function(){
   const SHARED = true; // league data shared with anyone viewing this dashboard (cloud mode only)
@@ -1200,11 +1231,30 @@ body{
     await saveSharedState();
   }
 
+  function replayDataSignature(replays){
+    return Object.values(replays || {}).map(r => [
+      r?.id || '',
+      r?.processedAt || 0,
+      r?.parserVersion || 0,
+      r?.mons ? Object.values(r.mons).reduce((sum,m) =>
+        sum + (Number(m?.directDamage)||0) + (Number(m?.indirectDamage)||0) +
+        (Number(m?.kills)||0) + (Number(m?.deaths)||0) + (Number(m?.assists)||0), 0) : 0
+    ].join(':')).sort().join('|');
+  }
+
   async function refreshSharedState(){
     if(loadingFromRemote) return;
-    const before = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
+    const before = JSON.stringify({
+      r: replayDataSignature(STATE.replays),
+      t: STATE.teamMap,
+      s: STATE.settings
+    });
     await loadState();
-    const after = JSON.stringify({r:Object.keys(STATE.replays).length,t:STATE.teamMap,s:STATE.settings});
+    const after = JSON.stringify({
+      r: replayDataSignature(STATE.replays),
+      t: STATE.teamMap,
+      s: STATE.settings
+    });
     if(before !== after){
       renderTicker();
       render();
@@ -1243,6 +1293,17 @@ body{
     const raw=String(n??'').trim().toLowerCase().replace(/-/g,' ').replace(/_/g,' ').replace(/\s+/g,' ');
     if(raw.replace(/\s+/g,'')==='yefmoc') return 'comfey';
     return raw;
+  }
+  // Statistics identity MUST preserve battle forms. The old normName() is a
+  // display/search normalizer and is not safe as the primary key for stats.
+  // Use the shared stats service so Deoxys-Speed, Thundurus-Incarnate, etc.
+  // remain separate records.
+  function statIdentity(n){
+    if(window.SBL?.stats?.identity) return window.SBL.stats.identity(n);
+    let id=String(n??'').trim().toLowerCase().replace(/[’']/g,'').replace(/[♀]/g,'-f').replace(/[♂]/g,'-m').replace(/[.:]/g,'').replace(/_/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    id=id.replace(/-(forme|form|style)$/,'');
+    const typo={scovilalian:'scovillain',scovillian:'scovillain',scovilion:'scovillain'};
+    return typo[id]||id;
   }
   function toShowdownId(species){ return SBL.pokemon.normalizeName(species); }
   function spriteUrl(species){ return SBL.pokemon.spriteUrl(species); }
@@ -1299,720 +1360,10 @@ body{
     if(/^[a-z0-9-]+$/i.test(url)) return url;
     return null;
   }
-  function parseHP(token){
-    if(!token) return 0;
-    token = token.split(' ')[0]; // strip status tags like "tox", "fnt"
-    if(token.includes('/')){
-      const [a,b] = token.split('/').map(Number);
-      if(!b) return 0;
-      return (a/b)*100;
-    }
-    const v = parseFloat(token);
-    return isNaN(v) ? 0 : v;
-  }
-  function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
-
-  // ---------- replay parsing ----------
-  function canonicalBattleSpecies(name){
-    const raw = String(name || '').trim();
-    if(!raw) return raw;
-    if(window.SBL?.pokemon?.displayName) return SBL.pokemon.displayName(raw);
-    const id = raw.toLowerCase().replace(/[’']/g,'').replace(/_/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-');
-    const map = {
-      'mimikyu-busted':'Mimikyu','aegislash-blade':'Aegislash','aegislash-shield':'Aegislash',
-      'terapagos-terastal':'Terapagos','terapagos-stellar':'Terapagos','palafin-hero':'Palafin',
-      'zacian-crowned':'Zacian','zamazenta-crowned':'Zamazenta','eiscue-noice':'Eiscue',
-      'morpeko-hangry':'Morpeko','wishiwashi-school':'Wishiwashi','cramorant-gulping':'Cramorant',
-      'cramorant-gorging':'Cramorant','darmanitan-zen':'Darmanitan','meloetta-pirouette':'Meloetta',
-      'minior-meteor':'Minior','zygarde-10-percent':'Zygarde','zygarde-50-percent':'Zygarde',
-      'necrozma-dusk-mane':'Necrozma','necrozma-dawn-wings':'Necrozma','necrozma-ultra':'Necrozma',
-      'giratina-origin':'Giratina','shaymin-sky':'Shaymin','hoopa-unbound':'Hoopa',
-      'kyurem-black':'Kyurem','kyurem-white':'Kyurem','deoxys-attack':'Deoxys','deoxys-defense':'Deoxys',
-      'deoxys-speed':'Deoxys','keldeo-resolute':'Keldeo'
-    };
-    return map[id] || raw;
-  }
-
-  function parseLog(json, replayId){
-    const lines = json.log.split('\n');
-    const players = {p1:'', p2:''};
-    const slots = {}; // slotId -> {species, hp, side, monId}
-    let nextMonInstance = 0;
-    const mons = {}; // unique battle-stint id -> stats
-    const appearedThisReplay = new Set();
-    let lastMove = null; // {source, target, move}
-    let currentTurn = 0;
-    let winner = null;
-    const luck = {p1:newLuckSide(), p2:newLuckSide()};
-    const luckPokemon = {};
-    function pokemonLuckForSlot(slot){
-      const mk = monKey(slot);
-      if(!mk) return null;
-      if(!luckPokemon[mk]) luckPokemon[mk] = Object.assign({species:(slots[slot] && slots[slot].species) || ''}, newLuckSide());
-      return luckPokemon[mk];
-    }
-    function addLuckEvent(target, type, score, detail){
-      if(!target || !Array.isArray(target.luckEvents)) return;
-      target.luckEvents.push({turn:currentTurn, type, score:Number(score||0), detail:String(detail||'')});
-    }
-    const sleeping = {};
-    const frozen = {};
-    const pendingStatusChecks = {};
-    const currentMajorStatus = {};
-    // Accuracy comes from the same move data used by Pokemon Showdown, rather
-    // than a manually maintained list. The replay itself tells us which move
-    // was used; this lookup tells us that move's base accuracy.
-    const MOVE_DATA_URL = 'https://play.pokemonshowdown.com/data/moves.json';
-    let MOVE_DATA = null;
-    let MOVE_ACCURACY_PROMISE = null;
-    function moveKey(name){ return String(name || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
-    async function ensureMoveAccuracyData(){
-      if(MOVE_DATA) return MOVE_DATA;
-      if(MOVE_ACCURACY_PROMISE) return MOVE_ACCURACY_PROMISE;
-      MOVE_ACCURACY_PROMISE = fetch(MOVE_DATA_URL, {cache:'force-cache'})
-        .then(r=>{ if(!r.ok) throw new Error('could not load Showdown move data (' + r.status + ')'); return r.json(); })
-        .then(data=>{
-          const out = {};
-          for(const [id, move] of Object.entries(data || {})){
-            if(!move) continue;
-            const acc = move.accuracy;
-            const value = (typeof acc === 'number') ? acc : null;
-            const statusChances = {};
-            if(move.status) statusChances[move.status] = 100;
-            const secondaries = Array.isArray(move.secondaries) ? move.secondaries : (move.secondary && move.secondary !== false ? [move.secondary] : []);
-            for(const sec of secondaries){
-              if(sec && sec.status){
-                const chance = typeof sec.chance === 'number' ? sec.chance : 100;
-                statusChances[sec.status] = Math.max(statusChances[sec.status] || 0, chance);
-              }
-            }
-            // willCrit (e.g. Frost Breath, Storm Throw, Zippy Zap, Wicked Blow, Surging
-            // Strikes) marks a move as an automatic, deterministic critical hit. Showdown
-            // encodes this separately from critRatio, not as critRatio:4, so both must be
-            // captured or guaranteed crits get scored as lucky.
-            const entry = {accuracy:value, statusChances, critRatio:(typeof move.critRatio === 'number' ? move.critRatio : 1), willCrit:!!move.willCrit};
-            out[moveKey(id)] = entry;
-            if(move.name) out[moveKey(move.name)] = entry;
-          }
-          MOVE_DATA = out;
-          return out;
-        })
-        .catch(err=>{
-          console.warn('Move accuracy data unavailable; accuracy-sensitive luck events will be skipped.', err);
-          MOVE_DATA = {};
-          return MOVE_DATA;
-        });
-      return MOVE_ACCURACY_PROMISE;
-    }
-    function getMoveAccuracy(name){
-      if(!MOVE_DATA) return null;
-      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
-      return entry && typeof entry.accuracy === 'number' ? entry.accuracy : null;
-    }
-    function getMoveStatusChance(name, status){
-      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
-      if(!entry || !entry.statusChances) return null;
-      const value = entry.statusChances[status];
-      return typeof value === 'number' ? value : null;
-    }
-    function isLowAccuracyMove(name){
-      const acc = getMoveAccuracy(name);
-      return acc !== null && acc <= 85;
-    }
-    // Luck is weighted by how unlikely the observed event was.
-    // p=1 is guaranteed and contributes 0; rarer events contribute more.
-    function rarityLuck(probability){
-      if(typeof probability !== 'number' || probability <= 0 || probability > 1) return 0;
-      return (1 / probability) - 1;
-    }
-    function statusDodgeLuck(chance){
-      // The event is FAILURE of the status roll. A 10% status therefore has a
-      // 90% dodge probability, while a 30% status has a 70% dodge probability.
-      // This makes dodging Discharge's 30% paralysis luckier than dodging
-      // Thunderbolt's 10% paralysis, as intended. 100% status has no roll.
-      if(typeof chance !== 'number' || chance <= 0 || chance >= 100) return 0;
-      return rarityLuck(1 - (chance / 100));
-    }
-    function moveDodgeLuck(accuracy){
-      if(typeof accuracy !== 'number' || accuracy < 0 || accuracy >= 100) return 0;
-      return rarityLuck(1 - (accuracy / 100));
-    }
-    function lowAccuracyHitLuck(accuracy){
-      if(typeof accuracy !== 'number' || accuracy <= 0 || accuracy > 100) return 0;
-      return rarityLuck(accuracy / 100);
-    }
-    function critChance(name){
-      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
-      const ratio = entry && typeof entry.critRatio === 'number' ? entry.critRatio : 1;
-      // Guaranteed-crit moves are deterministic and excluded from luck scoring.
-      // Guaranteed crits are flagged via willCrit (Frost Breath, Storm Throw,
-      // Zippy Zap, Wicked Blow, Surging Strikes), not via critRatio.
-      if((entry && entry.willCrit) || ratio >= 4) return null;
-      if(ratio >= 3) return 0.5;
-      if(ratio >= 2) return 0.125;
-      return 1 / 24;
-    }
-    function critLuck(name){
-      const chance = critChance(name);
-      return chance === null ? 0 : rarityLuck(chance);
-    }
-    function paralysisDodgeLuck(){ return rarityLuck(0.75); }
-    function durationLuck(turns){
-      if(!Number.isFinite(turns) || turns <= 0) return 0;
-      return 2 - turns; // 1 turn = +1, 2 = neutral, 3 = -1, etc.
-    }
-    function newLuckSide(){ return {crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0,luckEvents:[]}; }
-    // NOTE: these three all store direct references to a mon's *stats object*
-    // (captured at the moment of the event via ensureMon), never a slot label.
-    // A slot label like "p1a" gets reused by a different mon later in the game,
-    // so resolving it lazily at credit-time would silently attribute damage/
-    // kills to whoever happens to be standing there now instead of whoever
-    // actually did it.
-    let lastAttacker = {}; // targetSlot -> attacker's stats object (for kill credit)
-    // Per-life damage ledger used for assist credit. Each target slot gets a fresh
-    // ledger when a new Pokémon switches in, so damage from an earlier life cannot
-    // create an assist on a later faint.
-    let damageContributors = {}; // targetSlot -> { attackerMonKey: {stats, damage} }
-    // Poison/burn (unlike confusion) persist through a switch — the same individual
-    // keeps ticking for the same status after it returns to the field. So this is
-    // keyed by the *individual mon* (monKey: side+species), not by slot, and is
-    // deliberately NOT cleared on switch — only when the status actually ends.
-    let statusSourceByMon = {}; // monKey -> stats object that inflicted brn/psn/tox on them
-    let hazardSetter = {}; // side -> {hazardName: setter's stats object}
-    // side (the side that GOT toxic-spiked) -> setter's stats object.
-    // Toxic Spikes are a side-wide condition, so this survives switches/faints
-    // and lets residual poison damage inherit kill credit from the setter.
-    let toxicSpikesSetter = {};
-    let delayedSetter = {}; // side -> {moveName: setter's stats object}, for Future Sight / Doom Desire
-    let pendingDelayedHit = {}; // targetSlot -> {stats, cause}; Showdown emits the delayed hit as -end, then an untagged -damage
-    const HAZARD_MOVES = ['Stealth Rock','Spikes'];
-    const DELAYED_MOVES = ['Future Sight','Doom Desire'];
-    const STATUS_TAGS = ['psn','tox','brn'];
-
-    function ofSlotFromTag(tag){
-      // tag like "[of] p2a: Ferrothorn" -> "p2a"
-      const m = tag.match(/p[1-4][a-f]/);
-      return m ? m[0] : null;
-    }
-
-    function monKey(slot){
-      const s = slots[slot];
-      return s?.monId || null;
-    }
-    function ensureMon(slot){
-      const s = slots[slot];
-      if(!s) return null;
-      const k = monKey(slot);
-      if(!mons[k]) mons[k] = {
-        id:k, side:s.side, species:s.species, damageDealt:0, damageTaken:0,
-        kills:0, deaths:0, appearances:0, assists:0, killLog:[], deathLog:[], assistLog:[],      };
-      if(!appearedThisReplay.has(k)){
-        appearedThisReplay.add(k);
-        mons[k].appearances += 1;
-      }
-      return mons[k];
-    }
-
-    function addStatusDodgeLuck(targetSide, chance, targetMk){
-      const score = statusDodgeLuck(chance);
-      if(luck[targetSide]) { luck[targetSide].statusDodgeLuck += score; addLuckEvent(luck[targetSide], 'status-dodge', score, `${chance}% status chance avoided`); }
-      if(targetMk && luckPokemon[targetMk]) { luckPokemon[targetMk].statusDodgeLuck += score; addLuckEvent(luckPokemon[targetMk], 'status-dodge', score, `${chance}% status chance avoided`); }
-    }
-    function finalizePendingStatusChecks(){
-      for(const key of Object.keys(pendingStatusChecks)){
-        const checks = pendingStatusChecks[key];
-        for(const check of checks){
-          if(!check.resolved && !check.cancelled){
-            addStatusDodgeLuck(check.targetSide, check.chance, check.targetMk || key);
-            check.resolved = true;
-          }
-        }
-        delete pendingStatusChecks[key];
-      }
-    }
-    function finalizeStatusDuration(mk, status){
-      const store = status === 'slp' ? sleeping : frozen;
-      const st = store[mk];
-      if(!st) return;
-      const side = mk.split('|')[0];
-      const score = durationLuck(st.turns);
-      if(luck[side]){
-        if(status === 'slp') luck[side].sleepDurationLuck += score;
-        if(status === 'frz') luck[side].freezeDurationLuck += score;
-      }
-      const monLuck = luckPokemon[mk];
-      if(monLuck){
-        if(status === 'slp') monLuck.sleepDurationLuck += score;
-        if(status === 'frz') monLuck.freezeDurationLuck += score;
-        addLuckEvent(monLuck, status === 'slp' ? 'sleep' : 'freeze', score, `${st.turns} turn${st.turns===1?'':'s'} ${status === 'slp' ? 'sleep' : 'freeze'}`);
-      }
-      const sideLuck = luck[side];
-      if(sideLuck) addLuckEvent(sideLuck, status === 'slp' ? 'sleep' : 'freeze', score, `${st.turns} turn${st.turns===1?'':'s'} ${status === 'slp' ? 'sleep' : 'freeze'}`);
-      delete store[mk];
-    }
-
-    for(const raw of lines){
-      if(!raw.startsWith('|')) continue;
-      const parts = raw.split('|');
-      const cmd = parts[1];
-
-      if(cmd === 'poke' && parts[3]){
-        const side = parts[2];
-        const species = parts[3].split(',')[0].trim();
-        if((side==='p1'||side==='p2') && species && !teamRoster[side].some(x=>normName(x)===normName(species))) teamRoster[side].push(species);
-      } else if(cmd === 'player' && parts[3]){
-        const side = parts[2];
-        if(side === 'p1' || side === 'p2') players[side] = parts[3];
-      } else if(cmd === 'turn'){
-        const t = parseInt(parts[2], 10);
-        if(!isNaN(t)){
-          currentTurn = t;
-          for(const mk of Object.keys(sleeping)){
-            const st = sleeping[mk];
-            if(st && st.lastCountedTurn < currentTurn){
-              const side = mk.split('|')[0];
-              if(luck[side]) luck[side].sleepTurns += 1;
-              if(luckPokemon[mk]) luckPokemon[mk].sleepTurns += 1;
-              st.turns += 1;
-              st.lastCountedTurn = currentTurn;
-            }
-          }
-          for(const mk of Object.keys(frozen)){
-            const st = frozen[mk];
-            if(st && st.lastCountedTurn < currentTurn){
-              const side = mk.split('|')[0];
-              if(luck[side]) luck[side].freezeTurns += 1;
-              if(luckPokemon[mk]) luckPokemon[mk].freezeTurns += 1;
-              st.turns += 1;
-              st.lastCountedTurn = currentTurn;
-            }
-          }
-          finalizePendingStatusChecks();
-        }
-      } else if(cmd === 'win'){
-        winner = (parts[2] || '').trim() || null;
-      } else if(cmd === 'switch' || cmd === 'drag'){
-        const slotFull = parts[2]; // "p1a: Nickname"
-        const slot = slotFull.split(':')[0].trim();
-        const side = sideOf(slot);
-        const species = parts[3].split(',')[0].trim();
-        const hp = parseHP(parts[4] || '100/100');
-        const monId = side + '|' + (++nextMonInstance);
-        slots[slot] = {species, hp, hpMax: parseMaxHP(parts[4] || '100/100'), side, monId};
-        // A new mon now occupies this slot — any prior *direct-hit* attacker
-        // credit for this slot belonged to the mon that just left, so that must
-        // not carry over. Status-source credit (poison/burn) is intentionally
-        // NOT cleared here — it lives in statusSourceByMon, keyed to the
-        // individual mon rather than the slot, because poison/burn persist
-        // through a switch and must keep crediting the original inflictor
-        // when the same mon returns and the status keeps ticking.
-        delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
-        damageContributors[slot] = {};
-        ensureMon(slot);
-      } else if(cmd === 'replace' || cmd === '-formechange' || cmd === 'detailschange'){
-        const slotFull = parts[2];
-        const slot = slotFull ? slotFull.split(':')[0].trim() : null;
-        const species = parts[3] ? parts[3].split(',')[0].trim() : '';
-        if(slot && species){
-          const st = slots[slot];
-          if(st){
-            st.species = species;
-            const k = monKey(slot);
-            if(k && mons[k]) mons[k].species = species;
-            if(k && luckPokemon[k]) luckPokemon[k].species = species;
-          }
-        }
-      } else if(cmd === 'move'){
-        finalizePendingStatusChecks();
-        const source = parts[2] ? parts[2].split(':')[0].trim() : null;
-        const target = parts[4] ? parts[4].split(':')[0].trim() : null;
-        const moveName = parts[3] ? parts[3].trim() : '';
-        if(source){
-          lastMove = {source, target, move: moveName, accuracy:getMoveAccuracy(moveName), hitCounted:false};
-          if(target && sideOf(source) !== sideOf(target)){
-            const targetMk = monKey(target);
-            const statusChances = ['par','slp','frz'].map(st => getMoveStatusChance(moveName, st)).filter(v => v !== null);
-            const combinedStatusChance = statusChances.length ? Math.min(100, statusChances.reduce((a,b)=>a+b,0)) : null;
-            if(targetMk && combinedStatusChance !== null && !currentMajorStatus[targetMk]){
-              (pendingStatusChecks[targetMk] ||= []).push({targetSide:sideOf(target), chance:combinedStatusChance, resolved:false, cancelled:false});
-            }
-          }
-        }
-        if(source && HAZARD_MOVES.includes(moveName)){
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats){
-            if(!hazardSetter[oppSide]) hazardSetter[oppSide] = {};
-            hazardSetter[oppSide][moveName] = setterStats;
-          }
-        }
-        if(source && DELAYED_MOVES.includes(moveName)){
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats){
-            if(!delayedSetter[oppSide]) delayedSetter[oppSide] = {};
-            delayedSetter[oppSide][moveName] = setterStats;
-          }
-        }
-        if(source && moveName === 'Toxic Spikes'){
-          // Toxic Spikes are a side-wide condition. Keep the Pokémon that most
-          // recently established the Toxic Spikes on that side so a later
-          // switch-in, poison tick, and eventual faint can all inherit the
-          // setter's kill credit even if the setter has switched out or fainted.
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats) toxicSpikesSetter[oppSide] = setterStats;
-        }
-      } else if(cmd === '-end'){
-        // Future Sight / Doom Desire are represented by Showdown as:
-        //   |-end|target|move: Future Sight
-        //   |-damage|target|...
-        // The -damage line is deliberately untagged, so looking for
-        // 'Future Sight' in its tags will never work. Resolve the setter
-        // at the -end event and carry it into the following damage event.
-        const slotFull = parts[2];
-        const effect = parts.slice(3).join('|');
-        if(slotFull && (effect.includes('move: Future Sight') || effect.includes('move: Doom Desire'))){
-          const slot = slotFull.split(':')[0].trim();
-          const delayedHit = DELAYED_MOVES.find(m => effect.includes('move: ' + m));
-          if(delayedHit && delayedSetter[sideOf(slot)] && delayedSetter[sideOf(slot)][delayedHit]){
-            pendingDelayedHit[slot] = {
-              stats: delayedSetter[sideOf(slot)][delayedHit],
-              cause: delayedHit
-            };
-          }
-        }
-      } else if(cmd === '-miss'){
-        const source = parts[2] ? parts[2].split(':')[0].trim() : null;
-        const target = parts[3] ? parts[3].split(':')[0].trim() : null;
-        if(source && target && sideOf(source) !== sideOf(target)){
-          const targetSide = sideOf(target);
-          // A miss is a dodge for the target. We also resolve the actual move
-          // accuracy so the replay records whether this was a low-accuracy
-          // dodge, rather than guessing from a hard-coded move list.
-          if(luck[targetSide]){
-            luck[targetSide].dodges += 1;
-            if(lastMove && lastMove.source === source && lastMove.target === target){
-              if(isLowAccuracyMove(lastMove.move)) luck[targetSide].lowAccuracyDodges += 1;
-              const missChances = ['par','slp','frz'].map(st => getMoveStatusChance(lastMove.move, st)).filter(v => v !== null);
-              if(missChances.length){
-                const combinedMissChance = Math.min(100, missChances.reduce((a,b)=>a+b,0));
-                addStatusDodgeLuck(targetSide, combinedMissChance);
-              }
-            }
-          }
-          if(lastMove && lastMove.source === source && lastMove.target === target){
-            lastMove.missed = true;
-            lastMove.accuracy = getMoveAccuracy(lastMove.move);
-          }
-        }
-      } else if(cmd === '-crit'){
-        const target = parts[2] ? parts[2].split(':')[0].trim() : null;
-        if(lastMove && target && lastMove.source && sideOf(lastMove.source) !== sideOf(target)){
-          const attackerSide = sideOf(lastMove.source);
-          // Guaranteed-crit moves are deterministic and must not count as lucky crits.
-          const critChanceValue = critChance(lastMove.move);
-          if(critChanceValue !== null){
-            if(luck[attackerSide]){
-              luck[attackerSide].crits += 1;
-              luck[attackerSide].critLuck += rarityLuck(critChanceValue);
-              addLuckEvent(luck[attackerSide], 'crit', rarityLuck(critChanceValue), `${lastMove.move} crit (${critChanceValue.toFixed(1)}% chance)`);
-            }
-            const monLuck = pokemonLuckForSlot(lastMove.source);
-            if(monLuck){ monLuck.crits += 1; monLuck.critLuck += rarityLuck(critChanceValue); addLuckEvent(monLuck, 'crit', rarityLuck(critChanceValue), `${lastMove.move} crit (${critChanceValue.toFixed(1)}% chance)`); }
-          }
-        }
-      } else if(cmd === '-status'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        const mk = monKey(slot);
-        if(!mk) continue;
-        const statusTags = parts.slice(3).join('|');
-        let inflictorStats = null;
-        if(statusTags.includes('Toxic Spikes') && toxicSpikesSetter[sideOf(slot)]){
-          // Poisoned on switch-in by Toxic Spikes. There is no attacker's move
-          // line for the later residual damage, so permanently associate this
-          // individual Pokémon with the Toxic Spikes setter until its status
-          // is cured. This is keyed by mon identity rather than slot because
-          // the poisoned Pokémon can switch out and back in.
-          inflictorStats = toxicSpikesSetter[sideOf(slot)];
-        } else if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
-          inflictorStats = ensureMon(lastMove.source);
-        }
-        if(inflictorStats) {
-          statusSourceByMon[mk] = inflictorStats;
-          const inflictorSide = inflictorStats.side;
-          const statusCode = statusTags.includes('par') ? 'par' : (statusTags.includes('slp') ? 'slp' : (statusTags.includes('frz') ? 'frz' : null));
-          currentMajorStatus[mk] = statusCode || currentMajorStatus[mk] || null;
-          if(statusCode && lastMove && lastMove.target === slot){
-            const pending = pendingStatusChecks[mk] || [];
-            for(const check of pending) check.resolved = true;
-            delete pendingStatusChecks[mk];
-          }
-          if(statusCode === 'slp'){
-            sleeping[mk] = {startTurn:currentTurn, lastCountedTurn:currentTurn, turns:0};
-            if(inflictorSide && luck[inflictorSide]) luck[inflictorSide].sleepEvents += 1;
-            const targetLuck = pokemonLuckForSlot(slot);
-            if(targetLuck) targetLuck.sleepEvents += 1;
-          } else if(statusCode === 'frz'){
-            frozen[mk] = {startTurn:currentTurn, lastCountedTurn:currentTurn, turns:0};
-            if(inflictorSide && luck[inflictorSide]) luck[inflictorSide].freezeEvents += 1;
-            const targetLuck = pokemonLuckForSlot(slot);
-            if(targetLuck) targetLuck.freezeEvents += 1;
-          } else if(statusCode === 'par'){
-            // The status itself is not automatically treated as lucky/unlucky.
-            // Luck comes from avoiding the status roll or from the duration/turn
-            // behaviour of the status.
-          }
-          if(lastMove && !lastMove.hitCounted && lastMove.target === slot && isLowAccuracyMove(lastMove.move)){
-            if(luck[inflictorSide]) luck[inflictorSide].lowAccuracyHits += 1;
-            lastMove.hitCounted = true;
-          }
-        }
-      } else if(cmd === 'cant'){
-        const slotFull = parts[2];
-        const reason = parts[3] ? parts[3].trim() : '';
-        if(slotFull && reason === 'par'){
-          const slot = slotFull.split(':')[0].trim();
-          const side = sideOf(slot);
-          if(luck[side]) luck[side].fullParalysis += 1;
-        }
-      } else if(cmd === '-block' || cmd === '-fail' || cmd === '-notarget'){
-        const slotFull = parts[2];
-        if(slotFull){
-          const slot = slotFull.split(':')[0].trim();
-          const mk = monKey(slot);
-          if(mk && pendingStatusChecks[mk]) delete pendingStatusChecks[mk];
-        }
-      } else if(cmd === '-immune'){
-        const slotFull = parts[2];
-        if(slotFull){
-          const slot = slotFull.split(':')[0].trim();
-          const mk = monKey(slot);
-          if(mk && pendingStatusChecks[mk]) delete pendingStatusChecks[mk];
-        }
-      } else if(cmd === '-curestatus'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        const mk = monKey(slot);
-        // status is gone — clear credit so it can't be reused if this individual
-        // is somehow attributed residual status damage again later
-        if(mk){
-          const curedStatus = parts[3] ? parts[3].split('|')[0].trim() : currentMajorStatus[mk];
-          if(curedStatus === 'slp') finalizeStatusDuration(mk, 'slp');
-          if(curedStatus === 'frz') finalizeStatusDuration(mk, 'frz');
-          delete currentMajorStatus[mk];
-          delete statusSourceByMon[mk];
-        }
-      } else if(cmd === '-damage'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        const newHp = parseHP(parts[3]);
-        const oldHp = slots[slot].hp;
-        const dmg = Math.max(0, oldHp - newHp);
-        slots[slot].hp = newHp;
-        const targetStats = ensureMon(slot);
-        if(targetStats) targetStats.damageTaken += dmg;
-        if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
-          if(!lastMove.hitCounted && isLowAccuracyMove(lastMove.move)){
-            const attackerSide = sideOf(lastMove.source);
-            const hitScore = lowAccuracyHitLuck(getMoveAccuracy(lastMove.move));
-            if(luck[attackerSide]){
-              luck[attackerSide].lowAccuracyHits += 1;
-              luck[attackerSide].lowAccuracyHitLuck += hitScore;
-              addLuckEvent(luck[attackerSide], 'low-accuracy-hit', hitScore, `${lastMove.move} hit (${getMoveAccuracy(lastMove.move)}% accurate)`);
-            }
-            const monLuck = pokemonLuckForSlot(lastMove.source);
-            if(monLuck){
-              monLuck.lowAccuracyHits += 1;
-              monLuck.lowAccuracyHitLuck += hitScore;
-              addLuckEvent(monLuck, 'low-accuracy-hit', hitScore, `${lastMove.move} hit (${getMoveAccuracy(lastMove.move)}% accurate)`);
-            }
-            lastMove.hitCounted = true;
-          }
-        }
-        if(dmg <= 0) continue;
-
-        const tags = parts.slice(4).join('|');
-        let attackerStats = null;
-        let cause = null;
-
-        // 1) explicit [of] source (Leech Seed, Rocky Helmet, Rough Skin, Iron Barbs, etc.)
-        //    resolved immediately off the current battle state, so it's always accurate
-        if(tags.includes('[of]')){
-          const ofSlot = ofSlotFromTag(tags);
-          if(ofSlot && slots[ofSlot]){
-            attackerStats = ensureMon(ofSlot);
-            const effectM = tags.match(/\[from\]\s*([^\|\[]+)/);
-            cause = effectM ? effectM[1].trim() : 'contact/held-item effect';
-          }
-        }
-        // 2) entry hazard chip (Stealth Rock / Spikes) -> credit whoever set it
-        if(!attackerStats){
-          const hazardHit = HAZARD_MOVES.find(h => tags.includes(h));
-          if(hazardHit && hazardSetter[sideOf(slot)] && hazardSetter[sideOf(slot)][hazardHit]){
-            attackerStats = hazardSetter[sideOf(slot)][hazardHit];
-            cause = hazardHit;
-          }
-        }
-        // 3) residual status damage (burn/poison/toxic) -> credit whoever inflicted the status.
-        // Looked up by the mon's own identity (monKey), not the slot, since poison/burn
-        // persist through a switch and must keep crediting the original inflictor even
-        // after this individual left and came back to the same or a different slot.
-        // This is also what gives a Toxic Spikes setter the kill when poison damage
-        // is the final damage instance before fainting.
-        if(!attackerStats){
-          const statusHit = STATUS_TAGS.find(s => tags.includes('[from] ' + s));
-          const mk = monKey(slot);
-          if(statusHit && mk && statusSourceByMon[mk]){
-            attackerStats = statusSourceByMon[mk];
-            const sourceWasToxicSpikes = (
-              toxicSpikesSetter[sideOf(slot)] &&
-              toxicSpikesSetter[sideOf(slot)] === attackerStats
-            );
-            cause = sourceWasToxicSpikes
-              ? 'Toxic Spikes'
-              : 'residual ' + statusHit;
-          }
-        }
-        // 3b) delayed hits (Future Sight / Doom Desire).
-        // Showdown puts the move name on a preceding -end event, NOT on the
-        // subsequent -damage line, so use the pending source captured there.
-        if(!attackerStats && pendingDelayedHit[slot]){
-          attackerStats = pendingDelayedHit[slot].stats;
-          cause = pendingDelayedHit[slot].cause;
-          delete pendingDelayedHit[slot];
-        }
-        // 4) fallback: direct hit from the most recent move, if it targeted this slot.
-        //    Showdown only omits [from]/[of] entirely on a -damage line for a genuine
-        //    direct move hit — weather chip, confusion self-hits, recoil, etc. always
-        //    carry a tag (just not one of the specific ones matched above). So this
-        //    fallback must only fire on a completely untagged line, or it ends up
-        //    crediting stale "last real attacker" info to indirect damage it never dealt.
-        if(!attackerStats && tags === '' && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
-          attackerStats = ensureMon(lastMove.source);
-          cause = lastMove.move || 'direct hit';
-        }
-
-        if(attackerStats && attackerStats.side !== slots[slot].side){
-          attackerStats.damageDealt += dmg;
-          const attackerKey = attackerStats.id || (attackerStats.side + '|' + normName(attackerStats.species));
-          const ledger = damageContributors[slot] || (damageContributors[slot] = {});
-          if(!ledger[attackerKey]) ledger[attackerKey] = {stats:attackerStats, damage:0};
-          ledger[attackerKey].damage += dmg;
-          lastAttacker[slot] = {stats: attackerStats, cause, turn: currentTurn};
-        } else {
-          // This damage instance landed but couldn't be attributed to an opposing
-          // mon (environmental chip we couldn't trace, self-inflicted damage, etc.).
-          // Clear any earlier attacker on file for this slot — otherwise a mon that
-          // survives a real hit and later dies to something untraceable still has
-          // the kill wrongly credited to whoever landed that earlier real hit.
-          lastAttacker[slot] = {stats:null, cause:'Other', turn:currentTurn};
-        }
-      } else if(cmd === '-heal' || cmd === '-sethp'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        slots[slot].hp = parseHP(parts[3]);
-      } else if(cmd === 'faint'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        const deadStats = ensureMon(slot);
-        const killerInfo = lastAttacker[slot];
-        const killerStats = killerInfo ? killerInfo.stats : null;
-        const credited = !!(killerStats && killerStats.side !== slots[slot].side);
-        if(deadStats){
-          const deadKey = monKey(slot);
-          if(deadKey){
-            if(sleeping[deadKey]) finalizeStatusDuration(deadKey, 'slp');
-            if(frozen[deadKey]) finalizeStatusDuration(deadKey, 'frz');
-            delete currentMajorStatus[deadKey];
-            delete sleeping[deadKey];
-            delete frozen[deadKey];
-            delete pendingStatusChecks[deadKey];
-          }
-          deadStats.deaths += 1;
-          deadStats.deathLog.push({
-            replayId, turn: currentTurn,
-            killer: credited ? killerStats.species : null,
-            cause: credited ? killerInfo.cause : (killerInfo?.cause || 'Other')
-          });
-        }
-        if(credited){
-          killerStats.kills += 1;
-          killerStats.killLog.push({
-            replayId, turn: currentTurn,
-            victim: deadStats ? deadStats.species : slots[slot].species,
-            cause: killerInfo.cause
-          });
-
-          // Credit every other opposing Pokémon that contributed damage during
-          // this life of the fainted target. The killer is excluded by definition.
-          const ledger = damageContributors[slot] || {};
-          const totalCreditedDamage = Object.values(ledger).reduce((sum,entry)=>sum + Number(entry.damage||0), 0);
-          for(const entry of Object.values(ledger)){
-            if(!entry.stats || entry.stats === killerStats || entry.stats.side === deadStats?.side) continue;
-            const damage = Number(entry.damage||0);
-            if(damage <= 0) continue;
-            const percent = Number(deadStats?.damageTaken||0) > 0 ? (damage / Number(deadStats.damageTaken)) * 100 : (totalCreditedDamage > 0 ? (damage / totalCreditedDamage) * 100 : 0);
-            entry.stats.assists = Number(entry.stats.assists||0) + 1;
-            entry.stats.assistLog.push({
-              replayId, turn: currentTurn,
-              victim: deadStats ? deadStats.species : slots[slot].species,
-              killer: killerStats.species,
-              damage, percent,
-              cause: 'damage contribution'
-            });
-          }
-        }
-        delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
-        delete damageContributors[slot];
-      }
-    }
-
-    // Aggregate only after parsing. Internally each switch-in is a unique stint,
-    // which prevents Zoroark/Transform, form changes and repeated species from
-    // sharing damage attribution. League-facing data is still one row per species.
-    const aggregatedMons = {};
-    for(const stint of Object.values(mons)){
-      const species = canonicalBattleSpecies(stint.species);
-      const key = stint.side + '|' + normName(species);
-      if(!aggregatedMons[key]) aggregatedMons[key] = Object.assign({}, stint, {id:key, species, appearances:1, killLog:[], deathLog:[], assistLog:[], moves:{}});
-      else {
-        const out=aggregatedMons[key];
-        out.damageDealt += Number(stint.damageDealt||0); out.damageTaken += Number(stint.damageTaken||0);
-        out.kills += Number(stint.kills||0); out.deaths += Number(stint.deaths||0); out.assists = Number(out.assists||0)+Number(stint.assists||0);
-        out.killLog.push(...(stint.killLog||[])); out.deathLog.push(...(stint.deathLog||[])); out.assistLog.push(...(stint.assistLog||[]));
-        for(const [mv,n] of Object.entries(stint.moves||{})) out.moves[mv]=(out.moves[mv]||0)+Number(n||0);
-        if(Number.isFinite(stint.maxHpObserved)) out.maxHpObserved=Math.max(out.maxHpObserved||0,stint.maxHpObserved);
-      }
-    }
-    const aggregatedLuckPokemon = {};
-    for(const [mk,l] of Object.entries(luckPokemon)){
-      const species=canonicalBattleSpecies(l.species || mk.split('|')[1] || '');
-      if(!species) continue;
-      const side=String(mk).split('|')[0];
-      const key=side+'|'+normName(species);
-      if(!aggregatedLuckPokemon[key]) aggregatedLuckPokemon[key]=Object.assign({species}, newLuckSide());
-      const out=aggregatedLuckPokemon[key];
-      for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) out[k]+=Number(l[k]||0);
-      out.luckEvents.push(...(l.luckEvents||[]));
-    }
-    return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons:aggregatedMons, winner, teamRoster, luck, luckPokemon:aggregatedLuckPokemon,
-      };
-  }
-
-  // ---------- automatic Monday-Sunday season weeks ----------
+  // ---------- processing ----------
+  // Automatic season week assignment: weeks run Monday -> Sunday.
+  // Week 1 begins on the Monday of the earliest replay in the season.
+  // Manual overrides (weekOverride === true) are never touched by this logic.
   function replayTimestampMs(replay){
     const n=Number(replay?.uploadtime||0);
     if(!n) return 0;
@@ -2049,7 +1400,7 @@ body{
   }
 
   async function processUrls(urlsRaw, week, logEl){
-    await ensureMoveAccuracyData();
+    await SBL.replays.ensureMoveAccuracyData();
     const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
     let added = 0, skipped = 0, failed = 0;
@@ -2061,7 +1412,7 @@ body{
         const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
-        const parsed = parseLog(json, id);
+        const parsed = SBL.replays.parseLog(json, id);
         parsed.week = autoWeekForReplay(parsed);
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
@@ -2097,26 +1448,9 @@ body{
     return Array.from(set).sort((a,b)=>{ if(a==='Unassigned') return 1; if(b==='Unassigned') return -1; const na=parseInt(String(a).replace(/\D/g,''),10), nb=parseInt(String(b).replace(/\D/g,''),10); return (na||999999)-(nb||999999); });
   }
   function globalPokemonStats(weekFilter){
-    const out = {}; // normSpecies -> {species, dealt, taken, kills, deaths, games, coaches}
-    for(const r of allReplays(weekFilter)){
-      for(const k in r.mons){
-        const m = r.mons[k];
-        const displaySpecies = normName(m.species)==='comfey' ? 'Comfey' : m.species;
-        const nk = normName(displaySpecies);
-        if(!out[nk]) out[nk] = {species:displaySpecies, dealt:0, taken:0, kills:0, deaths:0, assists:0, games:0, killLog:[], deathLog:[], assistLog:[], coaches:new Set()};
-        out[nk].dealt += m.damageDealt;
-        out[nk].taken += m.damageTaken;
-        out[nk].kills += m.kills;
-        out[nk].deaths += m.deaths;
-        out[nk].assists += Number(m.assists||0);
-        out[nk].games += m.appearances;
-        if(m.killLog) out[nk].killLog.push(...m.killLog);
-        if(m.deathLog) out[nk].deathLog.push(...m.deathLog);
-        if(m.assistLog) out[nk].assistLog.push(...m.assistLog);
-        out[nk].coaches.add(teamFor(r.players[m.side]));
-      }
-    }
-    return Object.values(out).sort((a,b)=>b.dealt-a.dealt);
+    // One canonical aggregation path. This preserves form identity and keeps
+    // the leaderboard, search, profile cards and audit counts in agreement.
+    return SBL.stats.pokemon(allReplays(weekFilter), {teamFor});
   }
 
   // Roster uploads have existed in both array form and wrapped/object form.
@@ -2140,12 +1474,12 @@ body{
     return key ? rosterEntries(rosters[key]) : [];
   }
   function currentRosterTeamForPokemon(species){
-    const target=normName(species);
+    const target=statIdentity(species);
     if(!target) return '';
     const rosters=STATE.settings?.rosters||{};
     for(const team of Object.keys(rosters)){
       const mons=rosterEntries(rosters[team]);
-      if(mons.some(mon=>normName(canonicalRosterSpecies(mon))===target)) return team;
+      if(mons.some(mon=>statIdentity(canonicalRosterSpecies(mon))===target)) return team;
     }
     return '';
   }
@@ -2156,7 +1490,7 @@ body{
   }
   function isCurrentRosterPokemon(team,species){
     const r=rosterForTeam(team);
-    return !r.length || r.some(x=>normName(canonicalRosterSpecies(x))===normName(species));
+    return !r.length || r.some(x=>statIdentity(canonicalRosterSpecies(x))===statIdentity(species));
   }
 
   // ---------- Franchise Stats: completely roster-driven ----------
@@ -2185,7 +1519,7 @@ body{
 
       for(const item of roster){
         const species = canonicalRosterSpecies(item);
-        const key = normName(species);
+        const key = statIdentity(species);
         if(!key || team.byKey[key]) continue;
         const points = item && typeof item==='object'
           ? (item.points ?? item.cost ?? item.price ?? null)
@@ -2227,13 +1561,13 @@ body{
         for(const stat of Object.values(replay.mons)){
           if(!stat || stat.side!==side || !stat.species) continue;
           const species=normName(stat.species)==='comfey' ? 'Comfey' : String(stat.species);
-          const target=team.byKey[normName(species)];
+          const target=team.byKey[statIdentity(species)];
           if(!target) continue;
           target.dealt += Number(stat.damageDealt)||0;
           target.taken += Number(stat.damageTaken)||0;
           target.kills += Number(stat.kills)||0;
           target.deaths += Number(stat.deaths)||0;
-          target.assists += Number(stat.assists)||0;
+          target.assists += Array.isArray(stat.assistLog) ? stat.assistLog.length : (Number(stat.assists)||0);
           target.appearances += Number(stat.appearances)||0;
           if(Array.isArray(stat.killLog)) target.killLog.push(...stat.killLog);
           if(Array.isArray(stat.deathLog)) target.deathLog.push(...stat.deathLog);
@@ -2377,8 +1711,8 @@ body{
   }
   function exportGlobalCSV(weekFilter, label){
     const stats = globalPokemonStats(weekFilter);
-    const rows = [['Pokemon','Total Damage Dealt','Avg Damage Dealt per Game','Assists','Games Played']];
-    stats.forEach(s => rows.push([s.species, s.dealt.toFixed(2), (s.games? (s.dealt/s.games):0).toFixed(2), s.assists||0, s.games]));
+    const rows = [['Pokemon','Total Damage Dealt','Direct Damage','Indirect Damage','Avg Damage Dealt per Game','Assists','Games Played','Switches','Leads']];
+    stats.forEach(s => rows.push([s.species, s.dealt.toFixed(2), Number(s.directDamage||0).toFixed(2), Number(s.indirectDamage||0).toFixed(2), (s.games? (s.dealt/s.games):0).toFixed(2), s.assists||0, s.games, s.switches||0, s.leads||0]));
     download(`Damage Leaderboard - ${label}.csv`, toCSV(rows));
   }
   function exportTeamCSVs(weekFilter, label){
@@ -2477,16 +1811,25 @@ body{
           <strong>Pokémon Profile</strong>
           <button class="ghost small" id="pokemonProfileClose" type="button">Close ✕</button>
         </div>
-        <div class="pokemon-modal-body">${renderPokemonProfile(species,'ALL')}</div>
+        <div class="pokemon-modal-body" id="pokemonProfileBody"></div>
       </div>
     </div>`;
-    document.body.appendChild(root.firstElementChild);
+    const modal=root.firstElementChild;
+    document.body.appendChild(modal);
     lockPopupScroll();
     const overlay=document.getElementById(modalId);
-    document.getElementById('pokemonProfileClose').addEventListener('click',closePokemonProfile);
+    const closeBtn=document.getElementById('pokemonProfileClose');
+    closeBtn.addEventListener('click',closePokemonProfile);
     overlay.addEventListener('click',e=>{ if(e.target===overlay) closePokemonProfile(); });
-    bindPokemonProfileTabs(overlay);
-    requestAnimationFrame(()=>document.getElementById('pokemonProfileClose')?.focus());
+    const body=document.getElementById('pokemonProfileBody');
+    try{
+      body.innerHTML=renderPokemonProfile(species,'ALL');
+      bindPokemonProfileTabs(overlay);
+    }catch(err){
+      console.error('Failed to render Pokémon profile:',err);
+      body.innerHTML=`<div class="empty-state"><strong>Could not load this Pokémon profile.</strong><div class="note" style="margin-top:6px;">The replay data for ${escapeHtml(species)} could not be rendered. The rest of Stats is still available.</div></div>`;
+    }
+    requestAnimationFrame(()=>closeBtn?.focus());
   }
 
   function openReplaySummary(replayId){
@@ -2498,8 +1841,30 @@ body{
     const winner = (r.winner || '').trim();
     const resultText = winner ? `${winner} won` : 'Result unavailable';
     const mons = Object.values(r.mons || {});
-    const sideMons = side => { const seen={}; (r.teamRoster?.[side]||[]).forEach(sp=>seen[normName(sp)]={side,species:sp,kills:0,assists:0,deaths:0,damageDealt:0,damageTaken:0,appearances:0}); mons.filter(m=>m.side===side).forEach(m=>seen[normName(m.species)]=m); return Object.values(seen).sort((a,b)=>
-      (b.kills-a.kills) || (a.deaths-b.deaths) || (b.damageDealt-a.damageDealt)); };
+    const sideMons = side => {
+      const seen={};
+      const ensure=(species, base={})=>{
+        const key=SBL.stats.identity(species);
+        if(!seen[key]) seen[key]={side,species, kills:0,assists:0,deaths:0,damageDealt:0,damageTaken:0,appearances:0,killLog:[],deathLog:[],assistLog:[]};
+        return seen[key];
+      };
+      (r.teamRoster?.[side]||[]).forEach(sp=>ensure(sp));
+      mons.filter(m=>m.side===side).forEach(m=>{
+        const target=ensure(m.species);
+        target.species = m.species;
+        target.kills += Number(m.kills)||0;
+        target.deaths += Number(m.deaths)||0;
+        target.assists += Array.isArray(m.assistLog) ? m.assistLog.length : (Number(m.assists)||0);
+        target.damageDealt += Number(m.damageDealt)||0;
+        target.damageTaken += Number(m.damageTaken)||0;
+        target.appearances += Number(m.appearances)||0;
+        if(Array.isArray(m.killLog)) target.killLog.push(...m.killLog);
+        if(Array.isArray(m.deathLog)) target.deathLog.push(...m.deathLog);
+        if(Array.isArray(m.assistLog)) target.assistLog.push(...m.assistLog);
+      });
+      return Object.values(seen).sort((a,b)=>
+        (b.kills-a.kills) || (a.deaths-b.deaths) || (b.damageDealt-a.damageDealt));
+    };
     const sideCard = (side, player) => {
       const list = sideMons(side);
       const team = teamFor(player);
@@ -2510,9 +1875,9 @@ body{
       const taken = list.reduce((n,m)=>n+m.damageTaken,0);
       return `<div class="summary-side">
         <div class="summary-side-head"><div><strong>${escapeHtml(player)}</strong><div class="summary-team">${escapeHtml(team)}</div></div><div class="summary-score">${deaths} fainted</div></div>
-        <div class="summary-line"><span>${kills} kills</span><span>${assists} assists</span><span>${dealt.toFixed(1)}% damage dealt</span><span>${taken.toFixed(1)}% taken</span></div>
+        <div class="summary-line"><span>${kills} kills</span><span>${assists} assists</span><span>${dealt.toFixed(1)}damage dealt</span><span>${taken.toFixed(1)}damage taken</span></div>
         <div class="summary-mons">${list.map(m=>`<div class="summary-mon">
-          ${pokemonLink(m.species, `${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><div class="pname-cell"><strong>${escapeHtml(m.species)}</strong></div><div class="summary-mon-stats">${m.kills} K · ${m.assists||0} A · ${m.deaths} D · ${m.damageDealt.toFixed(1)}% dmg</div></div>`)}
+          ${pokemonLink(m.species, `${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><div class="pname-cell"><strong>${escapeHtml(m.species)}</strong></div><div class="summary-mon-stats"><span class="summary-kad-link" data-audit='${escapeHtml(JSON.stringify({species:m.species,type:'kills',list:m.killLog||[],showLink:true}))}'>${m.kills} K</span> · <span class="summary-kad-link" data-audit='${escapeHtml(JSON.stringify({species:m.species,type:'assists',list:m.assistLog||[],showLink:true}))}'>${m.assists||0} A</span> · <span class="summary-kad-link" data-audit='${escapeHtml(JSON.stringify({species:m.species,type:'deaths',list:m.deathLog||[],showLink:true}))}'>${m.deaths} D</span> · ${m.damageDealt.toFixed(1)} dmg</div></div>`)}
           ${m.appearances ? (m.deaths ? '<span class="badge danger-badge">Fainted</span>' : '<span class="badge">Survived</span>') : '<span class="badge">Not sent</span>'}
         </div>`).join('') || '<div class="empty-state">No Pokémon recorded.</div>'}</div>
       </div>`;
@@ -2550,17 +1915,47 @@ body{
     const el = document.getElementById('auditModal');
     if(!el) return;
     const overlay = el.querySelector('.audit-overlay');
-    if(!overlay || overlay.classList.contains('is-closing')){
-      el.innerHTML = '';
-      unlockPopupScroll();
-      return;
-    }
-    overlay.classList.add('is-closing');
-    window.setTimeout(()=>{
-      if(el.contains(overlay)) el.innerHTML = '';
-      unlockPopupScroll();
-    }, 210);
+    if(!overlay){ el.innerHTML=''; unlockPopupScroll(); return; }
+    // Remove immediately. Animated overlays previously remained mounted and
+    // could continue intercepting pointer events, making the page appear frozen.
+    overlay.remove();
+    unlockPopupScroll();
   }
+
+  function closeAllPopups(){
+    document.getElementById('auditModal')?.replaceChildren();
+    document.getElementById('pokemonProfileModal')?.remove();
+    document.getElementById('assistProfileModal')?.remove();
+    document.getElementById('luckPokemonModal')?.remove();
+    unlockPopupScroll();
+  }
+
+  // Global backdrop safety net for every audit/overview overlay. This avoids
+  // relying on individual renderers having exactly the right target check.
+  document.addEventListener('pointerdown', (e)=>{
+    const overlay = e.target.closest?.('.audit-overlay');
+    if(overlay && e.target === overlay){ closeAudit(); }
+  }, true);
+
+  function closeTopPopup(){
+    const pokemon = document.getElementById('pokemonProfileModal');
+    if(pokemon){ pokemon.remove(); unlockPopupScroll(); return true; }
+    const assist = document.getElementById('assistProfileModal');
+    if(assist){ assist.remove(); unlockPopupScroll(); return true; }
+    const luck = document.getElementById('luckPokemonModal');
+    if(luck){ luck.remove(); unlockPopupScroll(); return true; }
+    const audit = document.querySelector('#auditModal .audit-overlay');
+    if(audit){ closeAudit(); return true; }
+    return false;
+  }
+  function replayContext(replayId){
+    const r=STATE.replays?.[replayId];
+    if(!r) return {week:'—', matchup:'—'};
+    const p1=(r.players?.p1||'?').trim()||'?';
+    const p2=(r.players?.p2||'?').trim()||'?';
+    return {week:r.week||'Unassigned', matchup:`${p1} vs ${p2}`};
+  }
+
   function openAudit(species, type, list, showLink){
     lockPopupScroll();
     showLink = showLink !== false;
@@ -2573,7 +1968,7 @@ body{
           <div class="audit-sub">Every ${type==='kills'?'kill':(type==='assists'?'assist':'death')} credited to this Pokémon this scope, with the turn${showLink?', replay,':''} and why it was credited.</div>
           ${rows.length===0 ? `<div class="empty-state">No entries.</div>` : `<ul class="audit-list">
             ${rows.map(r=>`<li>
-              <span>Turn ${r.turn} — ${type==='kills' ? 'vs ' + (r.victim ? pokemonLink(r.victim, escapeHtml(r.victim), '', false) : '?') : (type==='assists' ? 'helped finish ' + (r.victim ? pokemonLink(r.victim, escapeHtml(r.victim), '', false) : '?') + ' — ' + Number(r.percent||0).toFixed(1) + '% damage (' + Number(r.damage||0).toFixed(1) + ')' + (r.killer ? ' · killer: ' + pokemonLink(r.killer, escapeHtml(r.killer), '', false) : '') : (r.killer ? 'by ' + pokemonLink(r.killer, escapeHtml(r.killer), '', false) : 'unattributed'))} <span class="audit-cause">(${escapeHtml(r.cause||'—')})</span></span>
+              <span><strong>${escapeHtml(replayContext(r.replayId).week)}</strong> · ${escapeHtml(replayContext(r.replayId).matchup)} · Turn ${r.turn} — ${type==='kills' ? 'vs ' + (r.victim ? pokemonLink(r.victim, escapeHtml(r.victim), '', false) : '?') : (type==='assists' ? 'helped finish ' + (r.victim ? pokemonLink(r.victim, escapeHtml(r.victim), '', false) : '?') + ' — ' + Number(r.percent||0).toFixed(1) + '% damage (' + Number(r.damage||0).toFixed(1) + ')' + (r.killer ? ' · killer: ' + pokemonLink(r.killer, escapeHtml(r.killer), '', false) : '') : (r.killer ? 'by ' + pokemonLink(r.killer, escapeHtml(r.killer), '', false) : 'unattributed'))} <span class="audit-cause">(${escapeHtml(displayCause(r.cause))})</span></span>
               ${showLink ? `<a href="https://replay.pokemonshowdown.com/${escapeHtml(r.replayId)}" target="_blank" rel="noopener">${escapeHtml(r.replayId)}</a>` : ''}
             </li>`).join('')}
           </ul>`}
@@ -2586,14 +1981,14 @@ body{
 
 
   function openAssistProfile(species, scope='ALL'){
-    const stats = globalPokemonStats(scope).find(s=>normName(s.species)===normName(species));
+    const stats = globalPokemonStats(scope).find(s=>statIdentity(s.species)===statIdentity(species));
     const rows = (stats?.assistLog || []).slice().sort((a,b)=>(a.replayDate-b.replayDate)||(a.turn-b.turn));
     lockPopupScroll();
     const root=document.createElement('div');
     root.innerHTML=`<div class="pokemon-overlay" id="assistProfileModal"><div class="pokemon-modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(species)} assists">
       <div class="pokemon-modal-head"><strong>${escapeHtml(species)} — Assists (${rows.length})</strong><button class="ghost small" id="assistProfileClose" type="button">Close ✕</button></div>
       <div class="pokemon-modal-body"><h3 class="mini-heading">Assist record</h3>
-      ${rows.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Damage</th><th>Share</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim,escapeHtml(x.victim),'',false) : '?'}</td><td class="num dealt">${Number(x.damage||0).toFixed(1)}</td><td class="num">${Number(x.percent||0).toFixed(1)}%</td><td>${x.killer ? pokemonLink(x.killer,escapeHtml(x.killer),'',false) : '?'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">No assists recorded.</div>'}
+      ${rows.length ? `<table><thead><tr><th>Week</th><th>Matchup</th><th>Turn</th><th>Victim</th><th>Damage</th><th>Share</th><th>Reason</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${escapeHtml(safeReplayContext(x.replayId).week)}</td><td>${escapeHtml(safeReplayContext(x.replayId).matchup)}</td><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim,escapeHtml(x.victim),'',false) : '?'}</td><td class="num dealt">${Number(x.damage||0).toFixed(1)}</td><td class="num">${Number(x.percent||0).toFixed(1)}%</td><td>${escapeHtml(safeCause(x.cause||'damage'))}</td><td>${x.killer ? pokemonLink(x.killer,escapeHtml(x.killer),'',false) : '?'}</td><td>${x.replayId ? `<a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}${Number.isFinite(Number(x.turn)) && Number(x.turn) >= 0 ? `?turn=${encodeURIComponent(Number(x.turn))}` : ''}" target="_blank" rel="noopener">View</a>` : '<span class="note">Unavailable</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">No assists recorded.</div>'}
       </div></div></div>`;
     document.body.appendChild(root.firstElementChild);
     const modal=document.getElementById('assistProfileModal');
@@ -2674,6 +2069,18 @@ body{
       card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
     });
   }
+  function openTeamOverview(team){
+    const data=teamStandings('ALL');
+    const t=data.find(x=>x.team===team);
+    if(!t) return;
+    const all=teamPokemonStats('ALL');
+    const mons=Object.values(all[team]||{}).filter(m=>m && m.species).sort((a,b)=>Number(b.appearances||0)-Number(a.appearances||0)||Number(b.dealt||0)-Number(a.dealt||0)).slice(0,6);
+    document.getElementById('auditModal').innerHTML=`<div class="audit-overlay" id="teamOverviewOverlay"><div class="audit-box overview-modal"><div class="summary-header"><div><div class="summary-kicker">League Overview</div><h3>${escapeHtml(team)}</h3><div class="summary-result" style="color:var(--text-dim);font-weight:600;">${t.wins}–${t.losses} · ${t.games} game${t.games===1?'':'s'}</div></div><button class="ghost small" id="teamOverviewClose">Close ✕</button></div><div class="profile-grid"><div><span>Record</span><strong>${t.wins}-${t.losses}</strong></div><div><span>Win %</span><strong>${t.games?(100*t.wins/t.games).toFixed(1)+'%':'—'}</strong></div><div><span>Differential</span><strong>${Number(t.diff||0)>0?'+':''}${Number(t.diff||0)}</strong></div><div><span>Damage dealt</span><strong>${Number(t.dealt||0).toFixed(1)}</strong></div></div><div class="section-divider"></div><h3 class="mini-heading">Top used Pokémon</h3>${mons.length?mons.map(m=>`<div class="summary-mon">${pokemonLink(m.species,`${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><strong>${escapeHtml(m.species)}</strong><div class="summary-mon-stats">${m.appearances||0} games · ${m.kills||0} K · ${(m.appearances ? (Number(m.kills||0)/Number(m.appearances)).toFixed(2) : '0.00')} K/G · ${m.deaths||0} D · ${(Number(m.dealt)||0).toFixed(1)} dmg</div></div>`)}</div>`).join(''):'<div class="empty-state">No Pokémon data.</div>'}</div></div>`;
+    updateModalPageLock?.();
+    document.getElementById('teamOverviewClose').addEventListener('click',closeAudit);
+    document.getElementById('teamOverviewOverlay').addEventListener('click',e=>{if(e.target.id==='teamOverviewOverlay')closeAudit();});
+  }
+
   function renderProcess(){
     const count = Object.keys(STATE.replays).length;
     contentEl.innerHTML = `
@@ -2712,7 +2119,7 @@ body{
   }
 
   async function reprocessAll(logEl){
-    await ensureMoveAccuracyData();
+    await SBL.replays.ensureMoveAccuracyData();
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
     for(const id of ids){
@@ -2722,7 +2129,7 @@ body{
         if(!resp.ok) throw new Error('not found (' + resp.status + ')');
         const json = await resp.json();
         const oldReplay = STATE.replays[id];
-        const parsed = parseLog(json, id);
+        const parsed = SBL.replays.parseLog(json, id);
         parsed.uploadtime = json.uploadtime;
         parsed.weekOverride = !!oldReplay.weekOverride;
         parsed.week = oldReplay.weekOverride
@@ -2779,9 +2186,9 @@ body{
     contentEl.innerHTML = `
       <div class="panel">
         <h2>Damage Leaderboard</h2>
-        <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('globalWeek')}</div>
-          <div style="flex:0;"><button class="ghost" id="exportGlobal">Export CSV</button></div>
+        <div class="stats-controls stats-controls-damage">
+          <div class="stats-control"><label for="globalWeek">Scope</label>${weekSelectorHtml('globalWeek')}</div>
+          <div class="stats-control"><label for="globalDamageType">Damage type</label><select id="globalDamageType"><option value="dealt">Total Damage</option><option value="directDamage">Direct Damage</option><option value="indirectDamage">Indirect Damage</option></select></div>
         </div>
         <div id="globalTable"></div>
         <a class="nav-link" id="toTeamsLink">Want per-team breakdowns? → View Franchise Stats</a>
@@ -2790,24 +2197,29 @@ body{
     document.getElementById('toTeamsLink').addEventListener('click', ()=> goToTab('teams'));
 
     const sel = document.getElementById('globalWeek');
+    const damageType = document.getElementById('globalDamageType');
     function drawGlobal(){
-      const stats = globalPokemonStats(sel.value);
+      const key = damageType.value;
+      const label = key==='directDamage' ? 'Direct Damage' : (key==='indirectDamage' ? 'Indirect Damage' : 'Total Damage');
+      const stats = globalPokemonStats(sel.value).slice().sort((a,b)=>(Number(b[key])||0)-(Number(a[key])||0) || (Number(b.kills)||0)-(Number(a.kills)||0) || String(a.species).localeCompare(String(b.species)));
       document.getElementById('globalTable').innerHTML = stats.length===0 ? `<div class="empty-state">No data for this scope yet.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
+        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">${label}</th><th class="num">Total</th><th class="num">Direct</th><th class="num">Indirect</th><th class="num">Kills</th><th class="num">Kills/Game</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Games</th></tr></thead><tbody>
         ${stats.map((s,i)=>`<tr>
           <td class="rank">${i+1}</td>
           <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
-          <td class="num dealt">${s.dealt.toFixed(1)}</td>
-          <td class="num taken">${s.taken.toFixed(1)}</td>
+          <td class="num dealt"><strong>${(Number(s[key])||0).toFixed(1)}</strong></td>
+          <td class="num dealt">${(Number(s.dealt)||0).toFixed(1)}</td>
+          <td class="num">${(Number(s.directDamage)||0).toFixed(1)}</td>
+          <td class="num">${(Number(s.indirectDamage)||0).toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
+          <td class="num">${s.games ? (s.kills/s.games).toFixed(2) : '0.00'}</td>
           <td ${auditAttr(s.species,'assists',s.assistLog)}>${s.assists||0}</td>
           <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
           <td class="num">${s.games}</td>
-          <td class="num">${(s.games? s.dealt/s.games:0).toFixed(1)}</td>
         </tr>`).join('')}</tbody></table>`;
     }
     sel.addEventListener('change', drawGlobal);
-    document.getElementById('exportGlobal').addEventListener('click', ()=> exportGlobalCSV(sel.value, sel.value==='ALL'?'Season':sel.value));
+    damageType.addEventListener('change', drawGlobal);
     drawGlobal();
   }
 
@@ -2817,9 +2229,8 @@ body{
         <h2>Assist Leaderboard</h2>
         <div class="row" style="align-items:flex-end;">
           <div><label>Scope</label>${weekSelectorHtml('assistWeek')}</div>
-          ${IS_ADMIN_PAGE ? '<div style="flex:0;"><button class="ghost" id="reprocessAssists">Reprocess All</button></div>' : ''}
         </div>
-        <div class="note" style="margin:8px 0 14px;">Every Pokémon is shown so zero-assist rows are visible too. Click an assist count to audit exactly what each assist was credited for.${IS_ADMIN_PAGE ? ' If these replays were processed before assist tracking was added, use Reprocess All once to populate the historical assist counts.' : ''}</div>
+        <div class="note" style="margin:8px 0 14px;">Every Pokémon is shown so zero-assist rows are visible too. Click an assist count to audit exactly what each assist was credited for.</div>
         <div id="assistTable"></div>
       </div>`;
     const sel=document.getElementById('assistWeek');
@@ -2828,16 +2239,6 @@ body{
       document.getElementById('assistTable').innerHTML = stats.length ? `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Assists</th><th class="num">Kills</th><th class="num">Damage Dealt</th><th class="num">Damage Taken</th><th class="num">Games</th></tr></thead><tbody>${stats.map((s,i)=>`<tr><td class="rank">${i+1}</td><td class="pname"><div class="pname-cell"><span class="pokemon-click" role="button" tabindex="0" data-assist-pokemon="${escapeHtml(s.species)}" title="View assists for ${escapeHtml(s.species)}">${pokemonName(s.species,true,'sprite-xl')}</span></div></td><td ${auditAttr(s.species,'assists',s.assistLog)}>${s.assists||0}</td><td class="num">${s.kills}</td><td class="num dealt">${s.dealt.toFixed(1)}</td><td class="num taken">${s.taken.toFixed(1)}</td><td class="num">${Number.isFinite(s.games)?s.games:0}</td></tr>`).join('')}</tbody></table>` : `<div class="empty-state">No assists recorded for this scope yet.</div>`;
     }
     sel.addEventListener('change',draw);
-    const reprocess=document.getElementById('reprocessAssists');
-    if(reprocess) reprocess.addEventListener('click', async ()=>{
-      reprocess.disabled=true;
-      try{
-        const log=document.createElement('div');
-        log.className='log';
-        document.getElementById('assistTable').before(log);
-        await reprocessAll(log);
-      } finally { reprocess.disabled=false; }
-    });
     draw();
   }
 
@@ -2870,25 +2271,7 @@ body{
       const q = input.value.trim().toLowerCase();
       const wantedType = typeFilter.value;
       const rawStats = globalPokemonStats('ALL');
-      const grouped = new Map();
-      rawStats.forEach(raw => {
-        const canonical = SBL.pokemon.displayName(raw.species);
-        const k = SBL.pokemon.normalizeName(canonical);
-        if(!k) return;
-        if(!grouped.has(k)){
-          grouped.set(k,{...raw,species:canonical,coaches:new Set(raw.coaches||[])});
-        }else{
-          const g=grouped.get(k);
-          g.coaches = new Set([...(g.coaches||[]),...(raw.coaches||[])]);
-          ['dealt','taken','kills','assists','deaths','games'].forEach(key=>{
-            if(key in g || key in raw) g[key]=(Number(g[key])||0)+(Number(raw[key])||0);
-          });
-          if(raw.killLog) g.killLog=[...(g.killLog||[]),...raw.killLog];
-          if(raw.assistLog) g.assistLog=[...(g.assistLog||[]),...raw.assistLog];
-          if(raw.deathLog) g.deathLog=[...(g.deathLog||[]),...raw.deathLog];
-        }
-      });
-      const stats = [...grouped.values()].filter(s => {
+      const stats = rawStats.filter(s => {
         const name=s.species.toLowerCase();
         return (!q || name.includes(q)) && (wantedType==='all' || pokemonTypes(s.species).includes(wantedType));
       }).sort((a,b)=>a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
@@ -2897,14 +2280,16 @@ body{
         return;
       }
       table.innerHTML = `<table><thead><tr>
-        <th>Pokémon</th><th>Coach / Team</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th>
+        <th>Pokémon</th><th>Coach / Team</th><th class="num">Luck Rank</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Kills/Game</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th>
       </tr></thead><tbody>
         ${stats.map(s=>`<tr class="search-match" data-pokemon="${escapeHtml(s.species)}" tabindex="0" role="button" title="Open ${escapeHtml(s.species)} profile" style="cursor:pointer;">
           <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
           <td>${escapeHtml(Array.from(s.coaches).sort().join(', ') || 'Unknown')}</td>
+          <td class="num">${(() => { const lr=luckPokemonRank(s.species,'ALL'); return lr ? `<strong>#${lr.rank}</strong>` : '—'; })()}</td>
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
+          <td class="num">${s.games ? (s.kills/s.games).toFixed(2) : '0.00'}</td>
           <td ${auditAttr(s.species,'assists',s.assistLog)}>${s.assists||0}</td>
           <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
           <td class="num">${s.games}</td>
@@ -2923,85 +2308,115 @@ body{
 
   // ---------- Pokémon profile / death causes / team comparison ----------
   function pokemonProfileData(species, weekFilter){
-    const target = normName(species);
-    const rows = [];
-    const coaches = new Set();
-    for(const r of allReplays(weekFilter)){
-      for(const k in r.mons){
-        const m = r.mons[k];
-        if(normName(m.species) !== target) continue;
-        coaches.add(teamFor(r.players[m.side]));
-        rows.push({replay:r, mon:m});
-      }
-    }
-    const weeksBrought = new Map();
-    const agg = {species: rows[0]?.mon?.species || species, dealt:0,taken:0,kills:0,deaths:0,assists:0,games:0,killLog:[],deathLog:[],assistLog:[],coaches,weeksBrought};
-    // Record every week in which the Pokémon was on the six-mon team preview,
-    // including games where it was never sent into battle.
-    for(const replay of allReplays(weekFilter)){
-      const week = replay.week;
-      for(const k in (replay.mons||{})){
-        const mon = replay.mons[k];
-        if(normName(mon.species) === target){
-          const key = String(week || '');
-          if(key) weeksBrought.set(key, (weeksBrought.get(key)||0) + 1);
-          break;
-        }
-      }
-    }
-    rows.forEach(({replay,mon})=>{
-      agg.dealt += mon.damageDealt||0; agg.taken += mon.damageTaken||0;
-      agg.kills += mon.kills||0; agg.deaths += mon.deaths||0; agg.assists += Number(mon.assists||0); agg.games += mon.appearances||0;
-      // Keep the replay timestamp with each event so profile history can be
-      // ordered by when the battle was played/uploaded rather than by turn.
-      const replayDate = Number(replay.uploadtime || replay.processedAt || 0);
-      agg.killLog.push(...(mon.killLog||[]).map(x=>({...x, replayDate})));
-      agg.deathLog.push(...(mon.deathLog||[]).map(x=>({...x, replayDate})));
-      agg.assistLog.push(...(mon.assistLog||[]).map(x=>({...x, replayDate})));
-    });
-    return agg;
+    return SBL.stats.pokemonProfile(species,allReplays(weekFilter),{teamFor});
   }
 
-  function renderPokemonProfile(species, weekFilter){
-    const s = pokemonProfileData(species, weekFilter);
-    if(!s.games) return `<div class="empty-state">No data for ${escapeHtml(species)} in this scope.</div>`;
-    const kd = s.deaths ? (s.kills/s.deaths).toFixed(2) : (s.kills ? '∞' : '0');
-    const avg = s.games ? (s.dealt/s.games).toFixed(1) : '0';
-    const killRows = s.killLog.slice().sort((a,b)=>(a.replayDate-b.replayDate)||(a.turn-b.turn));
-    const assistRows = s.assistLog.slice().sort((a,b)=>(a.replayDate-b.replayDate)||(a.turn-b.turn));
-    const deathRows = s.deathLog.slice().sort((a,b)=>(a.replayDate-b.replayDate)||(a.turn-b.turn));
-    const killPanel = killRows.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${killRows.map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim), '', false) : '?'}</td><td>${escapeHtml(x.cause||'—')}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>` : `<div class="empty-state">No kills.</div>`;
-    const assistPanel = assistRows.length ? `<table><thead><tr><th>Turn</th><th>Victim</th><th>Damage</th><th>Share</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${assistRows.map(x=>`<tr><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim, escapeHtml(x.victim), '', false) : '?'}</td><td class="num dealt">${Number(x.damage||0).toFixed(1)}</td><td class="num">${Number(x.percent||0).toFixed(1)}%</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer), '', false) : '?'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>` : `<div class="empty-state">No assists.</div>`;
-    const deathPanel = deathRows.length ? `<table><thead><tr><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${deathRows.map(x=>`<tr><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer, escapeHtml(x.killer), '', false) : 'Unattributed'}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}" target="_blank" rel="noopener">View</a></td></tr>`).join('')}</tbody></table>` : `<div class="empty-state">No deaths.</div>`;
+  function luckPokemonRank(species, scope){
+    const target=normName(species);
+    if(!target) return null;
+    // Ranking is based on every Pokémon that was actually brought in the
+    // selected scope. Pokémon with no luck events still belong in the pool at
+    // a neutral score of 0. Pokémon that were never brought are not ranked.
+    const brought=globalPokemonStats(scope).filter(p=>Number(p.games||0)>0);
+    if(!brought.some(p=>normName(p.species)===target)) return null;
+    const scored=luckPokemonData(scope);
+    const scoreByName=new Map(scored.map(p=>[normName(p.species),Number(p.score)||0]));
+    const rows=brought.map(p=>({species:p.species,score:scoreByName.get(normName(p.species))||0,games:Number(p.games)||0}));
+    rows.sort((a,b)=>b.score-a.score || b.games-a.games || a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
+    const index=rows.findIndex(p=>normName(p.species)===target);
+    if(index<0) return null;
+    return {rank:index+1,score:rows[index].score,total:rows.length};
+  }
+
+  function statsProfileUIDeps(){
+    return {pokemonProfileData,escapeHtml,pokemonLink,spriteImg,displayCause,replayContext,luckPokemonRank};
+  }
+
+  function renderPokemonProfileFallback(species, weekFilter){
+    const s = SBL.stats.pokemonProfile(species, allReplays(weekFilter), {teamFor});
+    if(!s || !Number(s.games)) return `<div class="empty-state">No data for ${escapeHtml(species)} in this scope.</div>`;
+    const num = v => Number(v)||0;
+    const esc = v => escapeHtml(v == null ? '' : String(v));
+    const coaches = Array.from(s.coaches instanceof Set ? s.coaches : []).sort().join(', ');
+    const kd = num(s.deaths) ? (num(s.kills)/num(s.deaths)).toFixed(2) : (num(s.kills) ? '∞' : '0');
+    const killsPerGame = num(s.games) ? (num(s.kills)/num(s.games)).toFixed(2) : '0.00';
+    let fallbackLuckRank = null;
+    try { fallbackLuckRank = luckPokemonRank(s.species, weekFilter || 'ALL'); } catch(e) {}
+    const profileLogRows = (list, type) => (Array.isArray(list) ? list : []).map((entry) => {
+      const x = entry && typeof entry === 'object' ? entry : {};
+      const replayId = String(x.replayId || x.replay || x.id || '');
+      const replayDate = Number(x.replayDate || 0) || 0;
+      const turn = Number(x.turn || x.turnNumber || 0) || 0;
+      const victim = x.victim == null ? '' : String(x.victim);
+      const killer = x.killer == null ? '' : String(x.killer);
+      const cause = x.cause == null ? '' : String(x.cause);
+      const damage = Number(
+        x.damage ?? x.damageAtRemoval ?? x.damageContribution ??
+        x.damageDealt ?? x.dealt ?? x.amount ?? 0
+      ) || 0;
+      const percent = Number(
+        x.percent ?? x.share ?? x.damagePercent ?? x.damageShare ??
+        x.percentDamage ?? x.contributionPercent ?? 0
+      ) || 0;
+      let ctx = {week:'—', matchup:'—'};
+      try { ctx = replayContext(replayId || ''); } catch(e) {}
+      let shownCause = cause || '—';
+      try { shownCause = displayCause(cause); } catch(e) {}
+      return {replayId,replayDate,turn,victim,killer,cause:shownCause,damage,percent,week:ctx.week||'—',matchup:ctx.matchup||'—'};
+    }).sort((a,b)=>(a.replayDate-b.replayDate)||(a.turn-b.turn));
+    const renderProfileLogTable = (list, type) => {
+      const rows = profileLogRows(list,type);
+      if(!rows.length) return `<div class="empty-state">No ${type === 'kill' ? 'kills' : type === 'assist' ? 'assists' : 'deaths'}.</div>`;
+      if(type === 'kill') return `<table><thead><tr><th>Week</th><th>Matchup</th><th>Turn</th><th>Victim</th><th>Cause</th><th>Replay</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${escapeHtml(String(x.week))}</td><td>${escapeHtml(String(x.matchup))}</td><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim,escapeHtml(x.victim),'',false) : '?'}</td><td>${escapeHtml(String(x.cause))}</td><td>${x.replayId ? `<a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}${Number.isFinite(Number(x.turn)) && Number(x.turn) >= 0 ? `?turn=${encodeURIComponent(Number(x.turn))}` : ''}" target="_blank" rel="noopener">View</a>` : '<span class="note">Unavailable</span>'}</td></tr>`).join('')}</tbody></table>`;
+      if(type === 'assist') return `<table><thead><tr><th>Week</th><th>Matchup</th><th>Turn</th><th>Victim</th><th>Damage</th><th>Share</th><th>Reason</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${escapeHtml(String(x.week))}</td><td>${escapeHtml(String(x.matchup))}</td><td>${x.turn}</td><td>${x.victim ? pokemonLink(x.victim,escapeHtml(x.victim),'',false) : '?'}</td><td class="num dealt">${x.damage.toFixed(1)}</td><td class="num">${x.percent.toFixed(1)}%</td><td>${escapeHtml(String(x.cause || 'damage'))}</td><td>${x.killer ? pokemonLink(x.killer,escapeHtml(x.killer),'',false) : '?'}</td><td>${x.replayId ? `<a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}${Number.isFinite(Number(x.turn)) && Number(x.turn) >= 0 ? `?turn=${encodeURIComponent(Number(x.turn))}` : ''}" target="_blank" rel="noopener">View</a>` : '<span class="note">Unavailable</span>'}</td></tr>`).join('')}</tbody></table>`;
+      return `<table><thead><tr><th>Week</th><th>Matchup</th><th>Turn</th><th>Killer</th><th>Replay</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${escapeHtml(String(x.week))}</td><td>${escapeHtml(String(x.matchup))}</td><td>${x.turn}</td><td>${x.killer ? pokemonLink(x.killer,escapeHtml(x.killer),'',false) : 'Unattributed'}</td><td>${x.replayId ? `<a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(x.replayId)}${Number.isFinite(Number(x.turn)) && Number(x.turn) >= 0 ? `?turn=${encodeURIComponent(Number(x.turn))}` : ''}" target="_blank" rel="noopener">View</a>` : '<span class="note">Unavailable</span>'}</td></tr>`).join('')}</tbody></table>`;
+    };
     return `<div class="panel pokemon-profile">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
         ${spriteImg(s.species,'sprite-xl')}
-        <div><h2 style="margin:0;color:var(--text);text-transform:none;letter-spacing:0;font-size:20px;">${pokemonLink(s.species, escapeHtml(s.species))}</h2>
-        <div class="note" style="margin-top:3px;">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div></div>
+        <div><h2 style="margin:0;color:var(--text);text-transform:none;letter-spacing:0;font-size:20px;">${pokemonLink(s.species, esc(s.species))}</h2>
+        <div class="note" style="margin-top:3px;">${esc(coaches)}</div></div>
       </div>
-      <div class="profile-grid">
-        <div><span>Games</span><strong>${s.games}</strong></div><div><span>Kills</span><strong class="kills">${s.kills}</strong></div>
-        <div><span>Assists</span><strong>${s.assists||0}</strong></div><div><span>Deaths</span><strong class="taken">${s.deaths}</strong></div><div><span>K/D</span><strong>${kd}</strong></div>
-        <div><span>Damage dealt</span><strong class="dealt">${s.dealt.toFixed(1)}</strong></div><div><span>Damage taken</span><strong class="taken">${s.taken.toFixed(1)}</strong></div>
-        <div><span>Avg dmg/game</span><strong>${avg}</strong></div><div><span>Kill rate/game</span><strong>${s.games?(s.kills/s.games).toFixed(2):'0'}</strong></div>
+      <div class="profile-section-tabs" role="tablist">
+        <button type="button" class="profile-section-tab active" data-profile-tab="overview">Overview</button>
+        <button type="button" class="profile-section-tab" data-profile-tab="damage">Damage</button>
+        <button type="button" class="profile-section-tab" data-profile-tab="usage">Usage</button>
+        <button type="button" class="profile-section-tab" data-profile-tab="kills">Kills (${num(s.kills)})</button>
+        <button type="button" class="profile-section-tab" data-profile-tab="assists">Assists (${num(s.assists)})</button>
+        <button type="button" class="profile-section-tab" data-profile-tab="deaths">Deaths (${num(s.deaths)})</button>
       </div>
-      <div class="profile-weeks" style="margin-top:14px;padding:12px 14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;">
-        <div class="mini-heading" style="margin-bottom:8px;">Weeks Brought</div>
-        <div style="display:flex;flex-wrap:wrap;gap:7px;">${Array.from(s.weeksBrought.keys()).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(w=>`<span class="badge">${escapeHtml(w)}</span>`).join('') || '<span class="note">No roster data recorded.</span>'}</div>
-      </div>
-      <div class="section-divider"></div>
-      <div class="profile-record-tabs" role="tablist" aria-label="Battle records">
-        <button type="button" class="profile-record-tab active" data-profile-tab="kills">Kills (${s.kills})</button>
-        <button type="button" class="profile-record-tab" data-profile-tab="assists">Assists (${s.assists||0})</button>
-        <button type="button" class="profile-record-tab" data-profile-tab="deaths">Deaths (${s.deaths})</button>
-      </div>
-      <div class="profile-record-panel" data-profile-section="kills"><h3 class="mini-heading">Kill record</h3>${killPanel}</div>
-      <div class="profile-record-panel" data-profile-section="assists" hidden><h3 class="mini-heading">Assist record</h3>${assistPanel}</div>
-      <div class="profile-record-panel" data-profile-section="deaths" hidden><h3 class="mini-heading">Death record</h3>${deathPanel}</div>
+      <section class="profile-section-panel" data-profile-section="overview"><h3 class="mini-heading">Battle overview</h3><div class="profile-summary-grid">
+        <div><span>Games</span><strong>${num(s.games)}</strong></div><div><span>Kills</span><strong>${num(s.kills)}</strong></div><div><span>Assists</span><strong>${num(s.assists)}</strong></div><div><span>Deaths</span><strong>${num(s.deaths)}</strong></div><div><span>K/D</span><strong>${kd}</strong></div><div><span>Avg dmg/game</span><strong>${num(s.games)?(num(s.dealt)/num(s.games)).toFixed(1):'0'}</strong></div><div><span>Kills / Game</span><strong>${killsPerGame}</strong></div>${fallbackLuckRank ? `<div><span>Luck Rank</span><strong>#${fallbackLuckRank.rank}</strong><div class=\"note\">${fallbackLuckRank.score>=0?'+':''}${Number(fallbackLuckRank.score||0).toFixed(2)} luck</div></div>` : ''}
+      </div></section>
+      <section class="profile-section-panel" data-profile-section="damage" hidden><h3 class="mini-heading">Damage</h3><div class="profile-summary-grid">
+        <div><span>Damage dealt</span><strong>${num(s.dealt).toFixed(1)}</strong></div><div><span>Damage taken</span><strong>${num(s.taken).toFixed(1)}</strong></div><div><span>Direct damage</span><strong>${num(s.directDamage).toFixed(1)}</strong></div><div><span>Indirect damage</span><strong>${num(s.indirectDamage).toFixed(1)}</strong></div>
+      </div></section>
+      <section class="profile-section-panel" data-profile-section="usage" hidden><h3 class="mini-heading">Usage</h3><div class="profile-summary-grid"><div><span>Switches</span><strong>${num(s.switches)}</strong></div><div><span>Leads</span><strong>${num(s.leads)}</strong></div></div></section>
+      <section class="profile-section-panel" data-profile-section="kills" hidden><h3 class="mini-heading">Kill record</h3>${renderProfileLogTable(s.killLog,'kill')}</section>
+      <section class="profile-section-panel" data-profile-section="assists" hidden><h3 class="mini-heading">Assist record</h3>${renderProfileLogTable(s.assistLog,'assist')}</section>
+      <section class="profile-section-panel" data-profile-section="deaths" hidden><h3 class="mini-heading">Death record</h3>${renderProfileLogTable(s.deathLog,'death')}</section>
     </div>`;
   }
 
+  function renderPokemonProfile(species, weekFilter){
+    try {
+      if(window.SBLStatsUI && typeof window.SBLStatsUI.renderPokemonProfile === 'function'){
+        return window.SBLStatsUI.renderPokemonProfile(species, weekFilter, statsProfileUIDeps());
+      }
+    } catch(err) {
+      console.warn('Profile module failed; using inline profile fallback.', err);
+    }
+    return renderPokemonProfileFallback(species, weekFilter);
+  }
+
   function bindPokemonProfileTabs(root){
+    try {
+      if(window.SBLStatsUI && typeof window.SBLStatsUI.bindPokemonProfileTabs === 'function'){
+        return window.SBLStatsUI.bindPokemonProfileTabs(root);
+      }
+    } catch(err) {
+      console.warn('Profile tab module failed; using inline tab binding.', err);
+    }
     const tabs=[...root.querySelectorAll('[data-profile-tab]')];
     const panels=[...root.querySelectorAll('[data-profile-section]')];
     tabs.forEach(tab=>tab.addEventListener('click',()=>{
@@ -3011,6 +2426,8 @@ body{
     }));
   }
 
+
+
   function luckTeamData(scope){
     const out={};
     for(const r of allReplays(scope)){
@@ -3019,15 +2436,15 @@ body{
         const team=teamFor(r.players[side]);
         if(!team) continue;
         const key=groupKey(team);
-        if(!out[key]) out[key]={team,games:0,crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0};
+        if(!out[key]) out[key]={team,games:0,crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,secondaryProcs:0,secondaryLuck:0,secondaryDodges:0,secondaryDodgeLuck:0,flinches:0,flinchLuck:0,confusionSelfHits:0,confusionLuck:0,protectSuccesses:0,protectLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0};
         const t=out[key];
         t.games++;
         const l=r.luck[side] || {};
-        for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) t[k]+=Number(l[k]||0);
+        for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','secondaryProcs','secondaryLuck','secondaryDodges','secondaryDodgeLuck','flinches','flinchLuck','confusionSelfHits','confusionLuck','protectSuccesses','protectLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) t[k]+=Number(l[k]||0);
       }
     }
     return Object.values(out).map(t=>{
-      t.score=t.critLuck+t.moveDodgeLuck+t.lowAccuracyHitLuck+t.statusDodgeLuck+t.paralysisDodgeLuck+t.sleepDurationLuck+t.freezeDurationLuck;
+      t.score=t.critLuck+t.moveDodgeLuck+t.lowAccuracyHitLuck+t.statusDodgeLuck+t.secondaryLuck+t.secondaryDodgeLuck+t.flinchLuck+t.confusionLuck+t.protectLuck+t.paralysisDodgeLuck+t.sleepDurationLuck+t.freezeDurationLuck;
       return t;
     }).sort((a,b)=>b.score-a.score || b.games-a.games || a.team.localeCompare(b.team,undefined,{sensitivity:'base'}));
   }
@@ -3044,16 +2461,16 @@ body{
         const currentTeam=currentRosterTeamForPokemon(species);
         const team=currentTeam || replayTeam;
         const key=normName(species);
-        if(!out[key]) out[key]={species,team,teams:new Set(),games:0,crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0};
+        if(!out[key]) out[key]={species,team,teams:new Set(),games:0,crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,secondaryProcs:0,secondaryLuck:0,secondaryDodges:0,secondaryDodgeLuck:0,flinches:0,flinchLuck:0,confusionSelfHits:0,confusionLuck:0,protectSuccesses:0,protectLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0};
         const p=out[key];
         if(team) p.teams.add(team);
         p.games++;
-        for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) p[k]+=Number(l[k]||0);
+        for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','secondaryProcs','secondaryLuck','secondaryDodges','secondaryDodgeLuck','flinches','flinchLuck','confusionSelfHits','confusionLuck','protectSuccesses','protectLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) p[k]+=Number(l[k]||0);
       }
     }
     return Object.values(out).map(p=>{
       p.team=Array.from(p.teams).join(', ');
-      p.score=p.critLuck+p.moveDodgeLuck+p.lowAccuracyHitLuck+p.statusDodgeLuck+p.paralysisDodgeLuck+p.sleepDurationLuck+p.freezeDurationLuck;
+      p.score=p.critLuck+p.moveDodgeLuck+p.lowAccuracyHitLuck+p.statusDodgeLuck+p.secondaryLuck+p.secondaryDodgeLuck+p.flinchLuck+p.confusionLuck+p.protectLuck+p.paralysisDodgeLuck+p.sleepDurationLuck+p.freezeDurationLuck;
       return p;
     }).sort((a,b)=>b.score-a.score || b.games-a.games || a.species.localeCompare(b.species,undefined,{sensitivity:'base'}));
   }
@@ -3063,14 +2480,18 @@ body{
     for(const r of allReplays(scope)){
       if(!r || !r.luck) continue;
       let score=0;
-      const totals={crits:0,dodges:0,lowAccuracyHits:0,statusDodges:0,fullParalysis:0,sleep:0,freeze:0};
+      const totals={crits:0,dodges:0,lowAccuracyHits:0,statusDodges:0,secondary:0,flinches:0,confusion:0,protect:0,fullParalysis:0,sleep:0,freeze:0};
       for(const side of ['p1','p2']){
         const l=r.luck[side]||{};
-        score += Number(l.critLuck||0)+Number(l.moveDodgeLuck||0)+Number(l.lowAccuracyHitLuck||0)+Number(l.statusDodgeLuck||0)+Number(l.paralysisDodgeLuck||0)+Number(l.sleepDurationLuck||0)+Number(l.freezeDurationLuck||0);
+        score += Number(l.critLuck||0)+Number(l.moveDodgeLuck||0)+Number(l.lowAccuracyHitLuck||0)+Number(l.statusDodgeLuck||0)+Number(l.secondaryLuck||0)+Number(l.secondaryDodgeLuck||0)+Number(l.flinchLuck||0)+Number(l.confusionLuck||0)+Number(l.protectLuck||0)+Number(l.paralysisDodgeLuck||0)+Number(l.sleepDurationLuck||0)+Number(l.freezeDurationLuck||0);
         totals.crits += Number(l.crits||0);
         totals.dodges += Number(l.dodges||0);
         totals.lowAccuracyHits += Number(l.lowAccuracyHits||0);
         totals.statusDodges += Number(l.statusDodgeLuck||0);
+        totals.secondary += Number(l.secondaryLuck||0)+Number(l.secondaryDodgeLuck||0);
+        totals.flinches += Number(l.flinches||0);
+        totals.confusion += Number(l.confusionSelfHits||0);
+        totals.protect += Number(l.protectSuccesses||0);
         totals.fullParalysis += Number(l.fullParalysis||0);
         totals.sleep += Number(l.sleepDurationLuck||0);
         totals.freeze += Number(l.freezeDurationLuck||0);
@@ -3112,8 +2533,8 @@ body{
   function renderLuckiestTeam(){
     contentEl.innerHTML=`<div class="panel">
       <h2>🍀 Luckiest</h2>
-      <div class="luck-explanation"><div class="luck-explanation-title">How luck is scored</div><div class="luck-explanation-body">Luck is weighted by how unlikely each event was. Move misses use the move's actual accuracy, status dodges use the probability of the status roll failing, crits use the move's crit stage, and low-accuracy hits use the move's actual hit chance. One-turn sleep is lucky; longer sleep and freeze are increasingly unlucky.</div></div>
-      <div class="row" style="align-items:flex-end;gap:12px;"><div><label>View</label><select id="luckView"><option value="team">Team</option><option value="pokemon">Pokemon</option><option value="game">Luckiest Game</option></select></div><div><label>Scope</label>${weekSelectorHtml('luckWeek')}</div></div>
+      <div class="luck-explanation"><div class="luck-explanation-title">How luck is scored</div><div class="luck-explanation-body">Luck is weighted by how unlikely each event was. Move misses use the move's actual accuracy; crits use the move's crit stage; low-accuracy hits use the move's actual hit chance; secondary effects (status, confusion, flinch, and secondary boosts) are scored from their actual proc chance; and consecutive protection uses Showdown's 1/3 success multiplier. Paralysis is scored for acting through full-paralysis checks, while sleep/freeze duration is scored against the normal duration baseline. Deterministic effects are not scored as luck.</div></div>
+      <div class="stats-controls"><div class="stats-control"><label for="luckView">View</label><select id="luckView"><option value="team">Team</option><option value="pokemon">Pokemon</option><option value="game">Luckiest Game</option></select></div><div class="stats-control"><label for="luckWeek">Scope</label>${weekSelectorHtml('luckWeek')}</div></div>
       <div id="luckTable"></div>
     </div>`;
     const scopeSel=document.getElementById('luckWeek');
@@ -3122,12 +2543,12 @@ body{
       const view=viewSel.value;
       if(view==='game'){
         const rows=luckGameData(scopeSel.value);
-        document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>Game</th><th>Matchup</th><th>Winner</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(r.id)}" target="_blank" rel="noopener">${escapeHtml(r.id||'Replay')}</a></td><td><strong>${escapeHtml(r.team1)}</strong> vs <strong>${escapeHtml(r.team2)}</strong></td><td>${escapeHtml(r.winner||'—')}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodges.toFixed(2)}</td><td class="num">${r.sleep>=0?'+':''}${r.sleep.toFixed(2)}</td><td class="num">${r.freeze>=0?'+':''}${r.freeze.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
+        document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>Game</th><th>Matchup</th><th>Winner</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status</th><th class="num">Secondary</th><th class="num">Flinches</th><th class="num">Confusion</th><th class="num">Protect</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td><a class="nav-link" href="https://replay.pokemonshowdown.com/${escapeHtml(r.id)}" target="_blank" rel="noopener">${escapeHtml(r.id||'Replay')}</a></td><td><strong>${escapeHtml(r.team1)}</strong> vs <strong>${escapeHtml(r.team2)}</strong></td><td>${escapeHtml(r.winner||'—')}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodges.toFixed(2)}</td><td class="num">${r.secondary>=0?'+':''}${r.secondary.toFixed(2)}</td><td class="num">${r.flinches}</td><td class="num">${r.confusion}</td><td class="num">${r.protect}</td><td class="num">${r.sleep>=0?'+':''}${r.sleep.toFixed(2)}</td><td class="num">${r.freeze>=0?'+':''}${r.freeze.toFixed(2)}</td></tr>`).join('')}</tbody></table></div>`;
         return;
       }
       const pokemon=view==='pokemon';
       const rows=pokemon?luckPokemonData(scopeSel.value):luckTeamData(scopeSel.value);
-      document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>${pokemon?'Pokemon':'Team'}</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status Dodges</th><th class="num">Full Paras</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${pokemon?`<span class="luck-pokemon-row" role="button" tabindex="0" data-luck-pokemon="${escapeHtml(r.species)}" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;">${spriteImg(r.species,'sprite')}<strong>${escapeHtml(r.species)}</strong></span><div class="note">${escapeHtml(r.team||'')}</div>`:`<strong>${escapeHtml(r.team)}</strong><div class="note">${r.games} game${r.games===1?'':'s'}</div>`}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${r.statusDodgeLuck.toFixed(2)}</td><td class="num">${r.fullParalysis}</td><td class="num">${r.sleepTurns} turns <span class="note">(${r.sleepDurationLuck>=0?'+':''}${r.sleepDurationLuck.toFixed(1)})</span></td><td class="num">${r.freezeTurns} turns <span class="note">(${r.freezeDurationLuck>=0?'+':''}${r.freezeDurationLuck.toFixed(1)})</span></td></tr>`).join('')}</tbody></table></div>`;
+      document.getElementById('luckTable').innerHTML=!rows.length?`<div class="empty-state">No luck data for this scope yet. Reprocess the replays after updating the luck parser.</div>`:`<div class="franchise-table-wrap"><table class="franchise-table"><thead><tr><th>#</th><th>${pokemon?'Pokemon':'Team'}</th><th class="num">Luck</th><th class="num">Crits</th><th class="num">Dodges</th><th class="num">Low-Acc Hits</th><th class="num">Status/Secondary</th><th class="num">Flinches</th><th class="num">Confusion</th><th class="num">Protect</th><th class="num">Full Paras</th><th class="num">Sleep</th><th class="num">Freeze</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${pokemon?`<span class="luck-pokemon-row" role="button" tabindex="0" data-luck-pokemon="${escapeHtml(r.species)}" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;">${spriteImg(r.species,'sprite')}<strong>${escapeHtml(r.species)}</strong></span><div class="note">${escapeHtml(r.team||'')}</div>`:`<strong>${escapeHtml(r.team)}</strong><div class="note">${r.games} game${r.games===1?'':'s'}</div>`}</td><td class="num"><strong>${r.score>=0?'+':''}${r.score.toFixed(2)}</strong></td><td class="num">${r.crits}</td><td class="num">${r.dodges}</td><td class="num">${r.lowAccuracyHits}</td><td class="num">${(Number(r.statusDodgeLuck||0)+Number(r.secondaryLuck||0)+Number(r.secondaryDodgeLuck||0)).toFixed(2)}</td><td class="num">${r.flinches}</td><td class="num">${r.confusionSelfHits}</td><td class="num">${r.protectSuccesses}</td><td class="num">${r.fullParalysis}</td><td class="num">${r.sleepTurns} turns <span class="note">(${r.sleepDurationLuck>=0?'+':''}${r.sleepDurationLuck.toFixed(1)})</span></td><td class="num">${r.freezeTurns} turns <span class="note">(${r.freezeDurationLuck>=0?'+':''}${r.freezeDurationLuck.toFixed(1)})</span></td></tr>`).join('')}</tbody></table></div>`;
       if(pokemon){ document.querySelectorAll('[data-luck-pokemon]').forEach(el=>{el.addEventListener('click',()=>openLuckPokemonSummary(el.dataset.luckPokemon,scopeSel.value)); el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openLuckPokemonSummary(el.dataset.luckPokemon,scopeSel.value);}});}); }
     }
     scopeSel.addEventListener('change',draw);
@@ -3322,46 +2743,9 @@ body{
     });
   }
 
-  function renderGoldenFist(){
-    contentEl.innerHTML = `
-      <div class="panel gf-panel">
-        <h2>🥇 Golden Fist</h2>
-        <div class="row" style="align-items:flex-end;">
-          <div><label>Scope</label>${weekSelectorHtml('gfWeek')}</div>
-          <div style="flex:0;"><button class="ghost" id="exportGF">Export CSV</button></div>
-        </div>
-        <div class="note" style="margin-bottom:12px;">Ranked by Kills − Deaths. Ties broken by total kills.</div>
-        <div id="gfList"></div>
-      </div>`;
 
-    const gfSel = document.getElementById('gfWeek');
-    function drawGF(){
-      const stats = globalPokemonStats(gfSel.value)
-        .map(s => ({...s, diff: s.kills - s.deaths}))
-        .sort((a,b)=> b.diff - a.diff || b.kills - a.kills);
-      const el = document.getElementById('gfList');
-      if(stats.length === 0){ el.innerHTML = `<div class="empty-state">No data for this scope yet.</div>`; return; }
-      const medals = ['🥇','🥈','🥉'];
-      el.innerHTML = `<div class="gf-list">${stats.map((s,i)=>`
-        <div class="gf-row ${i<3?'top'+(i+1):''} auditable-row" ${auditDataAttr(s.species,'kills',s.killLog,false)}>
-          <div class="gf-rank">${medals[i] || (i+1)}</div>
-          ${spriteImg(s.species,'gf-sprite')}
-          <div class="gf-info">
-            <div class="gf-name"><span class="pokemon-click" role="button" tabindex="0" data-pokemon="${escapeHtml(s.species)}" title="Open ${escapeHtml(s.species)} profile">${escapeHtml(s.species)}</span></div>
-            <div class="gf-sub">${s.kills} kills · ${s.assists||0} assists · ${s.deaths} deaths · ${s.games} games</div>
-          </div>
-          <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
-          <div class="gf-diff ${s.diff<0?'neg':''}">${s.diff>0?'+':''}${s.diff}</div>
-        </div>`).join('')}</div>`;
-    }
-    gfSel.addEventListener('change', drawGF);
-    document.getElementById('exportGF').addEventListener('click', ()=>{
-      const stats = globalPokemonStats(gfSel.value).map(s=>({...s, diff:s.kills-s.deaths})).sort((a,b)=>b.diff-a.diff || b.kills-a.kills);
-      const rows = [['Rank','Pokemon','Kills','Assists','Deaths','Differential','Games Played','Coach(es)']];
-      stats.forEach((s,i)=> rows.push([i+1, s.species, s.kills, s.assists||0, s.deaths, s.diff, s.games, Array.from(s.coaches).sort().join('; ')]));
-      download(`Golden Fist - ${gfSel.value==='ALL'?'Season':gfSel.value}.csv`, toCSV(rows));
-    });
-    drawGF();
+  function renderGoldenFist(){
+    return window.SBLStatsUI.renderGoldenFist({globalPokemonStats,weekSelectorHtml,spriteImg,escapeHtml,auditDataAttr,download,toCSV});
   }
 
   function renderTeams(){
@@ -3417,6 +2801,7 @@ body{
           <td class="num dealt">${s.dealt.toFixed(1)}</td>
           <td class="num taken">${s.taken.toFixed(1)}</td>
           <td class="num kills">${s.kills}</td>
+          <td class="num">${s.appearances ? (s.kills/s.appearances).toFixed(2) : '0.00'}</td>
           <td ${auditAttr(s.species,'assists',s.assistLog)}>${s.assists||0}</td>
           <td class="num taken">${s.deaths}</td>
           <td class="num">${s.appearances}</td>
@@ -3439,7 +2824,7 @@ body{
           </div>
           <div class="franchise-table-wrap">
             <table class="franchise-table">
-              <thead><tr><th>#</th><th>Pokémon</th><th class="num">Points</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Apps</th></tr></thead>
+              <thead><tr><th>#</th><th>Pokémon</th><th class="num">Points</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Kills/Game</th><th class="num">Assists</th><th class="num">Deaths</th><th class="num">Apps</th></tr></thead>
               <tbody>${rows}</tbody>
             </table>
           </div>
@@ -3758,7 +3143,7 @@ body{
       e.preventDefault();
       e.target.closest('[data-pokemon]').click();
     }
-    if(e.key==='Escape') closePokemonProfile();
+    if(e.key==='Escape') { e.preventDefault(); closeTopPopup(); }
   });
   document.addEventListener('click', (e)=>{
     const auditCell = e.target.closest('[data-audit]');
@@ -3827,9 +3212,5 @@ body{
   })();
 })();
 </script>
-<script src="js/sbl-supabase.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/services/rosters.js"></script>
-    <script src="js/sbl-site.js"></script>
 </body>
 </html>

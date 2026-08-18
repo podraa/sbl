@@ -202,6 +202,8 @@
   .gf-row.top3{border-color:#cd7f32;}
   .gf-row.auditable-row{cursor:pointer;}
   .gf-row.auditable-row:hover{border-color:var(--amber);}
+  .summary-kad-link{cursor:pointer;text-decoration:underline dotted var(--text-dim);text-underline-offset:3px;}
+  .summary-kad-link:hover{color:var(--amber);}
   .gf-rank{font-family:var(--mono); font-size:16px; width:28px; color:var(--text-dim); text-align:center;}
   .gf-row.top1 .gf-rank{color:#ffd166;}
   .gf-row.top2 .gf-rank{color:#c9c9c9;}
@@ -303,7 +305,7 @@
 
   /* Pokémon profile modal */
   .pokemon-overlay{
-    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center;
     padding:24px; overflow:auto; background:rgba(4,7,12,.62);
     backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
     animation:pokemonOverlayIn .16s ease-out;
@@ -336,7 +338,7 @@
   td.auditable:hover{color:var(--amber);}
   /* Franchise summary overlay */
   .audit-overlay{
-    position:fixed; inset:0; z-index:50;
+    position:fixed; inset:0; z-index:11000;
     display:flex; align-items:center; justify-content:center;
     padding:24px 16px; overflow-y:auto;
     background:rgba(6,9,14,.72);
@@ -1164,6 +1166,7 @@ body.modal-page-locked {
 }
 </style>
   <link rel="stylesheet" href="css/sbl-site.css">
+  <link rel="stylesheet" href="css/sbl-sprites-layout.css">
 </head>
 <body data-admin="false">
 <style>
@@ -1422,691 +1425,10 @@ body.modal-page-locked {
     if(/^[a-z0-9-]+$/i.test(url)) return url;
     return null;
   }
-  function parseHP(token){
-    if(!token) return 0;
-    token = token.split(' ')[0]; // strip status tags like "tox", "fnt"
-    if(token.includes('/')){
-      const [a,b] = token.split('/').map(Number);
-      if(!b) return 0;
-      return (a/b)*100;
-    }
-    const v = parseFloat(token);
-    return isNaN(v) ? 0 : v;
-  }
-  function sideOf(slot){ return slot.slice(0,2); } // 'p1' / 'p2'
-
-  // ---------- replay parsing ----------
-  function canonicalBattleSpecies(name){
-    const raw = String(name || '').trim();
-    if(!raw) return raw;
-    if(window.SBL?.pokemon?.displayName) return SBL.pokemon.displayName(raw);
-    const id = raw.toLowerCase().replace(/[’']/g,'').replace(/_/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-');
-    const map = {
-      'mimikyu-busted':'Mimikyu','aegislash-blade':'Aegislash','aegislash-shield':'Aegislash',
-      'terapagos-terastal':'Terapagos','terapagos-stellar':'Terapagos','palafin-hero':'Palafin',
-      'zacian-crowned':'Zacian','zamazenta-crowned':'Zamazenta','eiscue-noice':'Eiscue',
-      'morpeko-hangry':'Morpeko','wishiwashi-school':'Wishiwashi','cramorant-gulping':'Cramorant',
-      'cramorant-gorging':'Cramorant','darmanitan-zen':'Darmanitan','meloetta-pirouette':'Meloetta',
-      'minior-meteor':'Minior','zygarde-10-percent':'Zygarde','zygarde-50-percent':'Zygarde',
-      'necrozma-dusk-mane':'Necrozma','necrozma-dawn-wings':'Necrozma','necrozma-ultra':'Necrozma',
-      'giratina-origin':'Giratina','shaymin-sky':'Shaymin','hoopa-unbound':'Hoopa',
-      'kyurem-black':'Kyurem','kyurem-white':'Kyurem','deoxys-attack':'Deoxys','deoxys-defense':'Deoxys',
-      'deoxys-speed':'Deoxys','keldeo-resolute':'Keldeo'
-    };
-    return map[id] || raw;
-  }
-
-  function parseLog(json, replayId){
-    const lines = json.log.split('\n');
-    const players = {p1:'', p2:''};
-    const slots = {}; // slotId -> {species, hp, side, monId}
-    let nextMonInstance = 0;
-    const mons = {}; // unique battle-stint id -> stats
-    const appearedThisReplay = new Set();
-    let lastMove = null; // {source, target, move}
-    let currentTurn = 0;
-    let winner = null;
-    const luck = {p1:newLuckSide(), p2:newLuckSide()};
-    const luckPokemon = {};
-    function pokemonLuckForSlot(slot){
-      const mk = monKey(slot);
-      if(!mk) return null;
-      if(!luckPokemon[mk]) luckPokemon[mk] = Object.assign({species:(slots[slot] && slots[slot].species) || ''}, newLuckSide());
-      return luckPokemon[mk];
-    }
-    function addLuckEvent(target, type, score, detail){
-      if(!target || !Array.isArray(target.luckEvents)) return;
-      target.luckEvents.push({turn:currentTurn, type, score:Number(score||0), detail:String(detail||'')});
-    }
-    const sleeping = {};
-    const frozen = {};
-    const pendingStatusChecks = {};
-    const currentMajorStatus = {};
-    // Accuracy comes from the same move data used by Pokemon Showdown, rather
-    // than a manually maintained list. The replay itself tells us which move
-    // was used; this lookup tells us that move's base accuracy.
-    const MOVE_DATA_URL = 'https://play.pokemonshowdown.com/data/moves.json';
-    let MOVE_DATA = null;
-    let MOVE_ACCURACY_PROMISE = null;
-    function moveKey(name){ return String(name || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
-    async function ensureMoveAccuracyData(){
-      if(MOVE_DATA) return MOVE_DATA;
-      if(MOVE_ACCURACY_PROMISE) return MOVE_ACCURACY_PROMISE;
-      MOVE_ACCURACY_PROMISE = fetch(MOVE_DATA_URL, {cache:'force-cache'})
-        .then(r=>{ if(!r.ok) throw new Error('could not load Showdown move data (' + r.status + ')'); return r.json(); })
-        .then(data=>{
-          const out = {};
-          for(const [id, move] of Object.entries(data || {})){
-            if(!move) continue;
-            const acc = move.accuracy;
-            const value = (typeof acc === 'number') ? acc : null;
-            const statusChances = {};
-            if(move.status) statusChances[move.status] = 100;
-            const secondaries = Array.isArray(move.secondaries) ? move.secondaries : (move.secondary && move.secondary !== false ? [move.secondary] : []);
-            for(const sec of secondaries){
-              if(sec && sec.status){
-                const chance = typeof sec.chance === 'number' ? sec.chance : 100;
-                statusChances[sec.status] = Math.max(statusChances[sec.status] || 0, chance);
-              }
-            }
-            // willCrit (e.g. Frost Breath, Storm Throw, Zippy Zap, Wicked Blow, Surging
-            // Strikes) marks a move as an automatic, deterministic critical hit. Showdown
-            // encodes this separately from critRatio, not as critRatio:4, so both must be
-            // captured or guaranteed crits get scored as lucky.
-            const entry = {accuracy:value, statusChances, critRatio:(typeof move.critRatio === 'number' ? move.critRatio : 1), willCrit:!!move.willCrit};
-            out[moveKey(id)] = entry;
-            if(move.name) out[moveKey(move.name)] = entry;
-          }
-          MOVE_DATA = out;
-          return out;
-        })
-        .catch(err=>{
-          console.warn('Move accuracy data unavailable; accuracy-sensitive luck events will be skipped.', err);
-          MOVE_DATA = {};
-          return MOVE_DATA;
-        });
-      return MOVE_ACCURACY_PROMISE;
-    }
-    function getMoveAccuracy(name){
-      if(!MOVE_DATA) return null;
-      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
-      return entry && typeof entry.accuracy === 'number' ? entry.accuracy : null;
-    }
-    function getMoveStatusChance(name, status){
-      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
-      if(!entry || !entry.statusChances) return null;
-      const value = entry.statusChances[status];
-      return typeof value === 'number' ? value : null;
-    }
-    function isLowAccuracyMove(name){
-      const acc = getMoveAccuracy(name);
-      return acc !== null && acc <= 85;
-    }
-    // Luck is weighted by how unlikely the observed event was.
-    // p=1 is guaranteed and contributes 0; rarer events contribute more.
-    function rarityLuck(probability){
-      if(typeof probability !== 'number' || probability <= 0 || probability > 1) return 0;
-      return (1 / probability) - 1;
-    }
-    function statusDodgeLuck(chance){
-      // The event is FAILURE of the status roll. A 10% status therefore has a
-      // 90% dodge probability, while a 30% status has a 70% dodge probability.
-      // This makes dodging Discharge's 30% paralysis luckier than dodging
-      // Thunderbolt's 10% paralysis, as intended. 100% status has no roll.
-      if(typeof chance !== 'number' || chance <= 0 || chance >= 100) return 0;
-      return rarityLuck(1 - (chance / 100));
-    }
-    function moveDodgeLuck(accuracy){
-      if(typeof accuracy !== 'number' || accuracy < 0 || accuracy >= 100) return 0;
-      return rarityLuck(1 - (accuracy / 100));
-    }
-    function lowAccuracyHitLuck(accuracy){
-      if(typeof accuracy !== 'number' || accuracy <= 0 || accuracy > 100) return 0;
-      return rarityLuck(accuracy / 100);
-    }
-    function critChance(name){
-      const entry = MOVE_DATA && MOVE_DATA[moveKey(name)];
-      const ratio = entry && typeof entry.critRatio === 'number' ? entry.critRatio : 1;
-      // Guaranteed-crit moves are deterministic and excluded from luck scoring.
-      // Guaranteed crits are flagged via willCrit (Frost Breath, Storm Throw,
-      // Zippy Zap, Wicked Blow, Surging Strikes), not via critRatio.
-      if((entry && entry.willCrit) || ratio >= 4) return null;
-      if(ratio >= 3) return 0.5;
-      if(ratio >= 2) return 0.125;
-      return 1 / 24;
-    }
-    function critLuck(name){
-      const chance = critChance(name);
-      return chance === null ? 0 : rarityLuck(chance);
-    }
-    function paralysisDodgeLuck(){ return rarityLuck(0.75); }
-    function durationLuck(turns){
-      if(!Number.isFinite(turns) || turns <= 0) return 0;
-      return 2 - turns; // 1 turn = +1, 2 = neutral, 3 = -1, etc.
-    }
-    function newLuckSide(){ return {crits:0,critLuck:0,dodges:0,moveDodgeLuck:0,lowAccuracyHits:0,lowAccuracyHitLuck:0,lowAccuracyDodges:0,statusDodgeLuck:0,fullParalysis:0,paralysisDodgeLuck:0,paralysisDodges:0,sleepTurns:0,sleepEvents:0,sleepDurationLuck:0,freezeTurns:0,freezeEvents:0,freezeDurationLuck:0,luckEvents:[]}; }
-    // NOTE: these three all store direct references to a mon's *stats object*
-    // (captured at the moment of the event via ensureMon), never a slot label.
-    // A slot label like "p1a" gets reused by a different mon later in the game,
-    // so resolving it lazily at credit-time would silently attribute damage/
-    // kills to whoever happens to be standing there now instead of whoever
-    // actually did it.
-    let lastAttacker = {}; // targetSlot -> attacker's stats object (for kill credit)
-    // Poison/burn (unlike confusion) persist through a switch — the same individual
-    // keeps ticking for the same status after it returns to the field. So this is
-    // keyed by the *individual mon* (monKey: side+species), not by slot, and is
-    // deliberately NOT cleared on switch — only when the status actually ends.
-    let statusSourceByMon = {}; // monKey -> stats object that inflicted brn/psn/tox on them
-    let hazardSetter = {}; // side -> {hazardName: setter's stats object}
-    // side (the side that GOT toxic-spiked) -> setter's stats object.
-    // Toxic Spikes are a side-wide condition, so this survives switches/faints
-    // and lets residual poison damage inherit kill credit from the setter.
-    let toxicSpikesSetter = {};
-    let delayedSetter = {}; // side -> {moveName: setter's stats object}, for Future Sight / Doom Desire
-    let pendingDelayedHit = {}; // targetSlot -> {stats, cause}; Showdown emits the delayed hit as -end, then an untagged -damage
-    const HAZARD_MOVES = ['Stealth Rock','Spikes'];
-    const DELAYED_MOVES = ['Future Sight','Doom Desire'];
-    const STATUS_TAGS = ['psn','tox','brn'];
-
-    function ofSlotFromTag(tag){
-      // tag like "[of] p2a: Ferrothorn" -> "p2a"
-      const m = tag.match(/p[1-4][a-f]/);
-      return m ? m[0] : null;
-    }
-
-    function monKey(slot){
-      const s = slots[slot];
-      return s?.monId || null;
-    }
-    function ensureMon(slot){
-      const s = slots[slot];
-      if(!s) return null;
-      const k = monKey(slot);
-      if(!mons[k]) mons[k] = {
-        id:k, side:s.side, species:s.species, damageDealt:0, damageTaken:0,
-        kills:0, deaths:0, appearances:0, killLog:[], deathLog:[],      };
-      if(!appearedThisReplay.has(k)){
-        appearedThisReplay.add(k);
-        mons[k].appearances += 1;
-      }
-      return mons[k];
-    }
-
-    function addStatusDodgeLuck(targetSide, chance, targetMk){
-      const score = statusDodgeLuck(chance);
-      if(luck[targetSide]) { luck[targetSide].statusDodgeLuck += score; addLuckEvent(luck[targetSide], 'status-dodge', score, `${chance}% status chance avoided`); }
-      if(targetMk && luckPokemon[targetMk]) { luckPokemon[targetMk].statusDodgeLuck += score; addLuckEvent(luckPokemon[targetMk], 'status-dodge', score, `${chance}% status chance avoided`); }
-    }
-    function finalizePendingStatusChecks(){
-      for(const key of Object.keys(pendingStatusChecks)){
-        const checks = pendingStatusChecks[key];
-        for(const check of checks){
-          if(!check.resolved && !check.cancelled){
-            addStatusDodgeLuck(check.targetSide, check.chance, check.targetMk || key);
-            check.resolved = true;
-          }
-        }
-        delete pendingStatusChecks[key];
-      }
-    }
-    function finalizeStatusDuration(mk, status){
-      const store = status === 'slp' ? sleeping : frozen;
-      const st = store[mk];
-      if(!st) return;
-      const side = mk.split('|')[0];
-      const score = durationLuck(st.turns);
-      if(luck[side]){
-        if(status === 'slp') luck[side].sleepDurationLuck += score;
-        if(status === 'frz') luck[side].freezeDurationLuck += score;
-      }
-      const monLuck = luckPokemon[mk];
-      if(monLuck){
-        if(status === 'slp') monLuck.sleepDurationLuck += score;
-        if(status === 'frz') monLuck.freezeDurationLuck += score;
-        addLuckEvent(monLuck, status === 'slp' ? 'sleep' : 'freeze', score, `${st.turns} turn${st.turns===1?'':'s'} ${status === 'slp' ? 'sleep' : 'freeze'}`);
-      }
-      const sideLuck = luck[side];
-      if(sideLuck) addLuckEvent(sideLuck, status === 'slp' ? 'sleep' : 'freeze', score, `${st.turns} turn${st.turns===1?'':'s'} ${status === 'slp' ? 'sleep' : 'freeze'}`);
-      delete store[mk];
-    }
-
-    for(const raw of lines){
-      if(!raw.startsWith('|')) continue;
-      const parts = raw.split('|');
-      const cmd = parts[1];
-
-      if(cmd === 'poke' && parts[3]){
-        const side = parts[2];
-        const species = parts[3].split(',')[0].trim();
-        if((side==='p1'||side==='p2') && species && !teamRoster[side].some(x=>normName(x)===normName(species))) teamRoster[side].push(species);
-      } else if(cmd === 'player' && parts[3]){
-        const side = parts[2];
-        if(side === 'p1' || side === 'p2') players[side] = parts[3];
-      } else if(cmd === 'turn'){
-        const t = parseInt(parts[2], 10);
-        if(!isNaN(t)){
-          currentTurn = t;
-          for(const mk of Object.keys(sleeping)){
-            const st = sleeping[mk];
-            if(st && st.lastCountedTurn < currentTurn){
-              const side = mk.split('|')[0];
-              if(luck[side]) luck[side].sleepTurns += 1;
-              if(luckPokemon[mk]) luckPokemon[mk].sleepTurns += 1;
-              st.turns += 1;
-              st.lastCountedTurn = currentTurn;
-            }
-          }
-          for(const mk of Object.keys(frozen)){
-            const st = frozen[mk];
-            if(st && st.lastCountedTurn < currentTurn){
-              const side = mk.split('|')[0];
-              if(luck[side]) luck[side].freezeTurns += 1;
-              if(luckPokemon[mk]) luckPokemon[mk].freezeTurns += 1;
-              st.turns += 1;
-              st.lastCountedTurn = currentTurn;
-            }
-          }
-          finalizePendingStatusChecks();
-        }
-      } else if(cmd === 'win'){
-        winner = (parts[2] || '').trim() || null;
-      } else if(cmd === 'switch' || cmd === 'drag'){
-        const slotFull = parts[2]; // "p1a: Nickname"
-        const slot = slotFull.split(':')[0].trim();
-        const side = sideOf(slot);
-        const species = parts[3].split(',')[0].trim();
-        const hp = parseHP(parts[4] || '100/100');
-        const monId = side + '|' + (++nextMonInstance);
-        slots[slot] = {species, hp, hpMax: parseMaxHP(parts[4] || '100/100'), side, monId};
-        // A new mon now occupies this slot — any prior *direct-hit* attacker
-        // credit for this slot belonged to the mon that just left, so that must
-        // not carry over. Status-source credit (poison/burn) is intentionally
-        // NOT cleared here — it lives in statusSourceByMon, keyed to the
-        // individual mon rather than the slot, because poison/burn persist
-        // through a switch and must keep crediting the original inflictor
-        // when the same mon returns and the status keeps ticking.
-        delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
-        ensureMon(slot);
-      } else if(cmd === 'replace' || cmd === '-formechange' || cmd === 'detailschange'){
-        const slotFull = parts[2];
-        const slot = slotFull ? slotFull.split(':')[0].trim() : null;
-        const species = parts[3] ? parts[3].split(',')[0].trim() : '';
-        if(slot && species){
-          const st = slots[slot];
-          if(st){
-            st.species = species;
-            const k = monKey(slot);
-            if(k && mons[k]) mons[k].species = species;
-            if(k && luckPokemon[k]) luckPokemon[k].species = species;
-          }
-        }
-      } else if(cmd === 'move'){
-        finalizePendingStatusChecks();
-        const source = parts[2] ? parts[2].split(':')[0].trim() : null;
-        const target = parts[4] ? parts[4].split(':')[0].trim() : null;
-        const moveName = parts[3] ? parts[3].trim() : '';
-        if(source){
-          lastMove = {source, target, move: moveName, accuracy:getMoveAccuracy(moveName), hitCounted:false};
-          if(target && sideOf(source) !== sideOf(target)){
-            const targetMk = monKey(target);
-            const statusChances = ['par','slp','frz'].map(st => getMoveStatusChance(moveName, st)).filter(v => v !== null);
-            const combinedStatusChance = statusChances.length ? Math.min(100, statusChances.reduce((a,b)=>a+b,0)) : null;
-            if(targetMk && combinedStatusChance !== null && !currentMajorStatus[targetMk]){
-              (pendingStatusChecks[targetMk] ||= []).push({targetSide:sideOf(target), chance:combinedStatusChance, resolved:false, cancelled:false});
-            }
-          }
-        }
-        if(source && HAZARD_MOVES.includes(moveName)){
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats){
-            if(!hazardSetter[oppSide]) hazardSetter[oppSide] = {};
-            hazardSetter[oppSide][moveName] = setterStats;
-          }
-        }
-        if(source && DELAYED_MOVES.includes(moveName)){
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats){
-            if(!delayedSetter[oppSide]) delayedSetter[oppSide] = {};
-            delayedSetter[oppSide][moveName] = setterStats;
-          }
-        }
-        if(source && moveName === 'Toxic Spikes'){
-          // Toxic Spikes are a side-wide condition. Keep the Pokémon that most
-          // recently established the Toxic Spikes on that side so a later
-          // switch-in, poison tick, and eventual faint can all inherit the
-          // setter's kill credit even if the setter has switched out or fainted.
-          const oppSide = sideOf(source) === 'p1' ? 'p2' : 'p1';
-          const setterStats = ensureMon(source);
-          if(setterStats) toxicSpikesSetter[oppSide] = setterStats;
-        }
-      } else if(cmd === '-end'){
-        // Future Sight / Doom Desire are represented by Showdown as:
-        //   |-end|target|move: Future Sight
-        //   |-damage|target|...
-        // The -damage line is deliberately untagged, so looking for
-        // 'Future Sight' in its tags will never work. Resolve the setter
-        // at the -end event and carry it into the following damage event.
-        const slotFull = parts[2];
-        const effect = parts.slice(3).join('|');
-        if(slotFull && (effect.includes('move: Future Sight') || effect.includes('move: Doom Desire'))){
-          const slot = slotFull.split(':')[0].trim();
-          const delayedHit = DELAYED_MOVES.find(m => effect.includes('move: ' + m));
-          if(delayedHit && delayedSetter[sideOf(slot)] && delayedSetter[sideOf(slot)][delayedHit]){
-            pendingDelayedHit[slot] = {
-              stats: delayedSetter[sideOf(slot)][delayedHit],
-              cause: delayedHit
-            };
-          }
-        }
-      } else if(cmd === '-miss'){
-        const source = parts[2] ? parts[2].split(':')[0].trim() : null;
-        const target = parts[3] ? parts[3].split(':')[0].trim() : null;
-        if(source && target && sideOf(source) !== sideOf(target)){
-          const targetSide = sideOf(target);
-          // A miss is a dodge for the target. We also resolve the actual move
-          // accuracy so the replay records whether this was a low-accuracy
-          // dodge, rather than guessing from a hard-coded move list.
-          if(luck[targetSide]){
-            luck[targetSide].dodges += 1;
-            if(lastMove && lastMove.source === source && lastMove.target === target){
-              if(isLowAccuracyMove(lastMove.move)) luck[targetSide].lowAccuracyDodges += 1;
-              const missChances = ['par','slp','frz'].map(st => getMoveStatusChance(lastMove.move, st)).filter(v => v !== null);
-              if(missChances.length){
-                const combinedMissChance = Math.min(100, missChances.reduce((a,b)=>a+b,0));
-                addStatusDodgeLuck(targetSide, combinedMissChance);
-              }
-            }
-          }
-          if(lastMove && lastMove.source === source && lastMove.target === target){
-            lastMove.missed = true;
-            lastMove.accuracy = getMoveAccuracy(lastMove.move);
-          }
-        }
-      } else if(cmd === '-crit'){
-        const target = parts[2] ? parts[2].split(':')[0].trim() : null;
-        if(lastMove && target && lastMove.source && sideOf(lastMove.source) !== sideOf(target)){
-          const attackerSide = sideOf(lastMove.source);
-          // Guaranteed-crit moves are deterministic and must not count as lucky crits.
-          const critChanceValue = critChance(lastMove.move);
-          if(critChanceValue !== null){
-            if(luck[attackerSide]){
-              luck[attackerSide].crits += 1;
-              luck[attackerSide].critLuck += rarityLuck(critChanceValue);
-              addLuckEvent(luck[attackerSide], 'crit', rarityLuck(critChanceValue), `${lastMove.move} crit (${critChanceValue.toFixed(1)}% chance)`);
-            }
-            const monLuck = pokemonLuckForSlot(lastMove.source);
-            if(monLuck){ monLuck.crits += 1; monLuck.critLuck += rarityLuck(critChanceValue); addLuckEvent(monLuck, 'crit', rarityLuck(critChanceValue), `${lastMove.move} crit (${critChanceValue.toFixed(1)}% chance)`); }
-          }
-        }
-      } else if(cmd === '-status'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        const mk = monKey(slot);
-        if(!mk) continue;
-        const statusTags = parts.slice(3).join('|');
-        let inflictorStats = null;
-        if(statusTags.includes('Toxic Spikes') && toxicSpikesSetter[sideOf(slot)]){
-          // Poisoned on switch-in by Toxic Spikes. There is no attacker's move
-          // line for the later residual damage, so permanently associate this
-          // individual Pokémon with the Toxic Spikes setter until its status
-          // is cured. This is keyed by mon identity rather than slot because
-          // the poisoned Pokémon can switch out and back in.
-          inflictorStats = toxicSpikesSetter[sideOf(slot)];
-        } else if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
-          inflictorStats = ensureMon(lastMove.source);
-        }
-        if(inflictorStats) {
-          statusSourceByMon[mk] = inflictorStats;
-          const inflictorSide = inflictorStats.side;
-          const statusCode = statusTags.includes('par') ? 'par' : (statusTags.includes('slp') ? 'slp' : (statusTags.includes('frz') ? 'frz' : null));
-          currentMajorStatus[mk] = statusCode || currentMajorStatus[mk] || null;
-          if(statusCode && lastMove && lastMove.target === slot){
-            const pending = pendingStatusChecks[mk] || [];
-            for(const check of pending) check.resolved = true;
-            delete pendingStatusChecks[mk];
-          }
-          if(statusCode === 'slp'){
-            sleeping[mk] = {startTurn:currentTurn, lastCountedTurn:currentTurn, turns:0};
-            if(inflictorSide && luck[inflictorSide]) luck[inflictorSide].sleepEvents += 1;
-            const targetLuck = pokemonLuckForSlot(slot);
-            if(targetLuck) targetLuck.sleepEvents += 1;
-          } else if(statusCode === 'frz'){
-            frozen[mk] = {startTurn:currentTurn, lastCountedTurn:currentTurn, turns:0};
-            if(inflictorSide && luck[inflictorSide]) luck[inflictorSide].freezeEvents += 1;
-            const targetLuck = pokemonLuckForSlot(slot);
-            if(targetLuck) targetLuck.freezeEvents += 1;
-          } else if(statusCode === 'par'){
-            // The status itself is not automatically treated as lucky/unlucky.
-            // Luck comes from avoiding the status roll or from the duration/turn
-            // behaviour of the status.
-          }
-          if(lastMove && !lastMove.hitCounted && lastMove.target === slot && isLowAccuracyMove(lastMove.move)){
-            if(luck[inflictorSide]) luck[inflictorSide].lowAccuracyHits += 1;
-            lastMove.hitCounted = true;
-          }
-        }
-      } else if(cmd === 'cant'){
-        const slotFull = parts[2];
-        const reason = parts[3] ? parts[3].trim() : '';
-        if(slotFull && reason === 'par'){
-          const slot = slotFull.split(':')[0].trim();
-          const side = sideOf(slot);
-          if(luck[side]) luck[side].fullParalysis += 1;
-        }
-      } else if(cmd === '-block' || cmd === '-fail' || cmd === '-notarget'){
-        const slotFull = parts[2];
-        if(slotFull){
-          const slot = slotFull.split(':')[0].trim();
-          const mk = monKey(slot);
-          if(mk && pendingStatusChecks[mk]) delete pendingStatusChecks[mk];
-        }
-      } else if(cmd === '-immune'){
-        const slotFull = parts[2];
-        if(slotFull){
-          const slot = slotFull.split(':')[0].trim();
-          const mk = monKey(slot);
-          if(mk && pendingStatusChecks[mk]) delete pendingStatusChecks[mk];
-        }
-      } else if(cmd === '-curestatus'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        const mk = monKey(slot);
-        // status is gone — clear credit so it can't be reused if this individual
-        // is somehow attributed residual status damage again later
-        if(mk){
-          const curedStatus = parts[3] ? parts[3].split('|')[0].trim() : currentMajorStatus[mk];
-          if(curedStatus === 'slp') finalizeStatusDuration(mk, 'slp');
-          if(curedStatus === 'frz') finalizeStatusDuration(mk, 'frz');
-          delete currentMajorStatus[mk];
-          delete statusSourceByMon[mk];
-        }
-      } else if(cmd === '-damage'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        const newHp = parseHP(parts[3]);
-        const oldHp = slots[slot].hp;
-        const dmg = Math.max(0, oldHp - newHp);
-        slots[slot].hp = newHp;
-        const targetStats = ensureMon(slot);
-        if(targetStats) targetStats.damageTaken += dmg;
-        if(lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
-          if(!lastMove.hitCounted && isLowAccuracyMove(lastMove.move)){
-            const attackerSide = sideOf(lastMove.source);
-            const hitScore = lowAccuracyHitLuck(getMoveAccuracy(lastMove.move));
-            if(luck[attackerSide]){
-              luck[attackerSide].lowAccuracyHits += 1;
-              luck[attackerSide].lowAccuracyHitLuck += hitScore;
-              addLuckEvent(luck[attackerSide], 'low-accuracy-hit', hitScore, `${lastMove.move} hit (${getMoveAccuracy(lastMove.move)}% accurate)`);
-            }
-            const monLuck = pokemonLuckForSlot(lastMove.source);
-            if(monLuck){
-              monLuck.lowAccuracyHits += 1;
-              monLuck.lowAccuracyHitLuck += hitScore;
-              addLuckEvent(monLuck, 'low-accuracy-hit', hitScore, `${lastMove.move} hit (${getMoveAccuracy(lastMove.move)}% accurate)`);
-            }
-            lastMove.hitCounted = true;
-          }
-        }
-        if(dmg <= 0) continue;
-
-        const tags = parts.slice(4).join('|');
-        let attackerStats = null;
-        let cause = null;
-
-        // 1) explicit [of] source (Leech Seed, Rocky Helmet, Rough Skin, Iron Barbs, etc.)
-        //    resolved immediately off the current battle state, so it's always accurate
-        if(tags.includes('[of]')){
-          const ofSlot = ofSlotFromTag(tags);
-          if(ofSlot && slots[ofSlot]){
-            attackerStats = ensureMon(ofSlot);
-            const effectM = tags.match(/\[from\]\s*([^\|\[]+)/);
-            cause = effectM ? effectM[1].trim() : 'contact/held-item effect';
-          }
-        }
-        // 2) entry hazard chip (Stealth Rock / Spikes) -> credit whoever set it
-        if(!attackerStats){
-          const hazardHit = HAZARD_MOVES.find(h => tags.includes(h));
-          if(hazardHit && hazardSetter[sideOf(slot)] && hazardSetter[sideOf(slot)][hazardHit]){
-            attackerStats = hazardSetter[sideOf(slot)][hazardHit];
-            cause = hazardHit;
-          }
-        }
-        // 3) residual status damage (burn/poison/toxic) -> credit whoever inflicted the status.
-        // Looked up by the mon's own identity (monKey), not the slot, since poison/burn
-        // persist through a switch and must keep crediting the original inflictor even
-        // after this individual left and came back to the same or a different slot.
-        // This is also what gives a Toxic Spikes setter the kill when poison damage
-        // is the final damage instance before fainting.
-        if(!attackerStats){
-          const statusHit = STATUS_TAGS.find(s => tags.includes('[from] ' + s));
-          const mk = monKey(slot);
-          if(statusHit && mk && statusSourceByMon[mk]){
-            attackerStats = statusSourceByMon[mk];
-            const sourceWasToxicSpikes = (
-              toxicSpikesSetter[sideOf(slot)] &&
-              toxicSpikesSetter[sideOf(slot)] === attackerStats
-            );
-            cause = sourceWasToxicSpikes
-              ? 'Toxic Spikes'
-              : 'residual ' + statusHit;
-          }
-        }
-        // 3b) delayed hits (Future Sight / Doom Desire).
-        // Showdown puts the move name on a preceding -end event, NOT on the
-        // subsequent -damage line, so use the pending source captured there.
-        if(!attackerStats && pendingDelayedHit[slot]){
-          attackerStats = pendingDelayedHit[slot].stats;
-          cause = pendingDelayedHit[slot].cause;
-          delete pendingDelayedHit[slot];
-        }
-        // 4) fallback: direct hit from the most recent move, if it targeted this slot.
-        //    Showdown only omits [from]/[of] entirely on a -damage line for a genuine
-        //    direct move hit — weather chip, confusion self-hits, recoil, etc. always
-        //    carry a tag (just not one of the specific ones matched above). So this
-        //    fallback must only fire on a completely untagged line, or it ends up
-        //    crediting stale "last real attacker" info to indirect damage it never dealt.
-        if(!attackerStats && tags === '' && lastMove && lastMove.target === slot && sideOf(lastMove.source) !== sideOf(slot)){
-          attackerStats = ensureMon(lastMove.source);
-          cause = lastMove.move || 'direct hit';
-        }
-
-        if(attackerStats && attackerStats.side !== slots[slot].side){
-          attackerStats.damageDealt += dmg;
-          lastAttacker[slot] = {stats: attackerStats, cause, turn: currentTurn};
-        } else {
-          // This damage instance landed but couldn't be attributed to an opposing
-          // mon (environmental chip we couldn't trace, self-inflicted damage, etc.).
-          // Clear any earlier attacker on file for this slot — otherwise a mon that
-          // survives a real hit and later dies to something untraceable still has
-          // the kill wrongly credited to whoever landed that earlier real hit.
-          lastAttacker[slot] = {stats:null, cause:'Other', turn:currentTurn};
-        }
-      } else if(cmd === '-heal' || cmd === '-sethp'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        slots[slot].hp = parseHP(parts[3]);
-      } else if(cmd === 'faint'){
-        const slotFull = parts[2];
-        if(!slotFull) continue;
-        const slot = slotFull.split(':')[0].trim();
-        if(!slots[slot]) continue;
-        const deadStats = ensureMon(slot);
-        const killerInfo = lastAttacker[slot];
-        const killerStats = killerInfo ? killerInfo.stats : null;
-        const credited = !!(killerStats && killerStats.side !== slots[slot].side);
-        if(deadStats){
-          const deadKey = monKey(slot);
-          if(deadKey){
-            if(sleeping[deadKey]) finalizeStatusDuration(deadKey, 'slp');
-            if(frozen[deadKey]) finalizeStatusDuration(deadKey, 'frz');
-            delete currentMajorStatus[deadKey];
-            delete sleeping[deadKey];
-            delete frozen[deadKey];
-            delete pendingStatusChecks[deadKey];
-          }
-          deadStats.deaths += 1;
-          deadStats.deathLog.push({
-            replayId, turn: currentTurn,
-            killer: credited ? killerStats.species : null,
-            cause: credited ? killerInfo.cause : (killerInfo?.cause || 'Other')
-          });
-        }
-        if(credited){
-          killerStats.kills += 1;
-          killerStats.killLog.push({
-            replayId, turn: currentTurn,
-            victim: deadStats ? deadStats.species : slots[slot].species,
-            cause: killerInfo.cause
-          });
-        }
-        delete lastAttacker[slot];
-        delete pendingDelayedHit[slot];
-      }
-    }
-
-    // Aggregate only after parsing. Internally each switch-in is a unique stint,
-    // which prevents Zoroark/Transform, form changes and repeated species from
-    // sharing damage attribution. League-facing data is still one row per species.
-    const aggregatedMons = {};
-    for(const stint of Object.values(mons)){
-      const species = canonicalBattleSpecies(stint.species);
-      const key = stint.side + '|' + normName(species);
-      if(!aggregatedMons[key]) aggregatedMons[key] = Object.assign({}, stint, {id:key, species, appearances:1, killLog:[], deathLog:[], assistLog:[], moves:{}});
-      else {
-        const out=aggregatedMons[key];
-        out.damageDealt += Number(stint.damageDealt||0); out.damageTaken += Number(stint.damageTaken||0);
-        out.kills += Number(stint.kills||0); out.deaths += Number(stint.deaths||0); out.assists = Number(out.assists||0)+Number(stint.assists||0);
-        out.killLog.push(...(stint.killLog||[])); out.deathLog.push(...(stint.deathLog||[])); out.assistLog.push(...(stint.assistLog||[]));
-        for(const [mv,n] of Object.entries(stint.moves||{})) out.moves[mv]=(out.moves[mv]||0)+Number(n||0);
-        if(Number.isFinite(stint.maxHpObserved)) out.maxHpObserved=Math.max(out.maxHpObserved||0,stint.maxHpObserved);
-      }
-    }
-    const aggregatedLuckPokemon = {};
-    for(const [mk,l] of Object.entries(luckPokemon)){
-      const species=canonicalBattleSpecies(l.species || mk.split('|')[1] || '');
-      if(!species) continue;
-      const side=String(mk).split('|')[0];
-      const key=side+'|'+normName(species);
-      if(!aggregatedLuckPokemon[key]) aggregatedLuckPokemon[key]=Object.assign({species}, newLuckSide());
-      const out=aggregatedLuckPokemon[key];
-      for(const k of ['crits','critLuck','dodges','moveDodgeLuck','lowAccuracyHits','lowAccuracyHitLuck','lowAccuracyDodges','statusDodgeLuck','fullParalysis','paralysisDodgeLuck','paralysisDodges','sleepTurns','sleepEvents','sleepDurationLuck','freezeTurns','freezeEvents','freezeDurationLuck']) out[k]+=Number(l[k]||0);
-      out.luckEvents.push(...(l.luckEvents||[]));
-    }
-    return { id: replayId, format: json.formatid || json.format || '', uploadtime: json.uploadtime || null,
-      players, mons:aggregatedMons, winner, teamRoster, luck, luckPokemon:aggregatedLuckPokemon,
-      };
-  }
-
-  // ---------- automatic Monday-Sunday season weeks ----------
+  // ---------- processing ----------
+  // Automatic season week assignment: weeks run Monday -> Sunday.
+  // Week 1 begins on the Monday of the earliest replay in the season.
+  // Manual overrides (weekOverride === true) are never touched by this logic.
   function replayTimestampMs(replay){
     const n=Number(replay?.uploadtime||0);
     if(!n) return 0;
@@ -2143,7 +1465,7 @@ body.modal-page-locked {
   }
 
   async function processUrls(urlsRaw, week, logEl){
-    await ensureMoveAccuracyData();
+    await SBL.replays.ensureMoveAccuracyData();
     const urls = urlsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
     if(urls.length === 0){ appendLog(logEl, 'No links provided.', true); return; }
     let added = 0, skipped = 0, failed = 0;
@@ -2155,7 +1477,7 @@ body.modal-page-locked {
         const resp = await fetch(`https://replay.pokemonshowdown.com/${id}.json`);
         if(!resp.ok) throw new Error('replay not found (' + resp.status + ')');
         const json = await resp.json();
-        const parsed = parseLog(json, id);
+        const parsed = SBL.replays.parseLog(json, id);
         parsed.week = autoWeekForReplay(parsed);
         parsed.processedAt = Date.now();
         STATE.replays[id] = parsed;
@@ -2585,9 +1907,9 @@ body.modal-page-locked {
       const taken = list.reduce((n,m)=>n+m.damageTaken,0);
       return `<div class="summary-side">
         <div class="summary-side-head"><div><strong>${escapeHtml(player)}</strong><div class="summary-team">${escapeHtml(team)}</div></div><div class="summary-score">${deaths} fainted</div></div>
-        <div class="summary-line"><span>${kills} kills</span><span>${dealt.toFixed(1)}% damage dealt</span><span>${taken.toFixed(1)}% taken</span></div>
+        <div class="summary-line"><span>${kills} kills</span><span>${dealt.toFixed(1)}damage dealt</span><span>${taken.toFixed(1)}damage taken</span></div>
         <div class="summary-mons">${list.map(m=>`<div class="summary-mon">
-          ${pokemonLink(m.species, `${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><div class="pname-cell"><strong>${escapeHtml(m.species)}</strong></div><div class="summary-mon-stats">${m.kills} K · ${m.deaths} D · ${m.damageDealt.toFixed(1)}% dmg</div></div>`)}
+          ${pokemonLink(m.species, `${spriteImg(m.species,'sprite')}<div class="summary-mon-main"><div class="pname-cell"><strong>${escapeHtml(m.species)}</strong></div><div class="summary-mon-stats">${m.kills} K · ${m.deaths} D · ${m.damageDealt.toFixed(1)} dmg</div></div>`)}
           ${m.appearances ? (m.deaths ? '<span class="badge danger-badge">Fainted</span>' : '<span class="badge">Survived</span>') : '<span class="badge">Not sent</span>'}
         </div>`).join('') || '<div class="empty-state">No Pokémon recorded.</div>'}</div>
       </div>`;
@@ -2626,16 +1948,26 @@ body.modal-page-locked {
     const el = document.getElementById('auditModal');
     if(!el) return;
     const overlay = el.querySelector('.audit-overlay');
-    if(!overlay || overlay.classList.contains('is-closing')){
-      el.innerHTML = '';
-      updateModalPageLock();
-      return;
-    }
+    if(!overlay){ el.innerHTML=''; updateModalPageLock?.(); return; }
     overlay.classList.add('is-closing');
     window.setTimeout(()=>{
-      if(el.contains(overlay)) el.innerHTML = '';
-      updateModalPageLock();
-    }, 210);
+      if(el.contains(overlay)) overlay.remove();
+      updateModalPageLock?.();
+    }, 180);
+  }
+  // Global backdrop safety net for every audit/overview overlay. This avoids
+  // relying on individual renderers having exactly the right target check.
+  document.addEventListener('pointerdown', (e)=>{
+    const overlay = e.target.closest?.('.audit-overlay');
+    if(overlay && e.target === overlay){ closeAudit(); }
+  }, true);
+
+  function closeTopPopup(){
+    const pokemon=document.getElementById('pokemonProfileModal');
+    if(pokemon){pokemon.remove();updateModalPageLock?.();return true;}
+    const audit=document.querySelector('#auditModal .audit-overlay');
+    if(audit){closeAudit();return true;}
+    return false;
   }
   function openAudit(species, type, list, showLink){
     showLink = showLink !== false;
@@ -3119,7 +2451,7 @@ body.modal-page-locked {
   }
 
   async function reprocessAll(logEl){
-    await ensureMoveAccuracyData();
+    await SBL.replays.ensureMoveAccuracyData();
     const ids = Object.keys(STATE.replays);
     let ok=0, failed=0;
     for(const id of ids){
@@ -3129,7 +2461,7 @@ body.modal-page-locked {
         if(!resp.ok) throw new Error('not found (' + resp.status + ')');
         const json = await resp.json();
         const oldReplay = STATE.replays[id];
-        const parsed = parseLog(json, id);
+        const parsed = SBL.replays.parseLog(json, id);
         parsed.uploadtime = json.uploadtime;
         parsed.weekOverride = !!oldReplay.weekOverride;
         parsed.week = oldReplay.weekOverride
@@ -3188,6 +2520,7 @@ body.modal-page-locked {
         <h2>Damage Leaderboard</h2>
         <div class="row" style="align-items:flex-end;">
           <div><label>Scope</label>${weekSelectorHtml('globalWeek')}</div>
+          <div><label>Damage type</label><select id="globalDamageType"><option value="dealt">Total Damage</option><option value="directDamage">Direct Damage</option><option value="indirectDamage">Indirect Damage</option></select></div>
           <div style="flex:0;"><button class="ghost" id="exportGlobal">Export CSV</button></div>
         </div>
         <div id="globalTable"></div>
@@ -3197,22 +2530,17 @@ body.modal-page-locked {
     document.getElementById('toTeamsLink').addEventListener('click', ()=> goToTab('teams'));
 
     const sel = document.getElementById('globalWeek');
+    const damageType=document.getElementById('globalDamageType');
     function drawGlobal(){
-      const stats = globalPokemonStats(sel.value);
+      const key=document.getElementById('globalDamageType').value;
+      const label=key==='directDamage'?'Direct Damage':(key==='indirectDamage'?'Indirect Damage':'Total Damage');
+      const stats = globalPokemonStats(sel.value).slice().sort((a,b)=>(Number(b[key])||0)-(Number(a[key])||0)||Number(b.kills||0)-Number(a.kills||0));
       document.getElementById('globalTable').innerHTML = stats.length===0 ? `<div class="empty-state">No data for this scope yet.</div>` :
-        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">Dmg Dealt</th><th class="num">Dmg Taken</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th><th class="num">Avg Dmg/Game</th></tr></thead><tbody>
-        ${stats.map((s,i)=>`<tr>
-          <td class="rank">${i+1}</td>
-          <td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td>
-          <td class="num dealt">${s.dealt.toFixed(1)}</td>
-          <td class="num taken">${s.taken.toFixed(1)}</td>
-          <td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td>
-          <td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td>
-          <td class="num">${s.games}</td>
-          <td class="num">${(s.games? s.dealt/s.games:0).toFixed(1)}</td>
-        </tr>`).join('')}</tbody></table>`;
+        `<table><thead><tr><th class="rank">#</th><th>Pokémon</th><th class="num">${label}</th><th class="num">Total</th><th class="num">Direct</th><th class="num">Indirect</th><th class="num">Kills</th><th class="num">Deaths</th><th class="num">Games</th></tr></thead><tbody>
+        ${stats.map((s,i)=>`<tr><td class="rank">${i+1}</td><td class="pname"><div class="pname-cell">${pokemonName(s.species,true,'sprite-xl')}</div></td><td class="num dealt"><strong>${(Number(s[key])||0).toFixed(1)}</strong></td><td class="num">${(Number(s.dealt)||0).toFixed(1)}</td><td class="num">${(Number(s.directDamage)||0).toFixed(1)}</td><td class="num">${(Number(s.indirectDamage)||0).toFixed(1)}</td><td ${auditAttr(s.species,'kills',s.killLog)}>${s.kills}</td><td ${auditAttr(s.species,'deaths',s.deathLog)}>${s.deaths}</td><td class="num">${s.games}</td></tr>`).join('')}</tbody></table>`;
     }
     sel.addEventListener('change', drawGlobal);
+    damageType.addEventListener('change', drawGlobal);
     document.getElementById('exportGlobal').addEventListener('click', ()=> exportGlobalCSV(sel.value, sel.value==='ALL'?'Season':sel.value));
     drawGlobal();
   }
@@ -3912,12 +3240,12 @@ body.modal-page-locked {
       if(stats.length === 0){ el.innerHTML = `<div class="empty-state">No data for this scope yet.</div>`; return; }
       const medals = ['🥇','🥈','🥉'];
       el.innerHTML = `<div class="gf-list">${stats.map((s,i)=>`
-        <div class="gf-row ${i<3?'top'+(i+1):''} auditable-row" ${auditDataAttr(s.species,'kills',s.killLog,false)}>
+        <div class="gf-row ${i<3?'top'+(i+1):''}">
           <div class="gf-rank">${medals[i] || (i+1)}</div>
           ${spriteImg(s.species,'gf-sprite')}
           <div class="gf-info">
             <div class="gf-name"><span class="pokemon-click" role="button" tabindex="0" data-pokemon="${escapeHtml(s.species)}" title="Open ${escapeHtml(s.species)} profile">${escapeHtml(s.species)}</span></div>
-            <div class="gf-sub">${s.kills} kills · ${s.deaths} deaths · ${s.games} games</div>
+            <div class="gf-sub"><span class="summary-kad-link" ${auditDataAttr(s.species,'kills',s.killLog,false)}>${s.kills} kills</span> · ${s.deaths} deaths · ${s.games} games</div>
           </div>
           <div class="gf-coach">${escapeHtml(Array.from(s.coaches).sort().join(', '))}</div>
           <div class="gf-diff ${s.diff<0?'neg':''}">${s.diff>0?'+':''}${s.diff}</div>
@@ -4321,7 +3649,7 @@ body.modal-page-locked {
       e.preventDefault();
       e.target.closest('[data-pokemon]').click();
     }
-    if(e.key==='Escape') closePokemonProfile();
+    if(e.key==='Escape') { e.preventDefault(); closeTopPopup(); }
   });
   document.addEventListener('click', (e)=>{
     const auditCell = e.target.closest('[data-audit]');

@@ -743,6 +743,7 @@ body{padding-top:52px !important}
 </style>
 
   <link rel="stylesheet" href="css/sbl-site.css">
+  <link rel="stylesheet" href="css/sbl-sprites-layout.css">
 </head>
 <body>
 <nav id="pageNav" class="page-nav" aria-label="Site navigation"></nav>
@@ -824,8 +825,8 @@ function normalizeRosters(raw){
   for(const [team,list] of Object.entries(raw||{})){
     if(!Array.isArray(list))continue;
     out[team]=list.map(x=>typeof x==='string'
-      ?{name:x,points:null}
-      :{name:String(x?.name??x?.species??''),points:x?.points??null}
+      ?{name:(SBL.pokemon?.displayNameWithForm ? SBL.pokemon.displayNameWithForm(x) : x),points:null}
+      :{name:(SBL.pokemon?.displayNameWithForm ? SBL.pokemon.displayNameWithForm(String(x?.name??x?.species??'')) : String(x?.name??x?.species??'')),points:x?.points??null}
     ).filter(x=>x.name);
   }
   return out;
